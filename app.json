@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "Elpuls",
+    "slug": "elpuls",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "se.elpuls.app",
+      "supportsTablet": true,
+      "icon": "./assets/icon.png",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.se.elpuls.app"]
+      }
+    },
+    "android": {
+      "package": "se.elpuls.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#080F24",
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/monochrome-icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-font",
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Elpuls uses the camera to photograph an appliance's rating label or your electricity bill, so it can read the numbers for you.",
+          "photosPermission": "Elpuls needs access to your photos to pick a picture of an appliance's rating label or your electricity bill."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#080F24",
+          "enableFullScreenImage_legacy": true
+        }
+      ],
+      "@bacons/apple-targets"
+    ]
+  }
+}

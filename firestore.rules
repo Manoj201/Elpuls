@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users can only read/write their own profile.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Appliances registered via photo scan — self-owned like /users.
+    match /users/{userId}/appliances/{applianceId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Prices and weather are region-level, cached-from-upstream data:
+    // readable by any signed-in user, writable only by Cloud Functions
+    // (which use the Admin SDK and bypass these rules).
+    match /prices/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /weather/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Push subscriptions are keyed by uid, self-owned like /users.
+    match /pushSubscriptions/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Notification dispatch markers: Cloud Functions only, via Admin SDK.
+    match /priceNotifications/{docId} {
+      allow read, write: if false;
+    }
+
+    // AI-generated "why is it expensive" explainers, region-level like
+    // prices/weather: readable by any signed-in user, written only by
+    // Cloud Functions.
+    match /explainers/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
