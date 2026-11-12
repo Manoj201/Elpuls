@@ -17,6 +17,10 @@ interface UserState {
   retailerMarkupSekPerKwh: number | null;
   /** Self-reported, optional (Settings only, not part of onboarding) — feeds the Contract health check, since no real consumption-metering data source exists yet. */
   estimatedMonthlyKwh: number | null;
+  /** User-set "warn when price peaks exceed X öre/kWh" threshold (Settings only). Null means the high-price alert is off. */
+  priceAlertHighThresholdOre: number | null;
+  /** Opt-in "tip me about negative/very low prices" toggle (Settings only). */
+  priceAlertLowEnabled: boolean;
   isProSubscriber: boolean;
   proPeriodType: ProPeriodType;
   proExpirationMillis: number | null;
@@ -31,6 +35,7 @@ interface UserState {
   }) => void;
   setRetailerMarkup: (retailerMarkupSekPerKwh: number | null) => void;
   setEstimatedMonthlyKwh: (estimatedMonthlyKwh: number | null) => void;
+  setPriceAlertPrefs: (priceAlertHighThresholdOre: number | null, priceAlertLowEnabled: boolean) => void;
   setGridFee: (gridFeeFixedSekPerMonth: number | null, gridFeeVariableSekPerKwh: number | null) => void;
   setProStatus: (status: { isProSubscriber: boolean; periodType: ProPeriodType; expirationMillis: number | null }) => void;
 }
@@ -45,6 +50,8 @@ export const useUserStore = create<UserState>((set) => ({
   gridFeeVariableSekPerKwh: null,
   retailerMarkupSekPerKwh: null,
   estimatedMonthlyKwh: null,
+  priceAlertHighThresholdOre: null,
+  priceAlertLowEnabled: false,
   isProSubscriber: false,
   proPeriodType: null,
   proExpirationMillis: null,
@@ -52,6 +59,8 @@ export const useUserStore = create<UserState>((set) => ({
   setOnboardingInfo: (info) => set(info),
   setRetailerMarkup: (retailerMarkupSekPerKwh) => set({ retailerMarkupSekPerKwh }),
   setEstimatedMonthlyKwh: (estimatedMonthlyKwh) => set({ estimatedMonthlyKwh }),
+  setPriceAlertPrefs: (priceAlertHighThresholdOre, priceAlertLowEnabled) =>
+    set({ priceAlertHighThresholdOre, priceAlertLowEnabled }),
   setGridFee: (gridFeeFixedSekPerMonth, gridFeeVariableSekPerKwh) => set({ gridFeeFixedSekPerMonth, gridFeeVariableSekPerKwh }),
   setProStatus: ({ isProSubscriber, periodType, expirationMillis }) =>
     set({ isProSubscriber, proPeriodType: periodType, proExpirationMillis: expirationMillis }),

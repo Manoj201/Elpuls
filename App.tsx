@@ -66,6 +66,7 @@ async function hydrateUserProfile(uid: string): Promise<boolean> {
   });
   useUserStore.getState().setRetailerMarkup(data.retailerMarkupSekPerKwh ?? null);
   useUserStore.getState().setEstimatedMonthlyKwh(data.estimatedMonthlyKwh ?? null);
+  useUserStore.getState().setPriceAlertPrefs(data.priceAlertHighThresholdOre ?? null, Boolean(data.priceAlertLowEnabled));
   useCountryStore.getState().setZone(data.zone);
 
   return true;

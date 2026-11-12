@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { IconFlask, IconPencil, IconPlus, IconReceipt, IconTrash } from '@tabler/icons-react-native';
+import { IconBellRinging, IconFlask, IconPencil, IconPlus, IconReceipt, IconTrash } from '@tabler/icons-react-native';
 import { db } from '../lib/firebase';
 import { openManageSubscriptions } from '../lib/purchases';
 import { useApplianceStore, type RegisteredAppliance } from '../stores/useApplianceStore';
@@ -41,6 +41,7 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
   const user = useUserStore();
   const setOnboardingInfo = useUserStore((s) => s.setOnboardingInfo);
   const setEstimatedMonthlyKwh = useUserStore((s) => s.setEstimatedMonthlyKwh);
+  const setPriceAlertPrefs = useUserStore((s) => s.setPriceAlertPrefs);
   const setProStatus = useUserStore((s) => s.setProStatus);
   const showPaywall = useUiStore((s) => s.showPaywall);
   const [managingSubscription, setManagingSubscription] = useState(false);
@@ -107,6 +108,10 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
   const [estimatedMonthlyKwhInput, setEstimatedMonthlyKwhInput] = useState(
     user.estimatedMonthlyKwh !== null ? String(user.estimatedMonthlyKwh) : '',
   );
+  const [priceAlertHighInput, setPriceAlertHighInput] = useState(
+    user.priceAlertHighThresholdOre !== null ? String(user.priceAlertHighThresholdOre) : '',
+  );
+  const [priceAlertLowEnabled, setPriceAlertLowEnabled] = useState(user.priceAlertLowEnabled);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
@@ -115,6 +120,7 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
     const gridFeeFixedSekPerMonth = parsePositiveFloat(gridFeeFixedInput);
     const gridFeeVariableOre = parsePositiveFloat(gridFeeVariableInput);
     const estimatedMonthlyKwh = parsePositiveFloat(estimatedMonthlyKwhInput);
+    const priceAlertHighThresholdOre = parsePositiveFloat(priceAlertHighInput);
     const info = {
       zone,
       heatingType,
@@ -125,9 +131,14 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
     };
 
     try {
-      await setDoc(doc(db, 'users', uid), { ...info, estimatedMonthlyKwh, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(
+        doc(db, 'users', uid),
+        { ...info, estimatedMonthlyKwh, priceAlertHighThresholdOre, priceAlertLowEnabled, updatedAt: serverTimestamp() },
+        { merge: true },
+      );
       setOnboardingInfo(info);
       setEstimatedMonthlyKwh(estimatedMonthlyKwh);
+      setPriceAlertPrefs(priceAlertHighThresholdOre, priceAlertLowEnabled);
       setActiveZone(info.zone);
       setSavedAt(Date.now());
     } finally {
@@ -251,6 +262,23 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
         </Pressable>
       </Section>
 
+      <Section title={t('settings.priceAlertsTitle')}>
+        <Text style={styles.sectionSubtitle}>{t('settings.priceAlertsSubtitle')}</Text>
+        <TextInput
+          style={styles.gridFeeInput}
+          placeholder={t('settings.priceAlertHighPlaceholder')}
+          placeholderTextColor={theme.colors.textFaint}
+          keyboardType="numeric"
+          value={priceAlertHighInput}
+          onChangeText={setPriceAlertHighInput}
+        />
+        <InfoRow icon={IconBellRinging} title={t('settings.priceAlertLowTitle')} subtitle={t('settings.priceAlertLowSubtitle')} />
+        <View style={[styles.yesNoRow, styles.priceAlertLowRow]}>
+          <Chip label={t('common.yes')} selected={priceAlertLowEnabled} onPress={() => setPriceAlertLowEnabled(true)} />
+          <Chip label={t('common.no')} selected={!priceAlertLowEnabled} onPress={() => setPriceAlertLowEnabled(false)} />
+        </View>
+      </Section>
+
       <Section title={t('settings.appliancesTitle')}>
         {registeredAppliances.map((appliance) => (
           <Card key={appliance.id} style={styles.applianceRow}>
@@ -306,9 +334,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 10,
   },
+  sectionSubtitle: {
+    fontFamily: theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
   zoneRow: { flexDirection: 'row', gap: 8 },
   optionList: { gap: 10 },
   yesNoRow: { flexDirection: 'row', gap: 8 },
+  priceAlertLowRow: { marginTop: 10 },
   gridFeeInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,

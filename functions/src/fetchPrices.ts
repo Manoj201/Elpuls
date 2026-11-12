@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { notifyZonePricesPublished } from './sendPriceNotifications';
 import { scheduleApplianceWindowNotifications } from './applianceNotifications';
+import { notifyZonePriceAlerts } from './priceAlerts';
 
 const SWEDISH_ZONES = ['SE1', 'SE2', 'SE3', 'SE4'];
 
@@ -50,6 +51,7 @@ export const fetchPrices = onSchedule(
 
       const entries = (await response.json()) as ElprisetJustNuEntry[];
       const dateKey = tomorrow.toISOString().slice(0, 10);
+      const hours = entries.map((entry) => ({ hour: entry.time_start, price: entry.SEK_per_kWh }));
 
       await db
         .collection('prices')
@@ -58,22 +60,15 @@ export const fetchPrices = onSchedule(
           zone,
           date: dateKey,
           currency: 'SEK',
-          hours: entries.map((entry) => ({
-            hour: entry.time_start,
-            price: entry.SEK_per_kWh,
-          })),
+          hours,
           fetchedAt: new Date().toISOString(),
         });
 
       logger.info(`Stored ${entries.length} price entries for ${zone} on ${dateKey}`);
 
       await notifyZonePricesPublished(db, zone, dateKey);
-      await scheduleApplianceWindowNotifications(
-        db,
-        zone,
-        dateKey,
-        entries.map((entry) => ({ hour: entry.time_start, price: entry.SEK_per_kWh })),
-      );
+      await scheduleApplianceWindowNotifications(db, zone, dateKey, hours);
+      await notifyZonePriceAlerts(db, zone, dateKey, hours);
     }
   },
 );

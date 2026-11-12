@@ -107,6 +107,7 @@ struct PriceWidgetView: View {
     }
 }
 
+@main
 struct ElpulsWidget: Widget {
     let kind: String = "ElpulsWidget"
 
@@ -118,4 +119,16 @@ struct ElpulsWidget: Widget {
         .description("Today's electricity price at a glance.")
         .supportedFamilies([.systemSmall])
     }
+}
+
+// Renders in Xcode's canvas (Editor > Canvas) without touching the
+// Simulator's home screen at all — lets the widget's actual view be
+// verified independent of the SpringBoard ripple-effect crash affecting
+// this Mac's Simulator.
+#Preview(as: .systemSmall) {
+    ElpulsWidget()
+} timeline: {
+    PriceEntry(date: .now, snapshot: PriceSnapshot(priceOre: 142, trendArrow: "down", updatedAt: .now))
+    PriceEntry(date: .now, snapshot: PriceSnapshot(priceOre: 318, trendArrow: "up", updatedAt: .now))
+    PriceEntry(date: .now, snapshot: PriceSnapshot(priceOre: nil, trendArrow: nil, updatedAt: nil))
 }

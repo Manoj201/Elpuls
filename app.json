@@ -10,6 +10,7 @@
       "bundleIdentifier": "se.elpuls.app",
       "supportsTablet": true,
       "icon": "./assets/icon.png",
+      "appleTeamId": "WJAVTP2LM7",
       "entitlements": {
         "com.apple.security.application-groups": ["group.se.elpuls.app"]
       }
@@ -25,6 +26,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7fb1c159-7eb9-4f4c-bfe3-73ff4c12f03d"
+      }
     },
     "plugins": [
       "expo-notifications",

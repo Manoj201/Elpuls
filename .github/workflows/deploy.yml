@@ -1,0 +1,108 @@
+name: Deploy
+
+# On every push to main:
+#   1. typecheck (reuses ci.yml)
+#   2. deploy Firebase (functions + Firestore rules/indexes) if backend files changed
+#   3. start an EAS iOS build if app files changed
+#
+# Run it manually from the Actions tab to force both deploys, and to pick
+# the iOS build profile (simulator until an Apple Developer account exists).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ios_profile:
+        description: EAS build profile (production needs an Apple Developer account)
+        type: choice
+        default: simulator
+        options: [simulator, production]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      app: ${{ steps.filter.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'functions/**'
+              - 'firebase.json'
+              - '.firebaserc'
+              - 'firestore.rules'
+              - 'firestore.indexes.json'
+            app:
+              - 'App.tsx'
+              - 'index.ts'
+              - 'src/**'
+              - 'assets/**'
+              - 'targets/**'
+              - 'app.json'
+              - 'eas.json'
+              - 'package.json'
+              - 'yarn.lock'
+
+  firebase:
+    needs: [ci, changes]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: functions/yarn.lock
+
+      - name: Install functions dependencies
+        working-directory: functions
+        run: yarn install --frozen-lockfile
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # The predeploy hook in firebase.json compiles functions with tsc.
+      # --force: don't block on prompts (e.g. deleting a removed function).
+      - name: Deploy functions + Firestore rules/indexes
+        run: npx --yes firebase-tools@latest deploy --only functions,firestore --project elpuls --non-interactive --force
+
+  ios:
+    needs: [ci, changes]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # Builds run on Expo's servers; --no-wait lets this job finish as soon
+      # as the build is queued. Track it at expo.dev.
+      - name: Start iOS build
+        run: eas build --platform ios --profile ${{ inputs.ios_profile || 'simulator' }} --non-interactive --no-wait

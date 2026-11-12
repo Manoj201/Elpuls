@@ -53,6 +53,28 @@ export const HEATING_PLAN_COPY: Record<ServerLanguage, (bankStart: string, bankE
     `Lagra värme ${bankStart}-${bankEnd}, låt den sjunka ${coastStart}-${coastEnd} under kvällstoppen.`,
 };
 
+export const PRICE_ALERT_HIGH_COPY: Record<ServerLanguage, (zone: string, peakOre: number, peakHourLabel: string) => { title: string; body: string }> = {
+  en: (zone, peakOre, peakHourLabel) => ({
+    title: 'Price spike tomorrow',
+    body: `${zone} peaks at ${peakOre} öre/kWh tomorrow at ${peakHourLabel} — above your alert threshold.`,
+  }),
+  sv: (zone, peakOre, peakHourLabel) => ({
+    title: 'Pristopp imorgon',
+    body: `${zone} toppar på ${peakOre} öre/kWh imorgon kl ${peakHourLabel} — över din varningsgräns.`,
+  }),
+};
+
+export const PRICE_ALERT_LOW_COPY: Record<ServerLanguage, (zone: string, cheapestHourLabel: string) => { title: string; body: string }> = {
+  en: (zone, cheapestHourLabel) => ({
+    title: 'Super-cheap prices tomorrow',
+    body: `${zone} has a negative or very low price tomorrow around ${cheapestHourLabel} — a great time to use electricity.`,
+  }),
+  sv: (zone, cheapestHourLabel) => ({
+    title: 'Superlåga priser imorgon',
+    body: `${zone} har ett negativt eller mycket lågt pris imorgon kring kl ${cheapestHourLabel} — ett bra läge att använda el.`,
+  }),
+};
+
 export const APPLIANCE_WINDOW_COPY: Record<ServerLanguage, (applianceLabel: string) => { title: string; body: string }> = {
   en: (applianceLabel) => ({
     title: 'Cheap window now',
