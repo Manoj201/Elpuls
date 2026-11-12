@@ -38,12 +38,14 @@ jobs:
         with:
           filters: |
             backend:
+              - '.github/workflows/**'
               - 'functions/**'
               - 'firebase.json'
               - '.firebaserc'
               - 'firestore.rules'
               - 'firestore.indexes.json'
             app:
+              - '.github/workflows/**'
               - 'App.tsx'
               - 'index.ts'
               - 'src/**'
