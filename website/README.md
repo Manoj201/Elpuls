@@ -20,12 +20,9 @@ Outputs a fully static site to `dist/` — plain HTML/CSS/JS, no server required
 
 ## Deployment (Vercel)
 
-Deployed by `.github/workflows/website.yml` using the Vercel CLI. Settings live in `vercel.json` (Vite,
-yarn, `dist/`, SPA rewrite so `/privacy` works on refresh). Vercel's own Git auto-deploy is disabled there,
-so GitHub Actions is the only thing that deploys: every push to `main` deploys to production.
-
-The Vercel project's Root Directory is `website` (set in the dashboard); the workflow runs the CLI from the
-repo root. Repo secrets required: `VERCEL_TOKEN`, `VERCEL_ORG_ID` (Team ID), `VERCEL_PROJECT_ID`.
+Deployed by Vercel's GitHub integration (no GitHub Actions workflow): every push to `main` deploys to
+production, other branches get preview deploys. The Vercel project's Root Directory is `website`. Build
+settings live in `vercel.json` (Vite, yarn, `dist/`, SPA rewrite so `/privacy` works on refresh).
 
 ## Before going live
 
