@@ -13,6 +13,9 @@
       "appleTeamId": "WJAVTP2LM7",
       "entitlements": {
         "com.apple.security.application-groups": ["group.se.elpuls.app"]
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
