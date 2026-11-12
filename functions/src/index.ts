@@ -9,3 +9,4 @@ export { scanAppliancePhoto } from './scanAppliancePhoto';
 export { scanElectricityBill } from './scanElectricityBill';
 export { fireDueApplianceNotifications } from './applianceNotifications';
 export { sendDailyBriefings } from './dailyBriefing';
+export { deleteMyAccount } from './deleteAccount';

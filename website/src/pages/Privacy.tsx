@@ -90,7 +90,7 @@ export function Privacy() {
             </li>
           ))}
         </ul>
-        <p className={styles.placeholder}>{t("privacy.retention.note")}</p>
+        <p>{t("privacy.retention.note")}</p>
 
         <h2>{t("privacy.rights.heading")}</h2>
         <p>{t("privacy.rights.intro")}</p>
@@ -111,7 +111,6 @@ export function Privacy() {
 
         <h2>{t("privacy.transfers.heading")}</h2>
         <p>{t("privacy.transfers.body")}</p>
-        <p className={styles.placeholder}>{t("privacy.transfers.note")}</p>
 
         <h2>{t("privacy.changes.heading")}</h2>
         <p>{t("privacy.changes.body")}</p>

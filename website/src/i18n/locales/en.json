@@ -149,7 +149,7 @@
         { "label": "Push token", "body": "kept while notifications are enabled; removed when you disable them or stop using the app." },
         { "label": "Price and weather data", "body": "aggregate, zone-level, not personal — kept indefinitely to power the app." }
       ],
-      "note": "Open gap to fix before publishing: add a self-serve \"delete my account\" action in the app, or clearly state the contact address for deletion requests — GDPR's right to erasure requires an actual way to exercise it."
+      "note": "You can delete your account and all your data at any time from Settings → Account → Delete my account, in addition to contacting us at the address below."
     },
     "rights": {
       "heading": "Your Rights (GDPR)",
@@ -163,7 +163,7 @@
         { "label": "Lodge a complaint", "body": "with IMY (Integritetsskyddsmyndigheten), Sweden's data protection authority, at imy.se" }
       ],
       "note": "You can edit your zone, heating type, grid fee, and appliances directly in the app's Settings at any time. For anything else — including full account deletion — contact us at",
-      "emailPlaceholder": "privacy@elpuls.com (placeholder)"
+      "emailPlaceholder": "manoj.gam201@gmail.com"
     },
     "children": {
       "heading": "Children's Privacy",
@@ -171,17 +171,16 @@
     },
     "transfers": {
       "heading": "International Data Transfers",
-      "body": "Firebase/Google Cloud, Anthropic, RevenueCat, and Expo may process data on servers outside Sweden or the EU, including in the United States. Where that happens, these providers rely on safeguards such as Standard Contractual Clauses to meet GDPR's requirements for transfers outside the EU/EEA.",
-      "note": "This section is a placeholder — confirm each vendor's actual transfer mechanism before publishing."
+      "body": "Firestore, our database, is hosted in the EU (Google Cloud's \"eur3\" multi-region, Belgium/Netherlands), so your account and profile data stays within the EU. The Cloud Functions that process requests — including reading an appliance or bill photo you upload — run in Google Cloud's \"us-central1\" region in the United States, and Anthropic's Claude API processes that data on its standard infrastructure, which is primarily US-based. Expo, which delivers push notifications, participates in the EU-US Data Privacy Framework (DPF) for its US-side processing — though the final delivery always goes through Apple's or Google's own push services (APNs/FCM), which have their own data protection terms. RevenueCat's own subprocessors (AWS, Elastic, and Sentry) are based in the USA, and RevenueCat relies on Standard Contractual Clauses (EU Decision 2021/914) as its transfer safeguard."
     },
     "changes": {
       "heading": "Changes to This Policy",
-      "body": "If we change this policy in a meaningful way, we'll update the \"last updated\" date above and, for significant changes, notify you in the app. Continuing to use Elpuls after a change means you accept the updated policy."
+      "body": "If we change this policy in a meaningful way, we'll update the \"last updated\" date above and, for significant changes, note what changed at the top of this page. Continuing to use Elpuls after a change means you accept the updated policy."
     },
     "contact": {
       "heading": "Contact Us",
       "body": "Elpuls is developed and operated by an individual, not a registered company. {{name}}, trading as Elpuls, is the data controller for GDPR purposes.",
-      "emailPlaceholder": "privacy@elpuls.com — placeholder, set up once the domain is live",
+      "emailPlaceholder": "manoj.gam201@gmail.com",
       "note": "For any question about this policy or your data, or to request access, correction, or deletion, contact us at the address above."
     }
   }

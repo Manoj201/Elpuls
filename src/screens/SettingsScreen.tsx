@@ -27,6 +27,7 @@ interface SettingsScreenProps {
   onOpenApplianceScan: (editAppliance?: RegisteredAppliance) => void;
   onOpenBillScan: () => void;
   onDevReset: () => Promise<void>;
+  onAccountDeleted: () => Promise<void>;
 }
 
 function parsePositiveFloat(value: string): number | null {
@@ -34,7 +35,7 @@ function parsePositiveFloat(value: string): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDevReset }: SettingsScreenProps) {
+export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDevReset, onAccountDeleted }: SettingsScreenProps) {
   const { t } = useTranslation();
   const config = useCountryStore((s) => s.config);
   const setActiveZone = useCountryStore((s) => s.setZone);
@@ -93,6 +94,27 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
     } finally {
       setManagingSubscription(false);
     }
+  }
+
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+
+  async function performAccountDeletion() {
+    setDeletingAccount(true);
+    setDeleteAccountError(null);
+    try {
+      await onAccountDeleted();
+    } catch (err) {
+      setDeleteAccountError(err instanceof Error ? err.message : String(err));
+      setDeletingAccount(false);
+    }
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(t('settings.deleteAccountConfirmTitle'), t('settings.deleteAccountConfirmMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: performAccountDeletion },
+    ]);
   }
 
   const [zone, setZone] = useState(user.zone ?? config.zones[0]);
@@ -307,6 +329,23 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
         <LanguageSwitcher />
       </Section>
 
+      <Section title={t('settings.accountTitle')}>
+        <Card style={styles.devClearCard}>
+          <InfoRow
+            icon={IconTrash}
+            variant="danger"
+            title={t('settings.deleteAccountTitle')}
+            subtitle={user.isProSubscriber ? t('settings.deleteAccountSubtitlePro') : t('settings.deleteAccountSubtitle')}
+          />
+          <SecondaryButton
+            label={deletingAccount ? t('settings.saving') : t('settings.deleteAccountButton')}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount}
+          />
+          {deleteAccountError && <Text style={styles.error}>{deleteAccountError}</Text>}
+        </Card>
+      </Section>
+
       <PrimaryButton label={saving ? t('settings.saving') : t('settings.save')} onPress={handleSave} disabled={saving} />
       {savedAt !== null && <Text style={styles.savedHint}>{t('settings.saved')}</Text>}
     </ScrollView>
@@ -372,5 +411,10 @@ const styles = StyleSheet.create({
     color: theme.colors.positiveTealDeep,
     textAlign: 'center',
     marginTop: 10,
+  },
+  error: {
+    fontFamily: theme.typography.body,
+    fontSize: 13,
+    color: theme.colors.dangerEmber,
   },
 });

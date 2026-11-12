@@ -21,6 +21,7 @@ import { ScreenBackground } from './src/components/ScreenBackground';
 import { usePushRegistration } from './src/hooks/usePushRegistration';
 import { ensureAnonymousSignIn } from './src/lib/auth';
 import { clearLocalAppStorage } from './src/lib/devTools';
+import { deleteMyAccount } from './src/lib/account';
 import { db } from './src/lib/firebase';
 import { configurePurchases } from './src/lib/purchases';
 import { useCountryStore } from './src/stores/useCountryStore';
@@ -140,6 +141,18 @@ export default function App() {
     setInitAttempt((n) => n + 1);
   }
 
+  // Same reset shape as handleDevReset — once the account and its data are
+  // gone server-side, there's equally nothing left to show.
+  async function handleAccountDeleted() {
+    await deleteMyAccount();
+    setActiveUid(null);
+    setTab('overview');
+    setStackScreen(null);
+    setEditingAppliance(null);
+    setAppState('loading');
+    setInitAttempt((n) => n + 1);
+  }
+
   if (!spaceGroteskLoaded || !interLoaded || !i18nReady) {
     return <ScreenBackground />;
   }
@@ -229,6 +242,7 @@ export default function App() {
                 }}
                 onOpenBillScan={() => setStackScreen('billScan')}
                 onDevReset={handleDevReset}
+                onAccountDeleted={handleAccountDeleted}
               />
             )}
           </>
