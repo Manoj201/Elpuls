@@ -1,13 +1,17 @@
 name: Deploy to Production
 
-# Promotes a release candidate: tags release/<version> as v<version>,
-# creates a GitHub Release with auto-generated notes, then starts the
-# Deploy workflow on that release branch.
+# Releases a release candidate in one run:
+#   1. typecheck release/<version>
+#   2. tag v<version> + GitHub Release (skipped if the tag already exists,
+#      so running it again for the same version is a plain redeploy)
+#   3. deploy Firebase (functions + Firestore rules/indexes)
+#   4. start the EAS iOS build
+# If one deploy fails, use "Re-run failed jobs" on the run to retry just that part.
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release version to deploy (e.g. 1.2.0 — the release/1.2.0 branch)
+        description: Version to release (e.g. 1.2.0 — deploys the release/1.2.0 branch)
         type: string
         required: true
       ios_profile:
@@ -18,42 +22,111 @@ on:
 
 permissions:
   contents: write
-  actions: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
-  promote:
+  resolve:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      branch: ${{ steps.v.outputs.branch }}
     steps:
-      - name: Resolve version
+      - name: Resolve version and check the branch exists
         id: v
         run: |
           V="${{ inputs.version }}"
           V="${V#v}"; V="${V#release/}"
+          if ! echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::'$V' is not a valid x.y.z version"; exit 1
+          fi
+          if ! git ls-remote --exit-code --heads "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" "release/$V" >/dev/null; then
+            echo "::error::Branch release/$V doesn't exist. Run 'Create Release Candidate' first."; exit 1
+          fi
           echo "version=$V" >> "$GITHUB_OUTPUT"
           echo "branch=release/$V" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.v.outputs.branch }}
-          fetch-depth: 0
+  ci:
+    needs: resolve
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.resolve.outputs.branch }}
 
-      # Re-deploying an already-tagged version (e.g. a retry after a failed
-      # deploy) is allowed — the tag/release step is just skipped.
+  release:
+    needs: [resolve, ci]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      V: ${{ needs.resolve.outputs.version }}
+    steps:
       - name: Tag and create GitHub Release
         run: |
-          V="${{ steps.v.outputs.version }}"
-          if git ls-remote --exit-code --tags origin "refs/tags/v$V" >/dev/null; then
-            echo "Tag v$V already exists — redeploying without re-tagging."
+          if gh release view "v$V" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "v$V already released — redeploying without re-tagging."
           else
-            gh release create "v$V" --target "release/$V" --title "v$V" --generate-notes
+            gh release create "v$V" --repo "${{ github.repository }}" \
+              --target "release/$V" --title "v$V" --generate-notes
           fi
 
-      - name: Start Deploy workflow on the release branch
+  firebase:
+    needs: [resolve, release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.branch }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: functions/yarn.lock
+
+      - name: Install functions dependencies
+        working-directory: functions
+        run: yarn install --frozen-lockfile
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # The predeploy hook in firebase.json compiles functions with tsc.
+      # --force: don't block on prompts (e.g. deleting a removed function).
+      - name: Deploy functions + Firestore rules/indexes
+        run: npx --yes firebase-tools@latest deploy --only functions,firestore --project elpuls --non-interactive --force
+
+  ios:
+    needs: [resolve, release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.branch }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # Builds run on Expo's servers; --no-wait lets this job finish as soon
+      # as the build is queued. Track it at expo.dev.
+      - name: Start iOS build
+        run: eas build --platform ios --profile ${{ inputs.ios_profile }} --non-interactive --no-wait
+
+      - name: Summary
         run: |
-          gh workflow run deploy.yml \
-            --ref "${{ steps.v.outputs.branch }}" \
-            -f ios_profile="${{ inputs.ios_profile }}"
-          echo "### Deploying \`${{ steps.v.outputs.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "Follow the **Deploy** workflow run in the Actions tab." >> "$GITHUB_STEP_SUMMARY"
+          echo "### Released \`v${{ needs.resolve.outputs.version }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Firebase deployed from \`${{ needs.resolve.outputs.branch }}\`; iOS build queued — follow it on expo.dev." >> "$GITHUB_STEP_SUMMARY"

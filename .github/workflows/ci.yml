@@ -1,18 +1,25 @@
 name: CI
 
 # Type-checks the app and Cloud Functions on every PR and every push to
-# main / release branches (and is reused by Deploy before anything ships).
+# main / release branches (and is reused by Deploy to Production before anything ships).
 on:
   push:
     branches: [main, 'release/**']
   pull_request:
   workflow_call:
+    inputs:
+      ref:
+        description: Branch/ref to check (defaults to the triggering ref)
+        type: string
+        required: false
 
 jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: App — setup Node
         uses: actions/setup-node@v4
