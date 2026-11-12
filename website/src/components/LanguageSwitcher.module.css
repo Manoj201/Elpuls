@@ -1,0 +1,33 @@
+.switcher {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.option {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 11px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.option:hover {
+  color: var(--text-primary);
+}
+
+.active {
+  background: var(--purple);
+  color: var(--on-ink-button);
+}
+
+.active:hover {
+  color: var(--on-ink-button);
+}

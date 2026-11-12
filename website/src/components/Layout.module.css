@@ -31,6 +31,12 @@
   border-radius: 8px;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
 .nav {
   display: flex;
   gap: 28px;
@@ -76,7 +82,19 @@
   }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
+  .headerInner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px 0;
+    row-gap: 10px;
+  }
+
+  .headerRight {
+    width: 100%;
+    justify-content: center;
+  }
+
   .nav {
     gap: 12px;
     font-size: 13px;

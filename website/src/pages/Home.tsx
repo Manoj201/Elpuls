@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { PhoneMockup } from "../components/PhoneMockup";
 import { HeroPhoneSlider } from "../components/HeroPhoneSlider";
 import { GaugeGraphic } from "../components/GaugeGraphic";
@@ -35,26 +36,26 @@ function PlayIcon() {
 }
 
 export function Home() {
+  const { t } = useTranslation();
+  const featureItems = t("features.items", { returnObjects: true }) as { title: string; body: string }[];
+  const featureIcons = ["⚡", "🌦️", "✅", "🔔"] as const;
+  const proList = t("pro.list", { returnObjects: true }) as string[];
+
   return (
     <>
       <section className={styles.hero}>
         <div className={`container ${styles.heroGrid}`}>
           <div className={styles.heroText}>
             <h1 className={styles.heroTitle}>
-              Know when your electricity is <span>cheap</span>
+              {t("hero.titlePre")} <span>{t("hero.titleHighlight")}</span>
             </h1>
-            <p className={styles.heroSubtitle}>
-              Elpuls shows live Swedish spot prices, explains why they move
-              using weather data, and tells you when to run the dishwasher,
-              charge the car, or bank some heat. No hardware, no provider
-              switching.
-            </p>
+            <p className={styles.heroSubtitle}>{t("hero.subtitle")}</p>
             <div className={styles.heroActions}>
               <Link to="/#how-it-works" className="button button-primary">
-                See how it works
+                {t("hero.ctaPrimary")}
               </Link>
               <Link to="/#pro" className="button button-secondary">
-                Elpuls Pro
+                {t("hero.ctaSecondary")}
               </Link>
             </div>
           </div>
@@ -70,48 +71,16 @@ export function Home() {
 
       <section id="features" className={styles.section}>
         <div className="container">
-          <h2 className={styles.sectionHeading}>
-            Price, weather, and a reason why
-          </h2>
-          <p className={styles.sectionSubtitle}>
-            Every other price app shows you a number. Elpuls explains it, and
-            tells you what to do about it.
-          </p>
+          <h2 className={styles.sectionHeading}>{t("features.heading")}</h2>
+          <p className={styles.sectionSubtitle}>{t("features.subtitle")}</p>
           <div className={styles.featureGrid}>
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>⚡</div>
-              <div className={styles.featureTitle}>Live spot prices</div>
-              <div className={styles.featureBody}>
-                Today and tomorrow's prices for your zone (SE1–SE4), straight
-                from Nord Pool, with the cheapest and priciest hour highlighted.
+            {featureItems.map((item, i) => (
+              <div key={item.title} className={styles.featureCard}>
+                <div className={styles.featureIcon}>{featureIcons[i]}</div>
+                <div className={styles.featureTitle}>{item.title}</div>
+                <div className={styles.featureBody}>{item.body}</div>
               </div>
-            </div>
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>🌦️</div>
-              <div className={styles.featureTitle}>AI price explainer</div>
-              <div className={styles.featureBody}>
-                A plain-language reason why today's prices look the way they do,
-                linked to actual weather conditions in your zone.
-              </div>
-            </div>
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>✅</div>
-              <div className={styles.featureTitle}>
-                Cost check before you start
-              </div>
-              <div className={styles.featureBody}>
-                See the cost of running an appliance now versus waiting for the
-                next cheap window, before you turn it on.
-              </div>
-            </div>
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>🔔</div>
-              <div className={styles.featureTitle}>Alerts you set yourself</div>
-              <div className={styles.featureBody}>
-                Get notified when tomorrow's prices are published, when a price
-                spike crosses your threshold, or when prices go negative.
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -121,44 +90,24 @@ export function Home() {
           <div className={styles.proGrid}>
             <div>
               <h2 className={`${styles.sectionHeading} ${styles.proHeading}`}>
-                Elpuls Pro
+                {t("pro.heading")}
               </h2>
-              <p className={styles.proIntro}>
-                For households that want to actively save, not just glance at a
-                number.
-              </p>
+              <p className={styles.proIntro}>{t("pro.intro")}</p>
               <ul className={styles.proList}>
-                <li>
-                  <span className={styles.proCheck}>✓</span> AI price explainer,
-                  every day
-                </li>
-                <li>
-                  <span className={styles.proCheck}>✓</span> Solar bonus hours
-                  for your own panels
-                </li>
-                <li>
-                  <span className={styles.proCheck}>✓</span> Appliance
-                  recommendations for everything you own
-                </li>
-                <li>
-                  <span className={styles.proCheck}>✓</span> Heating plan — when
-                  to bank heat, when to let it drift
-                </li>
-                <li>
-                  <span className={styles.proCheck}>✓</span> Monthly cost
-                  breakdown and zone comparison
-                </li>
+                {proList.map((item) => (
+                  <li key={item}>
+                    <span className={styles.proCheck}>✓</span> {item}
+                  </li>
+                ))}
               </ul>
               <div className={styles.priceCard}>
                 <div className={styles.priceAmount}>39 kr</div>
-                <div className={styles.priceUnit}>/ month</div>
-                <p className={styles.priceTrial}>
-                  7-day free trial, cancel anytime.
-                </p>
+                <div className={styles.priceUnit}>{t("pro.priceUnit")}</div>
+                <p className={styles.priceTrial}>{t("pro.priceTrial")}</p>
               </div>
             </div>
             <div className={styles.proVisual}>
-              <PhoneMockup label="Overview" src="/screenshots/overview.png" />
+              <PhoneMockup label={t("pro.screenshotLabel")} src="/screenshots/overview.png" />
             </div>
           </div>
         </div>
@@ -167,18 +116,16 @@ export function Home() {
       <section className={styles.ctaSection}>
         <div className="container">
           <GaugeGraphic />
-          <h2 className={styles.sectionHeading}>Launching soon in Sweden</h2>
-          <p className={styles.sectionSubtitle}>
-            Elpuls isn't live in the App Store or Play Store yet.
-          </p>
+          <h2 className={styles.sectionHeading}>{t("cta.heading")}</h2>
+          <p className={styles.sectionSubtitle}>{t("cta.subtitle")}</p>
           <div className={styles.ctaBadges}>
             <span className={styles.badge}>
               <AppleIcon />
-              App Store — coming soon
+              {t("cta.appStore")}
             </span>
             <span className={styles.badge}>
               <PlayIcon />
-              Google Play — coming soon
+              {t("cta.googlePlay")}
             </span>
           </div>
         </div>

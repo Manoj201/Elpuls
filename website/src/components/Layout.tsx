@@ -1,9 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ScrollToHash } from './ScrollToHash';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import styles from './Layout.module.css';
 
 export function Layout({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+
   return (
     <>
       <ScrollToHash />
@@ -14,11 +18,14 @@ export function Layout({ children }: { children: ReactNode }) {
             <img src="/icon.png" alt="" className={styles.logoIcon} />
             Elpuls
           </Link>
-          <nav className={styles.nav}>
-            <Link to="/#features">Features</Link>
-            <Link to="/#pro">Pro</Link>
-            <Link to="/privacy">Privacy</Link>
-          </nav>
+          <div className={styles.headerRight}>
+            <nav className={styles.nav}>
+              <Link to="/#features">{t('nav.features')}</Link>
+              <Link to="/#pro">{t('nav.pro')}</Link>
+              <Link to="/privacy">{t('nav.privacy')}</Link>
+            </nav>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -28,7 +35,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className={`container ${styles.footerInner}`}>
           <span>&copy; {new Date().getFullYear()} Elpuls</span>
           <div className={styles.footerLinks}>
-            <Link to="/privacy">Privacy Policy</Link>
+            <Link to="/privacy">{t('footer.privacyPolicy')}</Link>
           </div>
         </div>
       </footer>

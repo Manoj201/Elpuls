@@ -1,0 +1,188 @@
+{
+  "nav": {
+    "features": "Features",
+    "pro": "Pro",
+    "privacy": "Privacy"
+  },
+  "hero": {
+    "titlePre": "Know when your electricity is",
+    "titleHighlight": "cheap",
+    "subtitle": "Elpuls shows live Swedish spot prices, explains why they move using weather data, and tells you when to run the dishwasher, charge the car, or bank some heat. No hardware, no provider switching.",
+    "ctaPrimary": "See how it works",
+    "ctaSecondary": "Elpuls Pro"
+  },
+  "howItWorks": {
+    "heading": "How it works",
+    "subtitle": "Price and weather data flow in, Claude explains it, you act on it.",
+    "steps": [
+      {
+        "title": "Live spot price",
+        "body": "elprisetjustnu.se (Nord Pool) for prices, SMHI for weather — fetched automatically for your zone."
+      },
+      {
+        "title": "AI explains it",
+        "body": "Claude reads the price and weather together and writes a plain-language reason why today looks the way it does."
+      },
+      {
+        "title": "You decide",
+        "body": "You see the price, the reason, and the best window — and act on it yourself. Elpuls never controls anything."
+      }
+    ]
+  },
+  "benefits": {
+    "heading": "Why Elpuls",
+    "subtitle": "Every other price app shows a number. Elpuls turns it into money saved.",
+    "items": [
+      {
+        "title": "Save real money",
+        "body": "See the exact cost before you run anything — not just a vague tip to \"use power off-peak.\""
+      },
+      {
+        "title": "No hardware, no switching",
+        "body": "Works with any electricity contract and any appliance you already own. No smart plugs, no new retailer."
+      },
+      {
+        "title": "Understand why, not just what",
+        "body": "A plain-language reason behind every price swing, linked to real weather — not just a raw number."
+      },
+      {
+        "title": "Alerts on your terms",
+        "body": "Set your own price-spike threshold and get notified about the prices that actually matter to you."
+      }
+    ]
+  },
+  "features": {
+    "heading": "Price, weather, and a reason why",
+    "subtitle": "Every other price app shows you a number. Elpuls explains it, and tells you what to do about it.",
+    "items": [
+      {
+        "title": "Live spot prices",
+        "body": "Today and tomorrow's prices for your zone (SE1–SE4), straight from Nord Pool, with the cheapest and priciest hour highlighted."
+      },
+      {
+        "title": "AI price explainer",
+        "body": "A plain-language reason why today's prices look the way they do, linked to actual weather conditions in your zone."
+      },
+      {
+        "title": "Cost check before you start",
+        "body": "See the cost of running an appliance now versus waiting for the next cheap window, before you turn it on."
+      },
+      {
+        "title": "Alerts you set yourself",
+        "body": "Get notified when tomorrow's prices are published, when a price spike crosses your threshold, or when prices go negative."
+      }
+    ]
+  },
+  "pro": {
+    "heading": "Elpuls Pro",
+    "intro": "For households that want to actively save, not just glance at a number.",
+    "list": [
+      "AI price explainer, every day",
+      "Solar bonus hours for your own panels",
+      "Appliance recommendations for everything you own",
+      "Heating plan — when to bank heat, when to let it drift",
+      "Monthly cost breakdown and zone comparison"
+    ],
+    "priceUnit": "/ month",
+    "priceTrial": "7-day free trial, cancel anytime.",
+    "screenshotLabel": "Overview"
+  },
+  "cta": {
+    "heading": "Launching soon in Sweden",
+    "subtitle": "Elpuls isn't live in the App Store or Play Store yet.",
+    "appStore": "App Store — coming soon",
+    "googlePlay": "Google Play — coming soon"
+  },
+  "footer": {
+    "privacyPolicy": "Privacy Policy"
+  },
+  "privacy": {
+    "title": "Elpuls Privacy Policy",
+    "updated": "Last updated: 2026-11-12",
+    "overview": {
+      "heading": "Overview",
+      "p1": "Elpuls (\"Elpuls\", \"we\", \"us\") is a mobile app for Swedish households that shows electricity spot prices, explains why they move using weather data, and suggests when to use electricity. Elpuls never controls or switches your electricity contract, and it never connects to or controls any smart-home device — all advice is informational, acted on manually by you.",
+      "p2": "This policy explains what personal data Elpuls collects, why, who it's shared with, how long it's kept, and the rights you have over it. It applies to the Elpuls mobile app and this website."
+    },
+    "dataWeCollect": {
+      "heading": "Data We Collect",
+      "tableHeaders": ["Data", "Collected when", "Required?"],
+      "rows": [
+        ["Anonymous account ID", "Always, automatically, on first app open", "Yes"],
+        ["Email + password", "Only if you choose to create an account instead of continuing anonymously", "No"],
+        ["Price zone, heating type, EV/solar flags, grid fee figures", "Onboarding or Settings", "No, but needed for personalized advice"],
+        ["Estimated monthly usage, price-alert thresholds, language", "Settings, optional", "No"],
+        ["Appliance rating-label photo, electricity bill photo/PDF", "Only if you choose to scan one", "No, you can enter values manually instead"],
+        ["Push notification token", "Only if you enable notifications", "No"],
+        ["Subscription/trial status", "When you start a Pro trial or subscribe", "No"]
+      ],
+      "note": "We don't collect precise location, contacts, photos beyond what you deliberately upload to scan, or any data from your device beyond what's listed above."
+    },
+    "howWeUse": {
+      "heading": "How We Use Your Data",
+      "items": [
+        "Personalize the price explainer, solar bonus hours, heating plan, weather-prep tips, and appliance cost recommendations to your zone and home profile",
+        "Send the push notifications you've opted into (tomorrow's prices published, your price-alert thresholds, daily briefing, appliance-window reminders)",
+        "Read an appliance or bill photo you upload once, to fill in a value for you to confirm or edit — never saved automatically",
+        "Manage your Pro subscription and free trial status",
+        "Diagnose bugs and keep the app running reliably"
+      ],
+      "note": "Elpuls does not sell your personal data, and does not show third-party advertising."
+    },
+    "thirdParties": {
+      "heading": "Third Parties We Share Data With",
+      "tableHeaders": ["Service", "What it receives", "Why"],
+      "rows": [
+        ["Firebase / Google Cloud", "Account ID, profile data, push token", "Authentication, database, serverless backend, diagnostics"],
+        ["Anthropic (Claude API)", "An appliance or bill photo/PDF, only when you choose to scan one", "Reads the label/line items; processed for that one request, not stored by Elpuls afterward"],
+        ["RevenueCat", "Account ID, subscription/entitlement status", "Manages your Pro subscription and trial"],
+        ["Expo", "Push notification token", "Delivers push notifications to your device"],
+        ["elprisetjustnu.se (Nord Pool) / SMHI", "Nothing personal — Elpuls only reads their public price and weather data", "Powers the price and weather features for everyone"]
+      ],
+      "note": "Confirm each vendor's actual Data Processing Agreement before publishing this policy."
+    },
+    "retention": {
+      "heading": "Data Retention",
+      "items": [
+        { "label": "Appliance and bill photos/PDFs", "body": "processed in memory for a single request and discarded immediately after — never written to any storage." },
+        { "label": "Account and profile data", "body": "kept while your account exists." },
+        { "label": "Push token", "body": "kept while notifications are enabled; removed when you disable them or stop using the app." },
+        { "label": "Price and weather data", "body": "aggregate, zone-level, not personal — kept indefinitely to power the app." }
+      ],
+      "note": "Open gap to fix before publishing: add a self-serve \"delete my account\" action in the app, or clearly state the contact address for deletion requests — GDPR's right to erasure requires an actual way to exercise it."
+    },
+    "rights": {
+      "heading": "Your Rights (GDPR)",
+      "intro": "As an EU/Swedish user, you have the right to:",
+      "items": [
+        { "label": "Access", "body": "the personal data we hold about you" },
+        { "label": "Correct", "body": "inaccurate data" },
+        { "label": "Erase", "body": "your data (\"right to be forgotten\")" },
+        { "label": "Export", "body": "your data in a portable format" },
+        { "label": "Object to or restrict", "body": "certain processing" },
+        { "label": "Lodge a complaint", "body": "with IMY (Integritetsskyddsmyndigheten), Sweden's data protection authority, at imy.se" }
+      ],
+      "note": "You can edit your zone, heating type, grid fee, and appliances directly in the app's Settings at any time. For anything else — including full account deletion — contact us at",
+      "emailPlaceholder": "privacy@elpuls.com (placeholder)"
+    },
+    "children": {
+      "heading": "Children's Privacy",
+      "body": "Elpuls is for adults only. You must be 18 or older to create an account and use the app. We do not knowingly collect personal data from anyone under 18. If we learn that a user is under 18, we will close their account and delete their data."
+    },
+    "transfers": {
+      "heading": "International Data Transfers",
+      "body": "Firebase/Google Cloud, Anthropic, RevenueCat, and Expo may process data on servers outside Sweden or the EU, including in the United States. Where that happens, these providers rely on safeguards such as Standard Contractual Clauses to meet GDPR's requirements for transfers outside the EU/EEA.",
+      "note": "This section is a placeholder — confirm each vendor's actual transfer mechanism before publishing."
+    },
+    "changes": {
+      "heading": "Changes to This Policy",
+      "body": "If we change this policy in a meaningful way, we'll update the \"last updated\" date above and, for significant changes, notify you in the app. Continuing to use Elpuls after a change means you accept the updated policy."
+    },
+    "contact": {
+      "heading": "Contact Us",
+      "body": "Elpuls is developed and operated by an individual, not a registered company. {{name}}, trading as Elpuls, is the data controller for GDPR purposes.",
+      "emailPlaceholder": "privacy@elpuls.com — placeholder, set up once the domain is live",
+      "note": "For any question about this policy or your data, or to request access, correction, or deletion, contact us at the address above."
+    }
+  }
+}

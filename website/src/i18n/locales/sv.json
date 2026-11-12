@@ -1,0 +1,188 @@
+{
+  "nav": {
+    "features": "Funktioner",
+    "pro": "Pro",
+    "privacy": "Integritet"
+  },
+  "hero": {
+    "titlePre": "Vet när elen är",
+    "titleHighlight": "billig",
+    "subtitle": "Elpuls visar Nord Pool-spotpriser i realtid, förklarar varför de ändras med hjälp av väderdata, och säger till när du ska köra diskmaskinen, ladda bilen eller lagra lite värme. Ingen hårdvara, inget byte av elbolag.",
+    "ctaPrimary": "Se hur det fungerar",
+    "ctaSecondary": "Elpuls Pro"
+  },
+  "howItWorks": {
+    "heading": "Så fungerar det",
+    "subtitle": "Pris- och väderdata strömmar in, Claude förklarar det, du agerar på det.",
+    "steps": [
+      {
+        "title": "Live spotpris",
+        "body": "elprisetjustnu.se (Nord Pool) för priser, SMHI för väder — hämtas automatiskt för ditt elområde."
+      },
+      {
+        "title": "AI förklarar det",
+        "body": "Claude läser priset och vädret tillsammans och skriver en lättbegriplig förklaring till varför dagen ser ut som den gör."
+      },
+      {
+        "title": "Du bestämmer",
+        "body": "Du ser priset, anledningen och det bästa tillfället — och agerar själv. Elpuls styr aldrig något."
+      }
+    ]
+  },
+  "benefits": {
+    "heading": "Varför Elpuls",
+    "subtitle": "Alla andra prisappar visar en siffra. Elpuls gör den till pengar sparade.",
+    "items": [
+      {
+        "title": "Spara riktiga pengar",
+        "body": "Se den exakta kostnaden innan du kör något — inte bara ett vagt tips om att \"använda el utanför toppen\"."
+      },
+      {
+        "title": "Ingen hårdvara, inget byte",
+        "body": "Fungerar med vilket elavtal och vilken apparat du redan äger som helst. Inga smarta kontakter, inget nytt elbolag."
+      },
+      {
+        "title": "Förstå varför, inte bara vad",
+        "body": "En lättbegriplig förklaring bakom varje prissvängning, kopplad till verkligt väder — inte bara en rå siffra."
+      },
+      {
+        "title": "Varningar på dina villkor",
+        "body": "Ställ in din egen pristoppgräns och få en notis om de priser som faktiskt spelar roll för dig."
+      }
+    ]
+  },
+  "features": {
+    "heading": "Pris, väder och en anledning varför",
+    "subtitle": "Alla andra prisappar visar bara en siffra. Elpuls förklarar den, och säger vad du ska göra åt det.",
+    "items": [
+      {
+        "title": "Livepriser",
+        "body": "Dagens och morgondagens priser för ditt elområde (SE1–SE4), direkt från Nord Pool, med den billigaste och dyraste timmen markerad."
+      },
+      {
+        "title": "AI-prisförklaring",
+        "body": "En lättbegriplig anledning till varför dagens priser ser ut som de gör, kopplad till faktiska väderförhållanden i ditt område."
+      },
+      {
+        "title": "Kostnadskoll innan du startar",
+        "body": "Se kostnaden för att köra en apparat nu jämfört med att vänta på nästa billiga tillfälle, innan du startar den."
+      },
+      {
+        "title": "Varningar du själv ställer in",
+        "body": "Få en notis när morgondagens priser publiceras, när ett pristopp passerar din gräns, eller när priserna blir negativa."
+      }
+    ]
+  },
+  "pro": {
+    "heading": "Elpuls Pro",
+    "intro": "För hushåll som vill spara aktivt, inte bara kasta ett öga på en siffra.",
+    "list": [
+      "AI-prisförklaring, varje dag",
+      "Solbonus-timmar för dina egna paneler",
+      "Apparatrekommendationer för allt du äger",
+      "Värmeplan — när du ska lagra värme, när du kan låta den sjunka",
+      "Månatlig kostnadsspecifikation och elområdesjämförelse"
+    ],
+    "priceUnit": "/ månad",
+    "priceTrial": "7 dagars gratis provperiod, avsluta när som helst.",
+    "screenshotLabel": "Översikt"
+  },
+  "cta": {
+    "heading": "Lanseras snart i Sverige",
+    "subtitle": "Elpuls finns inte i App Store eller Play Store än.",
+    "appStore": "App Store — kommer snart",
+    "googlePlay": "Google Play — kommer snart"
+  },
+  "footer": {
+    "privacyPolicy": "Integritetspolicy"
+  },
+  "privacy": {
+    "title": "Elpuls integritetspolicy",
+    "updated": "Senast uppdaterad: 2026-11-12",
+    "overview": {
+      "heading": "Översikt",
+      "p1": "Elpuls (\"Elpuls\", \"vi\", \"oss\") är en mobilapp för svenska hushåll som visar elpriser, förklarar varför de ändras med hjälp av väderdata, och föreslår när du ska använda el. Elpuls styr eller byter aldrig ditt elavtal, och ansluter eller styr aldrig någon smart hemenhet — alla råd är informativa och du agerar själv på dem manuellt.",
+      "p2": "Den här policyn förklarar vilka personuppgifter Elpuls samlar in, varför, vem de delas med, hur länge de sparas, och vilka rättigheter du har över dem. Den gäller Elpuls mobilapp och den här webbplatsen."
+    },
+    "dataWeCollect": {
+      "heading": "Uppgifter vi samlar in",
+      "tableHeaders": ["Uppgift", "Samlas in när", "Krävs?"],
+      "rows": [
+        ["Anonymt konto-ID", "Alltid, automatiskt, vid första appstart", "Ja"],
+        ["E-post + lösenord", "Endast om du väljer att skapa ett konto istället för att fortsätta anonymt", "Nej"],
+        ["Elområde, uppvärmningstyp, elbil/solceller-flaggor, nätavgiftssiffror", "Onboarding eller Inställningar", "Nej, men behövs för personliga råd"],
+        ["Uppskattad månadsförbrukning, prisvarningsgränser, språk", "Inställningar, valfritt", "Nej"],
+        ["Foto på apparatens märkplåt, foto/PDF av elräkning", "Endast om du väljer att skanna en", "Nej, du kan ange uppgifterna manuellt istället"],
+        ["Pushnotistoken", "Endast om du aktiverar notiser", "Nej"],
+        ["Prenumerations-/provstatus", "När du startar en Pro-provperiod eller prenumererar", "Nej"]
+      ],
+      "note": "Vi samlar inte in exakt plats, kontakter, foton utöver det du medvetet laddar upp för att skanna, eller någon data från din enhet utöver det som listas ovan."
+    },
+    "howWeUse": {
+      "heading": "Hur vi använder dina uppgifter",
+      "items": [
+        "Anpassar prisförklaringen, solbonus-timmar, värmeplanen, vädertips och apparatrekommendationer till ditt elområde och din hemprofil",
+        "Skickar de pushnotiser du har valt (morgondagens priser publicerade, dina prisvarningsgränser, daglig briefing, påminnelser om apparatfönster)",
+        "Läser en apparat- eller elräkningsbild du laddar upp en gång, för att fylla i ett värde du bekräftar eller redigerar — sparas aldrig automatiskt",
+        "Hanterar din Pro-prenumeration och gratis provperiod",
+        "Felsöker buggar och håller appen igång tillförlitligt"
+      ],
+      "note": "Elpuls säljer inte dina personuppgifter, och visar ingen tredjepartsreklam."
+    },
+    "thirdParties": {
+      "heading": "Tredje parter vi delar uppgifter med",
+      "tableHeaders": ["Tjänst", "Vad den tar emot", "Varför"],
+      "rows": [
+        ["Firebase / Google Cloud", "Konto-ID, profildata, pushtoken", "Autentisering, databas, serverlös backend, diagnostik"],
+        ["Anthropic (Claude API)", "En apparat- eller elräkningsbild/PDF, endast när du väljer att skanna en", "Läser märkplåten/radposterna; behandlas för just den förfrågan, sparas inte av Elpuls efteråt"],
+        ["RevenueCat", "Konto-ID, prenumerations-/rättighetsstatus", "Hanterar din Pro-prenumeration och provperiod"],
+        ["Expo", "Pushnotistoken", "Levererar pushnotiser till din enhet"],
+        ["elprisetjustnu.se (Nord Pool) / SMHI", "Inget personligt — Elpuls läser bara deras publika pris- och väderdata", "Driver pris- och väderfunktionerna för alla"]
+      ],
+      "note": "Bekräfta varje leverantörs faktiska personuppgiftsbiträdesavtal innan den här policyn publiceras."
+    },
+    "retention": {
+      "heading": "Lagring av uppgifter",
+      "items": [
+        { "label": "Apparat- och elräkningsbilder/PDF:er", "body": "behandlas i minnet för en enda förfrågan och kasseras omedelbart efteråt — sparas aldrig i någon lagring." },
+        { "label": "Konto- och profildata", "body": "sparas så länge ditt konto finns." },
+        { "label": "Pushtoken", "body": "sparas så länge notiser är aktiverade; tas bort när du inaktiverar dem eller slutar använda appen." },
+        { "label": "Pris- och väderdata", "body": "aggregerad, på elområdesnivå, inte personlig — sparas på obestämd tid för att driva appen." }
+      ],
+      "note": "Öppen lucka att åtgärda innan publicering: lägg till en självbetjänad \"radera mitt konto\"-funktion i appen, eller ange tydligt kontaktadressen för raderingsförfrågningar — GDPR:s rätt till radering kräver ett faktiskt sätt att utöva den."
+    },
+    "rights": {
+      "heading": "Dina rättigheter (GDPR)",
+      "intro": "Som EU/svensk användare har du rätt att:",
+      "items": [
+        { "label": "Få tillgång till", "body": "de personuppgifter vi har om dig" },
+        { "label": "Rätta", "body": "felaktiga uppgifter" },
+        { "label": "Radera", "body": "dina uppgifter (\"rätten att bli bortglömd\")" },
+        { "label": "Exportera", "body": "dina uppgifter i ett portabelt format" },
+        { "label": "Invända mot eller begränsa", "body": "viss behandling" },
+        { "label": "Lämna in ett klagomål", "body": "till IMY (Integritetsskyddsmyndigheten), Sveriges dataskyddsmyndighet, på imy.se" }
+      ],
+      "note": "Du kan redigera ditt elområde, uppvärmningstyp, nätavgift och apparater direkt i appens Inställningar när som helst. För allt annat — inklusive fullständig kontoradering — kontakta oss på",
+      "emailPlaceholder": "privacy@elpuls.com (platshållare)"
+    },
+    "children": {
+      "heading": "Barns integritet",
+      "body": "Elpuls är endast för vuxna. Du måste vara 18 år eller äldre för att skapa ett konto och använda appen. Vi samlar inte medvetet in personuppgifter från någon under 18 år. Om vi upptäcker att en användare är under 18 år stänger vi deras konto och raderar deras uppgifter."
+    },
+    "transfers": {
+      "heading": "Internationella dataöverföringar",
+      "body": "Firebase/Google Cloud, Anthropic, RevenueCat och Expo kan behandla data på servrar utanför Sverige eller EU, inklusive i USA. När det sker förlitar sig dessa leverantörer på skyddsåtgärder som standardavtalsklausuler för att uppfylla GDPR:s krav för överföringar utanför EU/EES.",
+      "note": "Det här avsnittet är en platshållare — bekräfta varje leverantörs faktiska överföringsmekanism innan publicering."
+    },
+    "changes": {
+      "heading": "Ändringar av denna policy",
+      "body": "Om vi ändrar den här policyn på ett betydande sätt uppdaterar vi datumet \"senast uppdaterad\" ovan och meddelar dig i appen vid viktiga ändringar. Att fortsätta använda Elpuls efter en ändring innebär att du godkänner den uppdaterade policyn."
+    },
+    "contact": {
+      "heading": "Kontakta oss",
+      "body": "Elpuls utvecklas och drivs av en privatperson, inte ett registrerat företag. {{name}}, som driver verksamheten under namnet Elpuls, är personuppgiftsansvarig enligt GDPR.",
+      "emailPlaceholder": "privacy@elpuls.com — platshållare, sätts upp när domänen är live",
+      "note": "Vid frågor om den här policyn eller dina uppgifter, eller för att begära tillgång, rättelse eller radering, kontakta oss på adressen ovan."
+    }
+  }
+}
