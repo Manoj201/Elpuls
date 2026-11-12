@@ -1,5 +1,6 @@
 {
   "common": {
+    "saveErrorTitle": "Kunde inte spara din profil",
     "cheapest": "Billigast",
     "priciest": "Dyrast",
     "yes": "Ja",

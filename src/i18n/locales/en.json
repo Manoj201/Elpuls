@@ -1,5 +1,6 @@
 {
   "common": {
+    "saveErrorTitle": "Couldn't save your profile",
     "cheapest": "Cheapest",
     "priciest": "Priciest",
     "yes": "Yes",

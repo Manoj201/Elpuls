@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -79,7 +79,19 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
       gridFeeVariableSekPerKwh: gridFeeVariableOre === null ? null : gridFeeVariableOre / 100,
     };
 
-    await setDoc(doc(db, 'users', uid), { ...info, onboardedAt: serverTimestamp() }, { merge: true });
+    try {
+      // setDoc waits for the server to confirm the write — if Firestore can't
+      // be reached it never settles, so cap it instead of hanging forever.
+      await Promise.race([
+        setDoc(doc(db, 'users', uid), { ...info, onboardedAt: serverTimestamp() }, { merge: true }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out saving profile (15s)')), 15000)),
+      ]);
+    } catch (err) {
+      console.error('Onboarding save failed:', err);
+      setSaving(false);
+      Alert.alert(t('common.saveErrorTitle'), err instanceof Error ? err.message : String(err));
+      return;
+    }
     setOnboardingInfo(info);
     setActiveZone(info.zone);
     onDone();
