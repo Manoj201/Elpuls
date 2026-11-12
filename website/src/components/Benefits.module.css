@@ -1,0 +1,75 @@
+.section {
+  padding: 64px 0;
+}
+
+.heading {
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  max-width: 480px;
+  margin: 0 auto 48px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 28px;
+}
+
+.card {
+  text-align: center;
+}
+
+.node {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: benefitPulse 3.6s infinite;
+}
+
+.icon {
+  font-size: 26px;
+}
+
+@keyframes benefitPulse {
+  0%,
+  100% {
+    box-shadow: none;
+    border-color: var(--border);
+    transform: scale(1);
+  }
+  6% {
+    box-shadow: 0 0 0 10px rgba(45, 212, 191, 0.12), 0 0 24px rgba(45, 212, 191, 0.4);
+    border-color: var(--teal);
+    transform: scale(1.06);
+  }
+  25% {
+    box-shadow: none;
+    border-color: var(--border);
+    transform: scale(1);
+  }
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}

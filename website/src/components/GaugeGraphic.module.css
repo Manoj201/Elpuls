@@ -1,0 +1,21 @@
+.gauge {
+  width: 220px;
+  height: auto;
+  display: block;
+  margin: 0 auto 28px;
+  filter: drop-shadow(0 0 24px rgba(124, 92, 255, 0.25));
+}
+
+.needle {
+  transform-origin: 100px 100px;
+  animation: sweep 4s ease-in-out infinite alternate;
+}
+
+@keyframes sweep {
+  0% {
+    transform: rotate(-55deg);
+  }
+  100% {
+    transform: rotate(45deg);
+  }
+}

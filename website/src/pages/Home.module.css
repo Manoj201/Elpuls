@@ -1,0 +1,246 @@
+.hero {
+  padding: 96px 0 64px;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.heroTitle {
+  font-size: 46px;
+  line-height: 1.1;
+  margin: 0 0 20px;
+}
+
+.heroTitle span {
+  color: var(--purple);
+}
+
+.heroSubtitle {
+  font-size: 18px;
+  color: var(--text-secondary);
+  max-width: 480px;
+  margin: 0 0 32px;
+}
+
+.heroActions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.heroPhoneCol {
+  display: flex;
+  justify-content: center;
+}
+
+.section {
+  padding: 64px 0;
+}
+
+.sectionHeading {
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.sectionSubtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  max-width: 540px;
+  margin: 0 auto 48px;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+}
+
+.featureCard {
+  background: var(--surface);
+  border: 1px solid var(--border-muted);
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.featureIcon {
+  font-size: 24px;
+  margin-bottom: 14px;
+}
+
+.featureTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.featureBody {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.proSection {
+  background: var(--purple-soft);
+  border-radius: 28px;
+}
+
+.proGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.proHeading {
+  text-align: left;
+}
+
+.proIntro {
+  color: var(--text-secondary);
+}
+
+.proList {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.proList li {
+  display: flex;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.proCheck {
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.proVisual {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.priceCard {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 28px;
+}
+
+.priceAmount {
+  font-size: 40px;
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+
+.priceUnit {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.priceTrial {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.ctaSection {
+  text-align: center;
+  padding: 80px 0;
+}
+
+.ctaBadges {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 760px) {
+  .heroGrid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .heroTitle {
+    font-size: 34px;
+  }
+
+  .heroSubtitle {
+    margin: 0 auto 32px;
+  }
+
+  .heroActions {
+    justify-content: center;
+  }
+
+  .heroPhoneCol {
+    margin-top: 36px;
+  }
+
+  .proGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .proHeading {
+    text-align: center;
+  }
+
+  .proIntro {
+    text-align: center;
+  }
+
+  .proList {
+    align-items: center;
+  }
+
+  .priceCard {
+    margin: 28px auto 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .heroTitle {
+    font-size: 28px;
+  }
+
+  .heroSubtitle {
+    font-size: 16px;
+  }
+
+  .sectionHeading {
+    font-size: 26px;
+  }
+
+  .priceAmount {
+    font-size: 34px;
+  }
+}
