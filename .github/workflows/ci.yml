@@ -1,8 +1,10 @@
 name: CI
 
-# Type-checks the app and Cloud Functions on every PR (and is reused by the
-# deploy workflow before anything ships).
+# Type-checks the app and Cloud Functions on every PR and every push to
+# main / release branches (and is reused by Deploy before anything ships).
 on:
+  push:
+    branches: [main, 'release/**']
   pull_request:
   workflow_call:
 

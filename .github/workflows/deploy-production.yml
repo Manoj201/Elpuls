@@ -1,0 +1,59 @@
+name: Deploy to Production
+
+# Promotes a release candidate: tags release/<version> as v<version>,
+# creates a GitHub Release with auto-generated notes, then starts the
+# Deploy workflow on that release branch.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version to deploy (e.g. 1.2.0 — the release/1.2.0 branch)
+        type: string
+        required: true
+      ios_profile:
+        description: EAS build profile (production needs an Apple Developer account)
+        type: choice
+        default: simulator
+        options: [simulator, production]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Resolve version
+        id: v
+        run: |
+          V="${{ inputs.version }}"
+          V="${V#v}"; V="${V#release/}"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "branch=release/$V" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.v.outputs.branch }}
+          fetch-depth: 0
+
+      # Re-deploying an already-tagged version (e.g. a retry after a failed
+      # deploy) is allowed — the tag/release step is just skipped.
+      - name: Tag and create GitHub Release
+        run: |
+          V="${{ steps.v.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$V" >/dev/null; then
+            echo "Tag v$V already exists — redeploying without re-tagging."
+          else
+            gh release create "v$V" --target "release/$V" --title "v$V" --generate-notes
+          fi
+
+      - name: Start Deploy workflow on the release branch
+        run: |
+          gh workflow run deploy.yml \
+            --ref "${{ steps.v.outputs.branch }}" \
+            -f ios_profile="${{ inputs.ios_profile }}"
+          echo "### Deploying \`${{ steps.v.outputs.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Follow the **Deploy** workflow run in the Actions tab." >> "$GITHUB_STEP_SUMMARY"

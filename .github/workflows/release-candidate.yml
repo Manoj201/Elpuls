@@ -1,0 +1,90 @@
+name: Create Release Candidate
+
+# Cuts release/<version> from a base branch (main for normal releases, an
+# existing release/* branch for hotfixes), bumps the version in package.json
+# and app.json, and pushes the new branch. Deploy it with "Deploy to Production".
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump (ignored if an exact version is given)
+        type: choice
+        default: minor
+        options: [patch, minor, major]
+      version:
+        description: Exact version instead (e.g. 1.2.0) — optional
+        type: string
+        required: false
+      base:
+        description: Branch to cut from (main, or release/x.y.z for a hotfix)
+        type: string
+        default: main
+
+permissions:
+  contents: write
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+          fetch-depth: 0
+
+      - name: Work out the new version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+          EXACT: ${{ inputs.version }}
+        run: |
+          if [ -n "$EXACT" ]; then
+            NEW="${EXACT#v}"
+          else
+            # Highest version seen anywhere: package.json, release/* branches, v* tags.
+            # Using branches too means two RCs in a row don't collide.
+            CURRENT=$(node -p "require('./package.json').version")
+            ALL=$( { echo "$CURRENT";
+                     git branch -r --list 'origin/release/*' | sed 's#.*origin/release/##';
+                     git tag --list 'v*' | sed 's#^v##'; } | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' )
+            LATEST=$(echo "$ALL" | sort -V | tail -1)
+            IFS=. read -r MA MI PA <<< "$LATEST"
+            case "$BUMP" in
+              major) NEW="$((MA+1)).0.0" ;;
+              minor) NEW="$MA.$((MI+1)).0" ;;
+              patch) NEW="$MA.$MI.$((PA+1))" ;;
+            esac
+          fi
+          if ! echo "$NEW" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::'$NEW' is not a valid x.y.z version"; exit 1
+          fi
+          if git ls-remote --exit-code --heads origin "release/$NEW" >/dev/null; then
+            echo "::error::release/$NEW already exists"; exit 1
+          fi
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          echo "Release candidate: $NEW"
+
+      - name: Create branch and bump version
+        env:
+          NEW: ${{ steps.version.outputs.new }}
+        run: |
+          git checkout -b "release/$NEW"
+          node -e '
+            const fs = require("fs");
+            const v = process.env.NEW;
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            pkg.version = v;
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+            const app = JSON.parse(fs.readFileSync("app.json", "utf8"));
+            app.expo.version = v;
+            fs.writeFileSync("app.json", JSON.stringify(app, null, 2) + "\n");
+          '
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): $NEW"
+          git push origin "release/$NEW"
+
+      - name: Summary
+        run: |
+          echo "### Release candidate \`release/${{ steps.version.outputs.new }}\` created" >> "$GITHUB_STEP_SUMMARY"
+          echo "When it's ready, run **Deploy to Production** with version \`${{ steps.version.outputs.new }}\`." >> "$GITHUB_STEP_SUMMARY"

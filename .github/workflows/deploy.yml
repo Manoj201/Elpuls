@@ -1,15 +1,10 @@
 name: Deploy
 
-# On every push to main:
-#   1. typecheck (reuses ci.yml)
-#   2. deploy Firebase (functions + Firestore rules/indexes) if backend files changed
-#   3. start an EAS iOS build if app files changed
-#
-# Run it manually from the Actions tab to force both deploys, and to pick
-# the iOS build profile (simulator until an Apple Developer account exists).
+# Deploys a release branch: Firebase (functions + Firestore rules/indexes)
+# and an EAS iOS build. Manual only — normally started by the
+# "Deploy to Production" workflow, which passes the release branch as ref.
+# Refuses to run from anything but a release/* branch.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       ios_profile:
@@ -19,46 +14,25 @@ on:
         options: [simulator, production]
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-production
   cancel-in-progress: false
 
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only deploy from release/* branches
+        if: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
+        run: |
+          echo "::error::Deploy must run on a release/* branch (got ${{ github.ref }}). Use 'Create Release Candidate' first."
+          exit 1
+
   ci:
+    needs: guard
     uses: ./.github/workflows/ci.yml
 
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      app: ${{ steps.filter.outputs.app }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            backend:
-              - '.github/workflows/**'
-              - 'functions/**'
-              - 'firebase.json'
-              - '.firebaserc'
-              - 'firestore.rules'
-              - 'firestore.indexes.json'
-            app:
-              - '.github/workflows/**'
-              - 'App.tsx'
-              - 'index.ts'
-              - 'src/**'
-              - 'assets/**'
-              - 'targets/**'
-              - 'app.json'
-              - 'eas.json'
-              - 'package.json'
-              - 'yarn.lock'
-
   firebase:
-    needs: [ci, changes]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true'
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -84,8 +58,7 @@ jobs:
         run: npx --yes firebase-tools@latest deploy --only functions,firestore --project elpuls --non-interactive --force
 
   ios:
-    needs: [ci, changes]
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.app == 'true'
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,4 +81,4 @@ jobs:
       # Builds run on Expo's servers; --no-wait lets this job finish as soon
       # as the build is queued. Track it at expo.dev.
       - name: Start iOS build
-        run: eas build --platform ios --profile ${{ inputs.ios_profile || 'simulator' }} --non-interactive --no-wait
+        run: eas build --platform ios --profile ${{ inputs.ios_profile }} --non-interactive --no-wait
