@@ -116,6 +116,8 @@
     "signIn": "Logga in",
     "continueWithoutAccount": "Fortsätt utan konto",
     "legal": "Genom att fortsätta godkänner du Elpuls användarvillkor och integritetspolicy.",
+    "termsLink": "Användarvillkor",
+    "privacyLink": "Integritetspolicy",
     "trust": {
       "priceTitle": "Livepriser för ditt elområde",
       "priceSubtitle": "SE1–SE4, uppdaterat direkt från Nord Pool.",
@@ -126,6 +128,9 @@
     }
   },
   "onboarding": {
+    "ageTitle": "Innan vi börjar",
+    "ageSubtitle": "Elpuls är endast för vuxna.",
+    "ageConfirmLabel": "Jag bekräftar att jag är 18 år eller äldre",
     "zoneTitle": "Vilket elområde bor du i?",
     "zoneSubtitle": "Osäker? Ange ditt postnummer och vi föreslår ett elområde.",
     "postcodePlaceholder": "Postnummer (t.ex. 112 29)",

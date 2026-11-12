@@ -94,7 +94,8 @@
     "googlePlay": "Google Play — coming soon"
   },
   "footer": {
-    "privacyPolicy": "Privacy Policy"
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
   },
   "privacy": {
     "title": "Elpuls Privacy Policy",
@@ -182,6 +183,66 @@
       "body": "Elpuls is developed and operated by an individual, not a registered company. {{name}}, trading as Elpuls, is the data controller for GDPR purposes.",
       "emailPlaceholder": "manoj.gam201@gmail.com",
       "note": "For any question about this policy or your data, or to request access, correction, or deletion, contact us at the address above."
+    }
+  },
+  "terms": {
+    "title": "Elpuls Terms of Service",
+    "updated": "Last updated: 2026-11-12",
+    "acceptance": {
+      "heading": "Acceptance of Terms",
+      "body": "By creating an account, continuing as a guest, or otherwise using Elpuls, you agree to these Terms of Service. If you don't agree, please don't use the app."
+    },
+    "description": {
+      "heading": "Description of Service",
+      "body": "Elpuls (\"Elpuls\", \"we\", \"us\") is a mobile app for Swedish households that shows electricity spot prices, explains why they move using weather data, and suggests when to use electricity. Elpuls is advisory only: it never switches your electricity contract, and it never connects to or controls any smart-home device or appliance. Every recommendation is information for you to act on manually."
+    },
+    "eligibility": {
+      "heading": "Eligibility",
+      "body": "You must be 18 years of age or older to use Elpuls. The app asks you to confirm this during onboarding. If we learn that a user is under 18, we will close their account, consistent with our Privacy Policy."
+    },
+    "accounts": {
+      "heading": "Accounts",
+      "body": "Elpuls works without creating an account — you're assigned an anonymous identifier automatically. You can optionally create an account with an email and password, which upgrades your existing anonymous identifier (so your data and subscription carry over) rather than starting fresh. You're responsible for keeping your login credentials secure, and for all activity under your account."
+    },
+    "subscription": {
+      "heading": "Elpuls Pro Subscription",
+      "body": "Elpuls Pro is an optional paid subscription (currently 39 kr/month) that unlocks additional features, with a 7-day free trial for new subscribers. Subscriptions are billed and managed entirely through the Apple App Store or Google Play Store — Elpuls never processes your payment details directly. Subscriptions automatically renew unless cancelled before the renewal date; cancel anytime through your App Store or Play Store account settings. Refunds are subject to Apple's or Google's own refund policies, not Elpuls'."
+    },
+    "acceptableUse": {
+      "heading": "Acceptable Use",
+      "body": "You agree not to reverse-engineer, scrape, or interfere with Elpuls or its backend services, and not to use the app for any unlawful purpose. Elpuls is a convenience tool, not a substitute for professional financial, legal, or electrical-safety advice — use your own judgment, especially for decisions with real financial or safety consequences."
+    },
+    "noDeviceControl": {
+      "heading": "No Device Control",
+      "body": "Elpuls never connects to, controls, or automates any smart-home device, appliance, EV charger, or heating system. Every feature — including appliance recommendations, the heating plan, and the pre-use cost check — is advisory: Elpuls shows you information, and you decide what to do and act on it yourself, manually. Elpuls has no partnerships with, and makes no claims about, any specific hardware brand."
+    },
+    "accuracy": {
+      "heading": "Accuracy Disclaimer",
+      "body": "Price data comes from elprisetjustnu.se (sourced from Nord Pool) and weather data from SMHI — both third parties Elpuls doesn't control. The AI-generated price explainer and other AI features are informational summaries, not guarantees. We work to keep this accurate, but Elpuls doesn't guarantee that any price, forecast, explanation, or savings estimate is complete, current, or error-free, and isn't liable for decisions made based on it."
+    },
+    "ip": {
+      "heading": "Intellectual Property",
+      "body": "Elpuls, its name, logo, and app content belong to us. You keep ownership of the information you provide (like your appliance list or grid fee figures), and grant us the right to use it to operate the app for you, as described in our Privacy Policy."
+    },
+    "termination": {
+      "heading": "Termination",
+      "body": "You can delete your account and all your data at any time from Settings → Account → Delete my account. We may suspend or terminate your access if you violate these terms. Deleting your account doesn't cancel an active Pro subscription — cancel that separately in the App Store or Play Store."
+    },
+    "liability": {
+      "heading": "Limitation of Liability",
+      "body": "To the extent permitted by law, Elpuls is provided \"as is,\" and we aren't liable for indirect, incidental, or consequential damages arising from your use of the app, including any electricity costs, missed savings, or decisions made based on Elpuls' content. Nothing here limits liability that can't legally be excluded under Swedish or EU consumer protection law."
+    },
+    "changes": {
+      "heading": "Changes to These Terms",
+      "body": "If we change these terms in a meaningful way, we'll update the \"last updated\" date above and note what changed at the top of this page. Continuing to use Elpuls after a change means you accept the updated terms."
+    },
+    "law": {
+      "heading": "Governing Law",
+      "body": "These terms are governed by the laws of Sweden, without regard to conflict-of-law principles. Any dispute will be handled under Swedish jurisdiction, without prejudice to any mandatory consumer-protection rights you have under EU law."
+    },
+    "contact": {
+      "heading": "Contact",
+      "body": "Elpuls is developed and operated by an individual, not a registered company. {{name}}, trading as Elpuls, can be reached at manoj.gam201@gmail.com for any question about these terms."
     }
   }
 }

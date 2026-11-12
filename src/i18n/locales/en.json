@@ -116,6 +116,8 @@
     "signIn": "Sign in",
     "continueWithoutAccount": "Continue without an account",
     "legal": "By continuing you agree to Elpuls' Terms of Service and Privacy Policy.",
+    "termsLink": "Terms of Service",
+    "privacyLink": "Privacy Policy",
     "trust": {
       "priceTitle": "Live prices for your zone",
       "priceSubtitle": "SE1–SE4, updated straight from Nord Pool.",
@@ -126,6 +128,9 @@
     }
   },
   "onboarding": {
+    "ageTitle": "Before we start",
+    "ageSubtitle": "Elpuls is for adults only.",
+    "ageConfirmLabel": "I confirm I am 18 years of age or older",
     "zoneTitle": "Which price zone are you in?",
     "zoneSubtitle": "Not sure? Enter your postcode and we'll suggest one.",
     "postcodePlaceholder": "Postcode (e.g. 112 29)",

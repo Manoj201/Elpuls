@@ -94,7 +94,8 @@
     "googlePlay": "Google Play — kommer snart"
   },
   "footer": {
-    "privacyPolicy": "Integritetspolicy"
+    "privacyPolicy": "Integritetspolicy",
+    "termsOfService": "Användarvillkor"
   },
   "privacy": {
     "title": "Elpuls integritetspolicy",
@@ -182,6 +183,66 @@
       "body": "Elpuls utvecklas och drivs av en privatperson, inte ett registrerat företag. {{name}}, som driver verksamheten under namnet Elpuls, är personuppgiftsansvarig enligt GDPR.",
       "emailPlaceholder": "manoj.gam201@gmail.com",
       "note": "Vid frågor om den här policyn eller dina uppgifter, eller för att begära tillgång, rättelse eller radering, kontakta oss på adressen ovan."
+    }
+  },
+  "terms": {
+    "title": "Elpuls användarvillkor",
+    "updated": "Senast uppdaterad: 2026-11-12",
+    "acceptance": {
+      "heading": "Godkännande av villkor",
+      "body": "Genom att skapa ett konto, fortsätta som gäst, eller på annat sätt använda Elpuls godkänner du dessa användarvillkor. Om du inte godkänner dem, vänligen använd inte appen."
+    },
+    "description": {
+      "heading": "Beskrivning av tjänsten",
+      "body": "Elpuls (\"Elpuls\", \"vi\", \"oss\") är en mobilapp för svenska hushåll som visar elpriser, förklarar varför de ändras med hjälp av väderdata, och föreslår när du ska använda el. Elpuls är endast rådgivande: den byter aldrig ditt elavtal, och den ansluter eller styr aldrig någon smart hemenhet eller apparat. Varje rekommendation är information som du agerar på manuellt."
+    },
+    "eligibility": {
+      "heading": "Behörighet",
+      "body": "Du måste vara 18 år eller äldre för att använda Elpuls. Appen ber dig bekräfta detta under onboarding. Om vi upptäcker att en användare är under 18 år stänger vi deras konto, i linje med vår integritetspolicy."
+    },
+    "accounts": {
+      "heading": "Konton",
+      "body": "Elpuls fungerar utan att du skapar ett konto — du tilldelas automatiskt en anonym identifierare. Du kan valfritt skapa ett konto med e-post och lösenord, vilket uppgraderar din befintliga anonyma identifierare (så att din data och prenumeration följer med) istället för att börja om. Du ansvarar för att hålla dina inloggningsuppgifter säkra, och för all aktivitet under ditt konto."
+    },
+    "subscription": {
+      "heading": "Elpuls Pro-prenumeration",
+      "body": "Elpuls Pro är en valfri betald prenumeration (just nu 39 kr/månad) som låser upp ytterligare funktioner, med en 7 dagars gratis provperiod för nya prenumeranter. Prenumerationer faktureras och hanteras helt via Apple App Store eller Google Play Store — Elpuls behandlar aldrig dina betalningsuppgifter direkt. Prenumerationer förnyas automatiskt om de inte avslutas innan förnyelsedatumet; avsluta när som helst via dina konto-inställningar i App Store eller Play Store. Återbetalningar följer Apples eller Googles egna återbetalningspolicyer, inte Elpuls."
+    },
+    "acceptableUse": {
+      "heading": "Tillåten användning",
+      "body": "Du godkänner att inte bakåtkompilera, skrapa eller störa Elpuls eller dess backend-tjänster, och att inte använda appen för något olagligt syfte. Elpuls är ett bekvämlighetsverktyg, inte en ersättning för professionell ekonomisk, juridisk eller elsäkerhetsrådgivning — använd ditt eget omdöme, särskilt för beslut med verkliga ekonomiska eller säkerhetsmässiga konsekvenser."
+    },
+    "noDeviceControl": {
+      "heading": "Ingen apparatstyrning",
+      "body": "Elpuls ansluter, styr eller automatiserar aldrig någon smart hemenhet, apparat, elbilsladdare eller värmesystem. Varje funktion — inklusive apparatrekommendationer, värmeplanen och kostnadskollen innan du startar — är rådgivande: Elpuls visar dig information, och du bestämmer vad du ska göra och agerar själv, manuellt. Elpuls har inga partnerskap med, och gör inga påståenden om, något specifikt hårdvarumärke."
+    },
+    "accuracy": {
+      "heading": "Ansvarsfriskrivning om noggrannhet",
+      "body": "Prisdata kommer från elprisetjustnu.se (hämtat från Nord Pool) och väderdata från SMHI — båda tredje parter som Elpuls inte kontrollerar. Den AI-genererade prisförklaringen och andra AI-funktioner är informativa sammanfattningar, inte garantier. Vi strävar efter att hålla detta korrekt, men Elpuls garanterar inte att något pris, prognos, förklaring eller besparingsuppskattning är fullständig, aktuell eller felfri, och ansvarar inte för beslut som fattas baserat på den."
+    },
+    "ip": {
+      "heading": "Immateriella rättigheter",
+      "body": "Elpuls, dess namn, logotyp och appinnehåll tillhör oss. Du behåller äganderätten till den information du tillhandahåller (som din apparatlista eller nätavgiftssiffror), och ger oss rätten att använda den för att driva appen åt dig, enligt beskrivningen i vår integritetspolicy."
+    },
+    "termination": {
+      "heading": "Uppsägning",
+      "body": "Du kan radera ditt konto och all din data när som helst från Inställningar → Konto → Ta bort mitt konto. Vi kan stänga av eller avsluta din åtkomst om du bryter mot dessa villkor. Att radera ditt konto avslutar inte en aktiv Pro-prenumeration — avsluta den separat i App Store eller Play Store."
+    },
+    "liability": {
+      "heading": "Ansvarsbegränsning",
+      "body": "I den utsträckning lagen tillåter tillhandahålls Elpuls \"i befintligt skick\", och vi ansvarar inte för indirekta, tillfälliga eller följdskador som uppstår av din användning av appen, inklusive elkostnader, uteblivna besparingar eller beslut som fattas baserat på Elpuls innehåll. Inget här begränsar ansvar som inte lagligen kan uteslutas enligt svensk eller EU:s konsumentskyddslagstiftning."
+    },
+    "changes": {
+      "heading": "Ändringar av dessa villkor",
+      "body": "Om vi ändrar dessa villkor på ett betydande sätt uppdaterar vi datumet \"senast uppdaterad\" ovan och beskriver vad som ändrats högst upp på sidan. Att fortsätta använda Elpuls efter en ändring innebär att du godkänner de uppdaterade villkoren."
+    },
+    "law": {
+      "heading": "Tillämplig lag",
+      "body": "Dessa villkor styrs av svensk lag, utan hänsyn till lagvalsregler. Eventuella tvister hanteras enligt svensk jurisdiktion, utan att det påverkar några obligatoriska konsumenträttigheter du har enligt EU-rätt."
+    },
+    "contact": {
+      "heading": "Kontakt",
+      "body": "Elpuls utvecklas och drivs av en privatperson, inte ett registrerat företag. {{name}}, som driver verksamheten under namnet Elpuls, kan nås på manoj.gam201@gmail.com för frågor om dessa villkor."
     }
   }
 }

@@ -18,7 +18,7 @@ interface OnboardingScreenProps {
 
 const HEATING_VALUES: NonNullable<HeatingType>[] = ['district', 'electric', 'heat_pump', 'other'];
 
-const STEP_COUNT = 5;
+const STEP_COUNT = 6;
 
 function parsePositiveFloat(value: string): number | null {
   const parsed = parseFloat(value);
@@ -32,6 +32,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
   const setOnboardingInfo = useUserStore((s) => s.setOnboardingInfo);
 
   const [step, setStep] = useState(0);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [zone, setZone] = useState<string | null>(null);
   const [postcodeInput, setPostcodeInput] = useState('');
   const [zoneTouchedManually, setZoneTouchedManually] = useState(false);
@@ -43,11 +44,12 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
   const [saving, setSaving] = useState(false);
 
   const canContinue =
-    (step === 0 && zone !== null) ||
-    (step === 1 && heatingType !== null) ||
-    (step === 2 && hasSolar !== null) ||
-    (step === 3 && hasEv !== null) ||
-    step === 4; // grid fee is optional/skippable
+    (step === 0 && ageConfirmed) ||
+    (step === 1 && zone !== null) ||
+    (step === 2 && heatingType !== null) ||
+    (step === 3 && hasSolar !== null) ||
+    (step === 4 && hasEv !== null) ||
+    step === 5; // grid fee is optional/skippable
 
   function handlePostcodeChange(value: string) {
     setPostcodeInput(value);
@@ -83,7 +85,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
       // setDoc waits for the server to confirm the write — if Firestore can't
       // be reached it never settles, so cap it instead of hanging forever.
       await Promise.race([
-        setDoc(doc(db, 'users', uid), { ...info, onboardedAt: serverTimestamp() }, { merge: true }),
+        setDoc(doc(db, 'users', uid), { ...info, ageConfirmedAt: serverTimestamp(), onboardedAt: serverTimestamp() }, { merge: true }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out saving profile (15s)')), 15000)),
       ]);
     } catch (err) {
@@ -104,6 +106,16 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
       </View>
 
       {step === 0 && (
+        <Step title={t('onboarding.ageTitle')} subtitle={t('onboarding.ageSubtitle')}>
+          <OptionCard
+            label={t('onboarding.ageConfirmLabel')}
+            selected={ageConfirmed}
+            onPress={() => setAgeConfirmed(!ageConfirmed)}
+          />
+        </Step>
+      )}
+
+      {step === 1 && (
         <Step title={t('onboarding.zoneTitle')} subtitle={t('onboarding.zoneSubtitle')}>
           <TextInput
             style={styles.postcodeInput}
@@ -128,7 +140,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
         </Step>
       )}
 
-      {step === 1 && (
+      {step === 2 && (
         <Step title={t('onboarding.heatingTitle')} subtitle={t('onboarding.heatingSubtitle')}>
           {HEATING_VALUES.map((value) => (
             <OptionCard
@@ -141,21 +153,21 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
         </Step>
       )}
 
-      {step === 2 && (
+      {step === 3 && (
         <Step title={t('onboarding.solarTitle')} subtitle={t('onboarding.solarSubtitle')}>
           <OptionCard label={t('common.yes')} selected={hasSolar === true} onPress={() => setHasSolar(true)} />
           <OptionCard label={t('common.no')} selected={hasSolar === false} onPress={() => setHasSolar(false)} />
         </Step>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <Step title={t('onboarding.evTitle')} subtitle={t('onboarding.evSubtitle')}>
           <OptionCard label={t('common.yes')} selected={hasEv === true} onPress={() => setHasEv(true)} />
           <OptionCard label={t('common.no')} selected={hasEv === false} onPress={() => setHasEv(false)} />
         </Step>
       )}
 
-      {step === 4 && (
+      {step === 5 && (
         <Step title={t('onboarding.gridFeeTitle')} subtitle={t('onboarding.gridFeeSubtitle')}>
           <TextInput
             style={styles.gridFeeInput}

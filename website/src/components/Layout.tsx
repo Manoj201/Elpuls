@@ -35,6 +35,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className={`container ${styles.footerInner}`}>
           <span>&copy; {new Date().getFullYear()} Elpuls</span>
           <div className={styles.footerLinks}>
+            <Link to="/terms">{t('footer.termsOfService')}</Link>
             <Link to="/privacy">{t('footer.privacyPolicy')}</Link>
           </div>
         </div>

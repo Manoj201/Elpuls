@@ -67,6 +67,11 @@
   color: var(--text-muted);
 }
 
+.footerLinks {
+  display: flex;
+  gap: 20px;
+}
+
 .footerLinks a {
   text-decoration: none;
   color: var(--text-muted);

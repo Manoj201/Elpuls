@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 // @firebase/auth directly, not firebase/auth — see src/lib/firebase.ts.
 import { EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from '@firebase/auth';
@@ -144,6 +144,15 @@ export function LoginScreen({ onSignedIn, onSkip }: LoginScreenProps) {
         </Pressable>
 
         <Text style={styles.legal}>{t('login.legal')}</Text>
+        <View style={styles.legalLinks}>
+          <Pressable onPress={() => Linking.openURL('https://elpuls.ravenbees.com/terms')}>
+            <Text style={styles.legalLink}>{t('login.termsLink')}</Text>
+          </Pressable>
+          <Text style={styles.legalLinkDivider}>·</Text>
+          <Pressable onPress={() => Linking.openURL('https://elpuls.ravenbees.com/privacy')}>
+            <Text style={styles.legalLink}>{t('login.privacyLink')}</Text>
+          </Pressable>
+        </View>
       </View>
     </ScrollView>
   );
@@ -224,5 +233,23 @@ const styles = StyleSheet.create({
     color: theme.colors.textFaint,
     marginTop: 24,
     textAlign: 'center',
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  legalLink: {
+    fontFamily: theme.typography.bodyMedium,
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    textDecorationLine: 'underline',
+  },
+  legalLinkDivider: {
+    fontFamily: theme.typography.body,
+    fontSize: 11,
+    color: theme.colors.textFaint,
   },
 });
