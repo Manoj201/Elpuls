@@ -469,7 +469,8 @@
   "pro": {
     "tag": "Pro",
     "tryFree": "Try free for {{days}} days",
-    "example": "Example"
+    "example": "Example",
+    "getPro": "Get Pro"
   },
   "setup": {
     "title": "See what you really pay",

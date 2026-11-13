@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   IconChartBar,
@@ -14,13 +14,14 @@ import type { PurchasesPackage } from 'react-native-purchases';
 import {
   DEFAULT_TRIAL_DAYS,
   getCurrentOfferingPackage,
+  getEligibleTrialDays,
   getLastOfferingIssue,
-  getTrialDays,
   purchaseErrorKind,
   purchasePackage,
   restorePurchases,
 } from '../lib/purchases';
 import { useUiStore, type PaywallSource } from '../stores/useUiStore';
+import { useUserStore } from '../stores/useUserStore';
 import { theme } from '../theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenBackground } from '../components/ScreenBackground';
@@ -60,22 +61,26 @@ export function PaywallScreen() {
   const [error, setError] = useState<string | null>(null);
   const [offeringIssue, setOfferingIssue] = useState<string | null>(null);
 
+  const storeTrialDays = useUserStore((s) => s.trialDays);
+  const setTrialDays = useUserStore((s) => s.setTrialDays);
+
   function loadOffering() {
     setLoadingOffering(true);
     getCurrentOfferingPackage()
-      .then((p) => {
+      .then(async (p) => {
         setPkg(p);
         setOfferingIssue(p ? null : getLastOfferingIssue());
+        // Re-check here too, so someone who already used the trial never
+        // sees "14 days free" (App Store guideline 3.1.2).
+        if (p) setTrialDays(await getEligibleTrialDays(p));
       })
       .finally(() => setLoadingOffering(false));
   }
 
   useEffect(loadOffering, []);
 
-  // Trial length comes from the store's intro offer. Before it loads (or if
-  // the store doesn't answer) we show the configured default; once a package
-  // is loaded without a free intro offer, trial wording disappears.
-  const trialDays = pkg ? getTrialDays(pkg) : DEFAULT_TRIAL_DAYS;
+  // Trial days this Apple ID can actually get (null = no trial offer).
+  const trialDays = storeTrialDays;
   const price = pkg?.product.priceString ?? t('paywall.fallbackPrice');
 
   async function handlePurchase() {
@@ -116,22 +121,27 @@ export function PaywallScreen() {
 
   return (
     <ScreenBackground style={styles.overlay}>
-      <Pressable
-        onPress={hidePaywall}
-        style={styles.close}
-        hitSlop={12}
-        accessibilityRole="button"
-        accessibilityLabel={t('paywall.close')}
-      >
-        <IconX size={24} color={theme.colors.textSecondary} />
-      </Pressable>
+      <SafeAreaView style={styles.safe}>
+      {/* Fixed header: the close button never overlaps scrolling content,
+          and nothing scrolls up under the status bar. */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={hidePaywall}
+          style={styles.close}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('paywall.close')}
+        >
+          <IconX size={24} color={theme.colors.textSecondary} />
+        </Pressable>
+      </View>
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.proTag}>
           <Text style={styles.proTagText}>{t('pro.tag')}</Text>
         </View>
         <Text style={styles.headline} accessibilityRole="header">
-          {t(HEADLINE_KEY[source], { days: trialDays ?? DEFAULT_TRIAL_DAYS })}
+          {source === 'onboarding' && !trialDays ? t('paywall.headline') : t(HEADLINE_KEY[source], { days: trialDays ?? DEFAULT_TRIAL_DAYS })}
         </Text>
         <Text style={styles.subheadline}>{t('paywall.subheadline')}</Text>
 
@@ -208,23 +218,17 @@ export function PaywallScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      </SafeAreaView>
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, zIndex: 10 },
-  close: {
-    position: 'absolute',
-    top: 56,
-    right: 16,
-    zIndex: 2,
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  container: { paddingHorizontal: 24, paddingTop: 104, paddingBottom: 48 },
+  safe: { flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 12, paddingTop: 8 },
+  close: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  container: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 48 },
   proTag: {
     alignSelf: 'flex-start',
     backgroundColor: theme.colors.accentAmberSoft,

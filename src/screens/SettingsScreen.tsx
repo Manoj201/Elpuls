@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { IconBellRinging, IconCircle, IconCircleCheck, IconFlask, IconPencil, IconPlus, IconReceipt, IconSparkles, IconTrash, IconUserCircle } from '@tabler/icons-react-native';
 import { db } from '../lib/firebase';
-import { DEFAULT_TRIAL_DAYS, openManageSubscriptions } from '../lib/purchases';
+import { openManageSubscriptions } from '../lib/purchases';
 import { authErrorKey, currentEmail, isGuest, linkGuestToEmail } from '../lib/auth';
 import { useApplianceStore, type RegisteredAppliance } from '../stores/useApplianceStore';
 import { useCountryStore } from '../stores/useCountryStore';
@@ -264,7 +264,7 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
         <Pressable onPress={() => showPaywall('settings')} accessibilityRole="button" style={styles.topCard}>
           <Card style={styles.proCard}>
             <InfoRow icon={IconSparkles} variant="amber" title={t('settings.proCardTitle')} subtitle={t('settings.proCardText')} />
-            <PrimaryButton size="compact" label={t('pro.tryFree', { days: DEFAULT_TRIAL_DAYS })} onPress={() => showPaywall('settings')} />
+            <PrimaryButton size="compact" label={user.trialDays ? t('pro.tryFree', { days: user.trialDays }) : t('pro.getPro')} onPress={() => showPaywall('settings')} />
           </Card>
         </Pressable>
       )}
@@ -491,7 +491,7 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
               loading={managingSubscription}
             />
           ) : (
-            <PrimaryButton size="compact" label={t('pro.tryFree', { days: DEFAULT_TRIAL_DAYS })} onPress={() => showPaywall('settings')} />
+            <PrimaryButton size="compact" label={user.trialDays ? t('pro.tryFree', { days: user.trialDays }) : t('pro.getPro')} onPress={() => showPaywall('settings')} />
           )}
         </Card>
       </Section>

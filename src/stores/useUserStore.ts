@@ -26,6 +26,13 @@ interface UserState {
   isProSubscriber: boolean;
   proPeriodType: ProPeriodType;
   proExpirationMillis: number | null;
+  /**
+   * Free-trial days this Apple ID can still get, from the store (null = no
+   * trial available, e.g. it was already used). Not persisted; refreshed
+   * when purchases are configured. Starts at the configured default so new
+   * users see the offer before the store answers.
+   */
+  trialDays: number | null;
   /** When onboarding was completed on this device (epoch ms). Persisted locally so a returning user is never sent back to login/onboarding, even offline or if the auth uid changes. */
   onboardedAt: number | null;
   /** When the user picked Create account / Sign in / Continue as guest on the Login screen (epoch ms). Until then the app always opens on Login — a background guest session alone doesn't count. Cleared on sign-out and account deletion. */
@@ -52,6 +59,7 @@ interface UserState {
   setPriceAlertPrefs: (priceAlertHighThresholdOre: number | null, priceAlertLowEnabled: boolean) => void;
   setGridFee: (gridFeeFixedSekPerMonth: number | null, gridFeeVariableSekPerKwh: number | null) => void;
   setProStatus: (status: { isProSubscriber: boolean; periodType: ProPeriodType; expirationMillis: number | null }) => void;
+  setTrialDays: (days: number | null) => void;
   /** Clears every profile field and the onboarded flag — used by sign-out, account deletion and the dev reset tool. */
   resetProfile: () => void;
   markEntryChosen: () => void;
@@ -130,6 +138,7 @@ export const useUserStore = create<UserState>()(
   isProSubscriber: false,
   proPeriodType: null,
   proExpirationMillis: null,
+  trialDays: 14,
   onboardedAt: null,
   entryChosenAt: null,
   introSeenAt: null,
@@ -145,6 +154,7 @@ export const useUserStore = create<UserState>()(
   setGridFee: (gridFeeFixedSekPerMonth, gridFeeVariableSekPerKwh) => set({ gridFeeFixedSekPerMonth, gridFeeVariableSekPerKwh }),
   setProStatus: ({ isProSubscriber, periodType, expirationMillis }) =>
     set({ isProSubscriber, proPeriodType: periodType, proExpirationMillis: expirationMillis }),
+  setTrialDays: (trialDays) => set({ trialDays }),
   resetProfile: () =>
     set({ ...EMPTY_PROFILE, uid: null, isProSubscriber: false, proPeriodType: null, proExpirationMillis: null }),
   markEntryChosen: () => set((state) => ({ entryChosenAt: state.entryChosenAt ?? Date.now() })),

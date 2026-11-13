@@ -469,7 +469,8 @@
   "pro": {
     "tag": "Pro",
     "tryFree": "Prova gratis i {{days}} dagar",
-    "example": "Exempel"
+    "example": "Exempel",
+    "getPro": "Skaffa Pro"
   },
   "setup": {
     "title": "Se vad du verkligen betalar",

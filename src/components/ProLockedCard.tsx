@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { IconLock } from '@tabler/icons-react-native';
 import { useUiStore, type PaywallSource } from '../stores/useUiStore';
-import { DEFAULT_TRIAL_DAYS } from '../lib/purchases';
+import { useUserStore } from '../stores/useUserStore';
 import { theme } from '../theme';
 import { Card } from './Card';
 import { Chip } from './Chip';
@@ -25,7 +25,9 @@ interface ProLockedCardProps {
 export function ProLockedCard({ title, subtitle, icon = IconLock, preview, ctaLabel, source = 'generic' }: ProLockedCardProps) {
   const { t } = useTranslation();
   const showPaywall = useUiStore((s) => s.showPaywall);
-  const cta = ctaLabel ?? t('pro.tryFree', { days: DEFAULT_TRIAL_DAYS });
+  const trialDays = useUserStore((s) => s.trialDays);
+  // Only promise a trial the store says this Apple ID can still get.
+  const cta = ctaLabel ?? (trialDays ? t('pro.tryFree', { days: trialDays }) : t('pro.getPro'));
 
   return (
     <Pressable

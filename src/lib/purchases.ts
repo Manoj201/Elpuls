@@ -1,5 +1,11 @@
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL, PURCHASES_ERROR_CODE, type CustomerInfo, type PurchasesPackage } from 'react-native-purchases';
+import Purchases, {
+  INTRO_ELIGIBILITY_STATUS,
+  LOG_LEVEL,
+  PURCHASES_ERROR_CODE,
+  type CustomerInfo,
+  type PurchasesPackage,
+} from 'react-native-purchases';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { useUserStore } from '../stores/useUserStore';
@@ -65,6 +71,7 @@ export async function configurePurchases(uid: string): Promise<void> {
       // registering a duplicate listener.
       const { customerInfo } = await Purchases.logIn(uid);
       syncProStatus(customerInfo);
+      refreshTrialEligibility().catch(() => {});
       return;
     }
     if (__DEV__) {
@@ -75,6 +82,7 @@ export async function configurePurchases(uid: string): Promise<void> {
     Purchases.addCustomerInfoUpdateListener(syncProStatus);
     const info = await Purchases.getCustomerInfo();
     syncProStatus(info);
+    refreshTrialEligibility().catch(() => {});
   } catch (err) {
     console.log('RevenueCat configure failed:', err);
   }
@@ -139,6 +147,39 @@ export function getTrialDays(pkg: PurchasesPackage | null): number | null {
     default:
       return null;
   }
+}
+
+/**
+ * Free-trial days this Apple ID can actually get for `pkg`, or null when
+ * there is no trial for them (already used it, or no intro offer). Apple
+ * doesn't allow promising a trial the user can't get (guideline 3.1.2).
+ * UNKNOWN is treated as eligible, per RevenueCat's guidance, since brand-new
+ * users often have no receipt yet.
+ */
+export async function getEligibleTrialDays(pkg: PurchasesPackage | null): Promise<number | null> {
+  const days = getTrialDays(pkg);
+  if (!pkg || days === null) return null;
+  try {
+    const id = pkg.product.identifier;
+    const result = await Purchases.checkTrialOrIntroductoryPriceEligibility([id]);
+    const status = result[id]?.status;
+    if (status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_INELIGIBLE) return null;
+    if (status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_NO_INTRO_OFFER_EXISTS) return null;
+    return days;
+  } catch (err) {
+    console.log('Trial eligibility check failed:', err);
+    return days;
+  }
+}
+
+/** Refreshes useUserStore.trialDays so every "Try free" button tells the truth. */
+export async function refreshTrialEligibility(): Promise<void> {
+  if (!configured) return;
+  const pkg = await getCurrentOfferingPackage();
+  // No package (store not reachable): keep showing the default rather than
+  // flipping every button to "Get Pro" on a network hiccup.
+  if (!pkg) return;
+  useUserStore.getState().setTrialDays(await getEligibleTrialDays(pkg));
 }
 
 /** Restores purchases; resolves true only if Pro is actually active afterwards. */
