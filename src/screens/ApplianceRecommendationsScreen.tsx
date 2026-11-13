@@ -14,7 +14,7 @@ import { useUserStore } from '../stores/useUserStore';
 import { theme } from '../theme';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
-import { ProLockedCard } from '../components/ProLockedCard';
+import { PreviewRow, ProLockedCard } from '../components/ProLockedCard';
 
 interface ApplianceRecommendationsScreenProps {
   uid: string;
@@ -117,7 +117,19 @@ export function ApplianceRecommendationsScreen({ uid, onBack }: ApplianceRecomme
       <Text style={styles.subtitle}>{t('applianceRecommendations.subtitle')}</Text>
 
       {!isProSubscriber ? (
-        <ProLockedCard title={t('paywall.features.recommendations')} subtitle={t('paywall.lockedRecommendationsSubtitle')} />
+        <ProLockedCard
+          icon={IconBolt}
+          title={t('paywall.headlineRecommendations')}
+          subtitle={t('paywall.lockedRecommendationsSubtitle')}
+          source="recommendations"
+          preview={
+            <View>
+              <PreviewRow label={t('ticker.appliances.dishwasher')} value={t('applianceRecommendations.sample.dishwasher')} />
+              <PreviewRow label={t('ticker.appliances.washing_machine')} value={t('applianceRecommendations.sample.washingMachine')} />
+              <PreviewRow label={t('ticker.appliances.ev')} value={t('applianceRecommendations.sample.ev')} />
+            </View>
+          }
+        />
       ) : (
         <View style={styles.list}>
           {allAppliances.map((appliance) => (
@@ -132,8 +144,8 @@ export function ApplianceRecommendationsScreen({ uid, onBack }: ApplianceRecomme
 const styles = StyleSheet.create({
   container: { padding: 16, paddingTop: 60, paddingBottom: 40 },
   backRow: { marginBottom: 12, alignSelf: 'flex-start' },
-  title: { fontFamily: theme.typography.display, fontSize: 26, color: theme.colors.textPrimary },
-  subtitle: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted, marginTop: 4, marginBottom: 20 },
+  title: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
+  subtitle: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted, marginTop: 4, marginBottom: 20 },
   list: { gap: 12 },
   row: {},
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
@@ -146,12 +158,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { fontFamily: theme.typography.bodyMedium, fontSize: 15, color: theme.colors.textPrimary },
+  label: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
   notifyRow: { marginTop: 10 },
   resultBlock: { gap: 4 },
-  costNow: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textSecondary },
-  waitHint: { fontFamily: theme.typography.bodyMedium, fontSize: 13, color: theme.colors.positiveTealDeep },
-  alreadyBest: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textMuted },
-  waiting: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textMuted },
-  fixedScheduleHint: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textMuted },
+  costNow: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  waitHint: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.positiveTealDeep },
+  alreadyBest: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted },
+  waiting: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted },
+  fixedScheduleHint: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted },
 });

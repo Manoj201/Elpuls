@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { IconChartBar, IconChartLine, IconGauge, IconSettings } from '@tabler/icons-react-native';
 import { useFonts as useSpaceGrotesk, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold } from '@expo-google-fonts/space-grotesk';
-import { useFonts as useInter, Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
+import { useFonts as useInter, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ForecastScreen } from './src/screens/ForecastScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
@@ -17,12 +17,13 @@ import { BillScanScreen } from './src/screens/BillScanScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { IntroScreen } from './src/screens/IntroScreen';
 import { ScreenBackground } from './src/components/ScreenBackground';
 import { usePushRegistration } from './src/hooks/usePushRegistration';
 import { ensureAnonymousSignIn, signOutUser } from './src/lib/auth';
 import { clearLocalAppStorage } from './src/lib/devTools';
 import { deleteMyAccount } from './src/lib/account';
-import { auth, db } from './src/lib/firebase';
+import { db } from './src/lib/firebase';
 import { configurePurchases } from './src/lib/purchases';
 import { useCountryStore } from './src/stores/useCountryStore';
 import { useUiStore } from './src/stores/useUiStore';
@@ -33,7 +34,7 @@ import { theme } from './src/theme';
 
 type TabScreen = 'overview' | 'forecast' | 'stats' | 'settings';
 type StackScreen = 'kostnadskoll' | 'applianceRecommendations' | 'applianceScan' | 'billScan' | null;
-type AppState = 'loading' | 'login' | 'onboarding' | 'main';
+type AppState = 'loading' | 'intro' | 'login' | 'onboarding' | 'main';
 
 const TABS: { id: TabScreen; labelKey: string; icon: ComponentType<{ size?: number; color?: string }> }[] = [
   { id: 'overview', labelKey: 'app.tabOverview', icon: IconGauge },
@@ -50,14 +51,8 @@ const TABS: { id: TabScreen; labelKey: string; icon: ComponentType<{ size?: numb
  * blank defaults in the UI on every restart, even though Firestore still
  * has the real values.
  */
-// TEMP debug (dev builds only) — remove once the sign-in → onboarding bug is confirmed fixed.
-export function authDebug(...args: unknown[]) {
-  if (__DEV__) console.log('[auth-debug]', ...args);
-}
-
 async function hydrateUserProfile(uid: string): Promise<boolean> {
   const snap = await getDoc(doc(db, 'users', uid));
-  authDebug('firestore users/', uid, 'exists=', snap.exists(), 'zone=', snap.exists() ? snap.data().zone : undefined, 'keys=', snap.exists() ? Object.keys(snap.data()) : []);
   if (!snap.exists() || !snap.data().zone) {
     return false;
   }
@@ -105,11 +100,9 @@ async function uploadCachedProfile(uid: string): Promise<void> {
  * always gets straight into the app; only a user with no cache sees the error.
  */
 async function resolveLanding(uid: string): Promise<'main' | 'onboarding'> {
-  authDebug('resolveLanding uid=', uid, 'authUser=', auth.currentUser?.uid, 'anon=', auth.currentUser?.isAnonymous, 'cache=', hasCachedProfile());
   try {
     if (await hydrateUserProfile(uid)) return 'main';
   } catch (err) {
-    authDebug('profile read FAILED', err);
     if (!hasCachedProfile()) throw err;
     console.log('Profile read failed, using cached profile:', err);
     useCountryStore.getState().setZone(useUserStore.getState().zone!);
@@ -160,6 +153,7 @@ export default function App() {
   const { t } = useTranslation();
   const setUid = useUserStore((s) => s.setUid);
   const isPaywallVisible = useUiStore((s) => s.isPaywallVisible);
+  const showPaywall = useUiStore((s) => s.showPaywall);
   const keyboardVisible = useKeyboardVisible();
 
   const [appState, setAppState] = useState<AppState>('loading');
@@ -167,12 +161,13 @@ export default function App() {
   const [tab, setTab] = useState<TabScreen>('overview');
   const [stackScreen, setStackScreen] = useState<StackScreen>(null);
   const [editingAppliance, setEditingAppliance] = useState<RegisteredAppliance | null>(null);
+  const [billScanManual, setBillScanManual] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const [initAttempt, setInitAttempt] = useState(0);
   const [i18nReady, setI18nReady] = useState(false);
 
   const [spaceGroteskLoaded] = useSpaceGrotesk({ SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold });
-  const [interLoaded] = useInter({ Inter_400Regular, Inter_500Medium });
+  const [interLoaded] = useInter({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold });
 
   useEffect(() => {
     initI18n().then(() => setI18nReady(true));
@@ -192,12 +187,15 @@ export default function App() {
         syncCurrentLanguageToFirestore();
         const landing = await resolveLanding(uid);
         if (cancelled) return;
-        authDebug('init uid=', uid, 'landing=', landing, 'entryChosenAt=', useUserStore.getState().entryChosenAt);
         // No profile yet: onboarding only if the user already chose Create
         // account / Sign in / Guest on the Login screen (and quit mid-way).
         // A background guest session alone — fresh install, or the one
         // started after sign-out/account deletion — always gets Login.
-        setAppState(landing === 'main' ? 'main' : useUserStore.getState().entryChosenAt !== null ? 'onboarding' : 'login');
+        // A brand-new install sees the short welcome intro before Login.
+        const { entryChosenAt, introSeenAt } = useUserStore.getState();
+        setAppState(
+          landing === 'main' ? 'main' : entryChosenAt !== null ? 'onboarding' : introSeenAt === null ? 'intro' : 'login',
+        );
       } catch (err) {
         console.error('App init failed:', err);
         if (!cancelled) setInitError(err instanceof Error ? err.message : String(err));
@@ -215,21 +213,31 @@ export default function App() {
   // the account's own profile wins; otherwise a guest profile on this
   // device carries over; only with neither does onboarding run.
   async function handleSignedIn(uid: string) {
-    authDebug('handleSignedIn uid=', uid);
     useUserStore.getState().markEntryChosen();
     setUid(uid);
     setActiveUid(uid);
     configurePurchases(uid);
     syncCurrentLanguageToFirestore();
-    const landing = await resolveLanding(uid);
-    authDebug('handleSignedIn landing=', landing);
-    setAppState(landing);
+    setAppState(await resolveLanding(uid));
+  }
+
+  // After setup, offer Pro once (skippable) while the value is fresh.
+  function handleOnboardingDone() {
+    setAppState('main');
+    const { proOfferSeenAt, isProSubscriber, markProOfferSeen } = useUserStore.getState();
+    if (proOfferSeenAt === null && !isProSubscriber) {
+      markProOfferSeen();
+      showPaywall('onboarding');
+    }
+  }
+
+  function openBillScan(manual = false) {
+    setBillScanManual(manual);
+    setStackScreen('billScan');
   }
 
   async function handleSignedOut() {
-    authDebug('signOut from uid=', auth.currentUser?.uid);
     const guestUid = await signOutUser();
-    authDebug('signOut new guest uid=', guestUid);
     setUid(guestUid);
     setActiveUid(guestUid);
     configurePurchases(guestUid);
@@ -295,6 +303,20 @@ export default function App() {
     );
   }
 
+  if (appState === 'intro') {
+    return (
+      <ScreenBackground>
+        <IntroScreen
+          onDone={() => {
+            useUserStore.getState().markIntroSeen();
+            setAppState('login');
+          }}
+        />
+        <StatusBar style="light" />
+      </ScreenBackground>
+    );
+  }
+
   if (appState === 'login') {
     return (
       <ScreenBackground>
@@ -310,7 +332,7 @@ export default function App() {
   if (appState === 'onboarding' && activeUid) {
     return (
       <ScreenBackground>
-        <OnboardingScreen uid={activeUid} onDone={() => setAppState('main')} />
+        <OnboardingScreen uid={activeUid} onDone={handleOnboardingDone} />
         <StatusBar style="light" />
       </ScreenBackground>
     );
@@ -335,14 +357,23 @@ export default function App() {
                 }}
               />
             )}
-            {stackScreen === 'billScan' && <BillScanScreen uid={activeUid} onBack={() => setStackScreen(null)} />}
+            {stackScreen === 'billScan' && (
+              <BillScanScreen uid={activeUid} startManual={billScanManual} onBack={() => setStackScreen(null)} />
+            )}
           </>
         ) : (
           <>
-            {tab === 'overview' && (
+            {tab === 'overview' && activeUid && (
               <HomeScreen
+                uid={activeUid}
                 onOpenKostnadskoll={() => setStackScreen('kostnadskoll')}
                 onOpenApplianceRecommendations={() => setStackScreen('applianceRecommendations')}
+                onOpenBillScan={openBillScan}
+                onOpenApplianceScan={() => {
+                  setEditingAppliance(null);
+                  setStackScreen('applianceScan');
+                }}
+                onOpenSettings={() => setTab('settings')}
               />
             )}
             {tab === 'forecast' && <ForecastScreen />}
@@ -354,7 +385,7 @@ export default function App() {
                   setEditingAppliance(editAppliance ?? null);
                   setStackScreen('applianceScan');
                 }}
-                onOpenBillScan={() => setStackScreen('billScan')}
+                onOpenBillScan={() => openBillScan(false)}
                 onDevReset={handleDevReset}
                 onAccountDeleted={handleAccountDeleted}
                 onSignedIn={handleSignedIn}
@@ -391,13 +422,13 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontFamily: theme.typography.displayMedium,
-    fontSize: 18,
+    fontSize: theme.type.lg,
     color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   errorMessage: {
     fontFamily: theme.typography.body,
-    fontSize: 14,
+    fontSize: theme.type.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
@@ -410,7 +441,7 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 14,
+    fontSize: theme.type.sm,
     color: theme.colors.onInkButton,
   },
   screen: {
@@ -430,7 +461,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 11,
+    fontSize: theme.type.xs,
     color: theme.colors.textMuted,
   },
   tabLabelActive: {

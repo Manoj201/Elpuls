@@ -41,7 +41,7 @@ export function InfoRow({ icon: Icon, title, subtitle, variant = 'neutral' }: In
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
   },
   iconContainer: {
@@ -56,14 +56,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 14,
+    fontSize: theme.type.md,
+    lineHeight: 24,
     color: theme.colors.textPrimary,
   },
   subtitle: {
     fontFamily: theme.typography.body,
-    fontSize: 13,
+    fontSize: theme.type.sm,
     color: theme.colors.textSecondary,
     marginTop: 2,
-    lineHeight: 18,
+    lineHeight: 20,
   },
 });

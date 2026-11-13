@@ -10,7 +10,8 @@
     "back": "Tillbaka",
     "month": "månad",
     "cancel": "Avbryt",
-    "delete": "Ta bort"
+    "delete": "Ta bort",
+    "saveFailed": "Det gick inte att spara. Kontrollera anslutningen och försök igen."
   },
   "app": {
     "initErrorTitle": "Kunde inte starta Elpuls",
@@ -23,26 +24,26 @@
   "home": {
     "todayLabel": "Idag",
     "country": "Sverige",
-    "noPricesYet": "Inga priser publicerade för idag än.",
-    "belowAverage": "Under medel idag",
-    "aboveAverage": "Över medel idag",
-    "aroundAverage": "Kring medel idag",
-    "normalRisk": "Normal prisrisk idag",
-    "higherRisk": "Högre prisrisk idag",
-    "elevatedRisk": "Förhöjd prisrisk idag",
-    "explainerTitle": "Varför dagens priser ser ut så här",
-    "hourlyTitle": "Idag, per timme",
-    "priceUnitNow": "öre/kWh · just nu",
-    "solarBonusHours": "Soltimmar med bonus",
-    "noBonusHours": "Inga soltimmar med bonus idag.",
-    "solarBonusSleepingCaption": "Solen sover — inga soltimmar med bonus idag.",
-    "solarBonusActiveCaption": "Solen går upp — {{count}} soltimmar med bonus idag.",
+    "noPricesYet": "Dagens priser är inte publicerade än.",
+    "belowAverage": "Billigare än vanligt idag",
+    "aboveAverage": "Dyrare än vanligt idag",
+    "aroundAverage": "Ungefär som vanligt idag",
+    "normalRisk": "Priserna ser normala ut idag",
+    "higherRisk": "Priset kan bli högt idag",
+    "elevatedRisk": "Priset kan bli lite högt idag",
+    "explainerTitle": "Därför ser priserna ut så här idag",
+    "hourlyTitle": "Pris per timme idag",
+    "priceUnitNow": "öre per kWh just nu",
+    "solarBonusHours": "Bästa timmarna för dina solpaneler",
+    "noBonusHours": "Inga särskilt bra soltimmar idag.",
+    "solarBonusSleepingCaption": "Inga särskilt bra soltimmar idag.",
+    "solarBonusActiveCaption": "{{count}} bra soltimmar idag.",
     "priceToggleSpot": "Spotpris",
     "priceToggleLanded": "Vad du betalar",
-    "landedEstimateCaption": "Uppskattning — väntar på din skannade elräkning för exakt påslag.",
+    "landedEstimateCaption": "Med nätavgift, skatt och moms. Lägg till elbolagets påslag från fakturan för exakt pris.",
     "openKostnadskollTitle": "Kostnadskoll",
-    "openKostnadskollSubtitle": "Jämför kostnaden att köra en apparat nu mot att vänta.",
-    "openApplianceRecommendationsSubtitle": "Få en kostnadstip för varje apparat du äger.",
+    "openKostnadskollSubtitle": "Köra nu eller vänta? Se vad det kostar.",
+    "openApplianceRecommendationsSubtitle": "Billigaste tiden för varje apparat.",
     "share": {
       "buttonLabel": "Dela prisjämförelse",
       "dialogTitle": "Dela Elpuls-jämförelse",
@@ -50,20 +51,49 @@
       "pricierSubheadline": "{{yourZone}} mot {{otherZone}} idag",
       "cheapestHeadline": "{{zone}} är billigast idag",
       "cheapestSubheadline": "Slår {{otherZone}} och resten av Sverige",
-      "footer": "Elpuls — svenska elpriser, förklarade"
-    }
+      "footer": "Elpuls: svenska elpriser, förklarade"
+    },
+    "loading": "Hämtar priser",
+    "loadFailed": "Det gick inte att hämta dagens priser. Kontrollera anslutningen.",
+    "noPricesHint": "De publiceras oftast strax efter 13:00 dagen innan.",
+    "zoneButtonLabel": "Elområde {{zone}}. Tryck för att byta.",
+    "zonePickerHint": "Titta på ett annat elområde",
+    "priceToggleLabel": "Visa spotpris eller vad du betalar",
+    "landedPromptTitle": "Lägg till din nätavgift först",
+    "landedPromptText": "Ditt pris innehåller nätavgiften från fakturan. Skanna fakturan eller skriv in avgiften, så visar vyn vad varje timme kostar dig.",
+    "landedPromptScan": "Skanna min faktura",
+    "landedPromptManual": "Skriv in själv",
+    "landedExactCaption": "Med nätavgift, elbolagets påslag, skatt och moms.",
+    "priceUnitLanded": "öre per kWh, vad du betalar nu",
+    "priceNowA11y": "{{price}} öre per kilowattimme just nu",
+    "atHour": "kl {{hour}}:00",
+    "riskFactors": {
+      "cold": "kallt, {{value}}°C i snitt",
+      "lowWind": "lite vind, {{value}} m/s"
+    },
+    "openApplianceRecommendationsTitle": "Apparattips",
+    "explainerNotReady": "Dagens förklaring är inte klar än. Den kommer oftast runt 07:00.",
+    "explainerLockedTitle": "Förstå varför priset ändras",
+    "explainerLockedText": "En kort förklaring varje dag om vad som drar priset upp eller ner.",
+    "explainerSample": "Kallt väder och lite vind höjer priset i kväll. I natt blåser det mer, så timmarna efter midnatt blir mycket billigare.",
+    "proTipsTitle": "Dina tips idag",
+    "proTipsLockedTitle": "Dagliga tips för ditt hem",
+    "proTipsLockedText": "När du ska värma, när du ska tvätta och vad morgondagen har att bjuda på.",
+    "proTipsSampleHeating": "Värm huset 06:00 till 09:00 och låt det svalna lite 17:00 till 20:00.",
+    "proTipsSampleWeather": "Kallt imorgon bitti. Förvärm bilen medan den står på laddning.",
+    "proTipsSampleSolar": "3 timmar idag då dina solpaneler ger mest."
   },
   "weatherPrep": {
     "title": "Vädertips",
-    "coldSnapEv": "Kallt imorgon bitti ({{start}}:00–{{end}}:00) — förvärm elbilen innan du åker.",
-    "coldSnapGeneric": "Kallt imorgon bitti ({{start}}:00–{{end}}:00) — klä varmt och ge dig extra tid.",
-    "dryingWindow": "Blåsigt och klart i eftermiddag ({{start}}:00–{{end}}:00) — bra tvättorkningsväder.",
-    "noTip": "Inga vädertips just nu — kolla igen när morgondagens prognos blir säkrare."
+    "coldSnapEv": "Kallt imorgon bitti ({{start}}:00 till {{end}}:00). Förvärm bilen medan den står på laddning.",
+    "coldSnapGeneric": "Kallt imorgon bitti ({{start}}:00 till {{end}}:00). Klä dig varmt och åk lite tidigare.",
+    "dryingWindow": "Blåsigt och klart i eftermiddag ({{start}}:00 till {{end}}:00). Bra väder att torka tvätt ute.",
+    "noTip": "Inga vädertips idag. Titta igen imorgon."
   },
   "heatingPlan": {
     "title": "Värmeplan",
-    "advisory": "Lagra värme {{bankStart}}:00–{{bankEnd}}:00, låt den sjunka {{coastStart}}:00–{{coastEnd}}:00 under kvällstoppen.",
-    "noPlanToday": "Ingen värmelagring behövs idag — priserna är stabila i kväll."
+    "advisory": "Värm huset {{bankStart}}:00 till {{bankEnd}}:00 och låt det sedan svalna lite {{coastStart}}:00 till {{coastEnd}}:00 när priset toppar.",
+    "noPlanToday": "Ingen plan behövs idag. Priset håller sig jämnt under kvällen."
   },
   "ticker": {
     "title": "Live kostnadsmätare",
@@ -108,29 +138,33 @@
   },
   "login": {
     "missingFields": "Ange e-post och lösenord.",
-    "tagline": "Veta när elen är billig.",
-    "description": "Elpuls visar Nord Pool-spotpriser för ditt elområde i realtid, förklarar varför de ändras och hjälper dig välja rätt tillfälle att använda el.",
+    "tagline": "Elpriset för ditt hem, förklarat.",
     "emailPlaceholder": "E-post",
     "passwordPlaceholder": "Lösenord",
     "createAccount": "Skapa konto",
     "signIn": "Logga in",
-    "continueWithoutAccount": "Fortsätt som gäst",
-    "legal": "Genom att fortsätta godkänner du Elpuls användarvillkor och integritetspolicy.",
-    "termsLink": "Användarvillkor",
-    "privacyLink": "Integritetspolicy",
-    "trust": {
-      "priceTitle": "Livepriser för ditt elområde",
-      "priceSubtitle": "SE1–SE4, uppdaterat direkt från Nord Pool.",
-      "aiTitle": "AI förklarar dagens priser",
-      "aiSubtitle": "Förstå varför elen är dyr eller billig just nu.",
-      "costCheckTitle": "Kostnadskoll innan du startar",
-      "costCheckSubtitle": "Se om det lönar sig att vänta med disk eller tvätt."
-    },
+    "legal": "Genom att fortsätta godkänner du Elpuls villkor och integritetspolicy.",
+    "termsLink": "Villkor",
+    "privacyLink": "Integritet",
     "passwordHint": "Minst 6 tecken.",
     "forgotPassword": "Glömt lösenordet?",
     "enterEmailForReset": "Fyll i din e-post ovan och tryck sedan på ”Glömt lösenordet?” igen.",
     "resetSent": "Vi har skickat en länk för att återställa lösenordet till {{email}}.",
-    "signInInstead": "Logga in med den här e-posten i stället"
+    "signInInstead": "Logga in med den här e-posten i stället",
+    "signinTitle": "Logga in",
+    "signinSubtitle": "Använd e-postadressen och lösenordet du skapade i Elpuls.",
+    "signupTitle": "Skapa konto",
+    "signupSubtitle": "Behåll dina inställningar om du byter telefon.",
+    "emailLabel": "E-post",
+    "passwordLabel": "Lösenord",
+    "showPassword": "Visa lösenord",
+    "hidePassword": "Dölj lösenord",
+    "switchToSignin": "Har du redan ett konto? Logga in",
+    "switchToSignup": "Ny här? Skapa ett konto",
+    "accountBenefit": "Med ett gratis konto följer dina inställningar och Pro med om du byter telefon.",
+    "createFreeAccount": "Skapa gratis konto",
+    "continueWithoutAccount": "Fortsätt utan konto",
+    "welcomeBack": "Välkommen tillbaka. Logga in så får du tillbaka dina inställningar och Pro."
   },
   "onboarding": {
     "ageTitle": "Innan vi börjar",
@@ -139,15 +173,15 @@
     "zoneTitle": "Vilket elområde bor du i?",
     "zoneSubtitle": "Osäker? Ange ditt postnummer och vi föreslår ett elområde.",
     "postcodePlaceholder": "Postnummer (t.ex. 112 29)",
-    "postcodeGuessed": "Baserat på ditt postnummer är du troligen i {{zone}} — bekräfta eller ändra nedan.",
+    "postcodeGuessed": "Utifrån ditt postnummer bor du troligen i {{zone}}. Kontrollera nedan.",
     "zoneInfo": {
-      "SE1": "Norra Sverige — Luleå, Kiruna, Boden",
-      "SE2": "Norra Mellansverige — Umeå, Sundsvall, Östersund",
-      "SE3": "Mellansverige & södra Mellansverige — Stockholm, Göteborg, Uppsala, Örebro (mest befolkade elområdet)",
-      "SE4": "Södra Sverige — Malmö, Helsingborg, Jönköping, Kalmar"
+      "SE1": "Norra Sverige: Luleå, Kiruna, Boden",
+      "SE2": "Norra Mellansverige: Umeå, Sundsvall, Östersund",
+      "SE3": "Mellansverige: Stockholm, Göteborg, Uppsala, Örebro",
+      "SE4": "Södra Sverige: Malmö, Helsingborg, Jönköping, Kalmar"
     },
     "heatingTitle": "Hur värms ditt hem upp?",
-    "heatingSubtitle": "Det hjälper oss förklara prisriskfaktorer.",
+    "heatingSubtitle": "Uppvärmningen drar mest el i de flesta hem, så det påverkar dina tips.",
     "heating": {
       "district": "Fjärrvärme",
       "electric": "Direktverkande el",
@@ -155,14 +189,19 @@
       "other": "Annat"
     },
     "solarTitle": "Har du solpaneler?",
-    "solarSubtitle": "Vi visar soltimmar med bonus om så är fallet.",
+    "solarSubtitle": "Om du har det visar vi timmarna då dina paneler är värda mest.",
     "evTitle": "Har du en elbil?",
-    "evSubtitle": "Vi anpassar förslag på apparater om så är fallet.",
-    "gridFeeTitle": "Vad är din nätavgift?",
-    "gridFeeSubtitle": "Valfritt — hittas på din elräkning. Du kan hoppa över detta nu.",
+    "evSubtitle": "Om du har det visar vi de billigaste timmarna att ladda.",
+    "gridFeeTitle": "Se vad du faktiskt betalar",
+    "gridFeeSubtitle": "Nätavgiften står på din elräkning. Med den visar Elpuls ditt riktiga pris per kWh.",
     "gridFeeFixedPlaceholder": "Fast avgift (kr/månad)",
     "gridFeeVariablePlaceholder": "Rörlig avgift (öre/kWh)",
-    "skip": "Hoppa över nu"
+    "skip": "Gör det senare",
+    "scanBillTitle": "Skanna din faktura",
+    "scanBillText": "Fotografera din senaste faktura eller välj PDF:en. Vi fyller i siffrorna så att du kan kontrollera dem.",
+    "scanBillButton": "Skanna min faktura",
+    "orTypeIt": "eller skriv in den",
+    "gridFeeVariableHelper": "På fakturan heter den ofta \"elöverföring\" eller \"överföringsavgift\"."
   },
   "forecast": {
     "title": "Prisprognos",
@@ -188,7 +227,6 @@
   },
   "stats": {
     "title": "Statistik",
-    "proTag": "PRO",
     "subtitle": "Kostnadsspecifikation och jämförelse mellan elområden.",
     "costBreakdown": "Kostnadsspecifikation, just nu",
     "spot": "Spotpris",
@@ -214,7 +252,14 @@
     "zoneComparison": "Elområden i Sverige",
     "consumptionTrend": "Förbrukningshistorik",
     "comingSoonTitle": "Kommer snart",
-    "comingSoonSubtitle": "Väntar på en datakälla för din faktiska elförbrukning över tid."
+    "comingSoonSubtitle": "Väntar på en datakälla för din faktiska elförbrukning över tid.",
+    "sample": {
+      "spot": "105,6 öre",
+      "gridFee": "24,5 öre",
+      "energyTax": "36,0 öre",
+      "vat": "41,5 öre",
+      "total": "207,6 öre/kWh"
+    }
   },
   "settings": {
     "title": "Inställningar",
@@ -224,13 +269,13 @@
     "accountTitle": "Konto",
     "deleteAccountTitle": "Ta bort konto",
     "deleteAccountSubtitle": "Tar bort ditt konto och all din data från Elpuls permanent. Det går inte att ångra.",
-    "deleteAccountSubtitlePro": "Tar bort ditt konto och all din data från Elpuls permanent. Det går inte att ångra, och det avslutar inte din Pro-prenumeration — hantera den separat i App Store eller Play Store.",
+    "deleteAccountSubtitlePro": "Tar bort ditt konto och all din data från Elpuls för gott. Det går inte att ångra. Pro-prenumerationen avslutas inte, så avsluta den i App Store.",
     "deleteAccountButton": "Ta bort mitt konto",
     "deleteAccountConfirmTitle": "Ta bort ditt konto?",
     "deleteAccountConfirmMessage": "Det här tar bort ditt konto och all din data permanent. Det går inte att ångra.",
     "save": "Spara",
     "saving": "Sparar…",
-    "saved": "Sparat.",
+    "saved": "Sparat",
     "estimatedMonthlyKwhPlaceholder": "Uppskattad förbrukning (kWh/månad)",
     "priceAlertsTitle": "Prisvarningar",
     "priceAlertsSubtitle": "Få en extra pushnotis när morgondagens priser är ovanligt extrema.",
@@ -264,7 +309,7 @@
     "signOut": "Logga ut",
     "signOutConfirmTitle": "Logga ut?",
     "signOutConfirmMessage": "Dina inställningar finns kvar på ditt konto. Logga in igen när du vill för att få tillbaka dem.",
-    "signOutConfirmMessagePro": "Elpuls Pro är kopplat till det här kontot. Logga in igen för att fortsätta använda Pro. Att logga ut avslutar inte prenumerationen — hantera den i App Store.",
+    "signOutConfirmMessagePro": "Elpuls Pro är kopplat till det här kontot. Logga in igen för att fortsätta använda Pro. Prenumerationen avslutas inte när du loggar ut. Du hanterar den i App Store.",
     "groupHome": "Ditt hem",
     "groupHomeSubtitle": "Det du angav vid start. Används för priser, kostnader och tips.",
     "groupNotifications": "Aviseringar",
@@ -273,13 +318,30 @@
     "groupDeveloper": "Utvecklare",
     "groupDeveloperSubtitle": "Visas bara i utvecklingsversioner.",
     "dangerZoneTitle": "Ta bort konto",
-    "saveChanges": "Spara ändringar"
+    "saveChanges": "Spara ändringar",
+    "proCardTitle": "Elpuls Pro",
+    "proCardText": "Daglig prisförklaring, värmeplan och tips för varje apparat.",
+    "realPriceTitle": "Ditt riktiga pris",
+    "realPriceText": "De här kommer från din elräkning. Elpuls använder dem för att visa vad du faktiskt betalar.",
+    "realPrice": {
+      "gridFee": "Nätavgift",
+      "markup": "Elbolagets påslag"
+    },
+    "valueOre": "{{value}} öre/kWh",
+    "notSet": "Inte tillagt",
+    "scanBill": "Skanna min faktura",
+    "scanNewBill": "Skanna en nyare faktura"
   },
   "applianceRecommendations": {
     "title": "Apparatrekommendationer",
     "subtitle": "Se bästa tiden att köra varje apparat idag.",
     "alreadyBest": "Redan bästa tiden idag.",
-    "notifyMe": "Notifiera mig"
+    "notifyMe": "Notifiera mig",
+    "sample": {
+      "dishwasher": "Vänta till 02:00, spara 3,10 kr",
+      "washingMachine": "Kör nu, billigast idag",
+      "ev": "Ladda 01:00 till 05:00, spara 38 kr"
+    }
   },
   "applianceScan": {
     "title": "Lägg till apparat",
@@ -301,51 +363,74 @@
     "saveFailed": "Kunde inte spara apparaten. Försök igen."
   },
   "billScan": {
-    "title": "Skanna elräkning",
-    "subtitle": "Fotografera fakturan eller välj en PDF, så läser vi av elhandlarens påslag.",
-    "takePhoto": "Ta foto av fakturan",
-    "choosePdf": "Välj PDF",
-    "scanning": "Läser av fakturan…",
-    "failed": "Kunde inte läsa fakturan. Försök igen eller ange uppgifterna manuellt.",
-    "confirmTitle": "Stämmer detta?",
+    "title": "Skanna din elräkning",
+    "subtitle": "Fotografera din senaste faktura eller välj PDF:en. Vi läser av nätavgift och påslag så att du kan kontrollera dem.",
+    "takePhoto": "Fotografera fakturan",
+    "choosePdf": "Välj en PDF",
+    "scanning": "Läser din faktura…",
+    "failed": "Vi kunde inte läsa fakturan. Ta en skarpare bild eller skriv in siffrorna själv.",
+    "confirmTitle": "Kontrollera siffrorna",
     "confidenceHigh": "Tydligt avläst",
-    "confidenceLow": "Osäker avläsning",
-    "retailerMarkupField": "Elhandlarens påslag (öre/kWh)",
-    "retailerMarkupPlaceholder": "T.ex. 11"
+    "confidenceLow": "Svårläst, kontrollera noga",
+    "retailerMarkupField": "Elbolagets påslag",
+    "retailerMarkupPlaceholder": "t.ex. 11",
+    "privacyNote": "Bilden används bara för att läsa av siffrorna. Den sparas inte.",
+    "tryAgain": "Försök igen",
+    "confirmSubtitle": "Jämför med din faktura och rätta det som ser fel ut.",
+    "manualTitle": "Skriv in dina avgifter",
+    "manualSubtitle": "Båda står på din elräkning. Lämna fältet tomt om du inte vet.",
+    "gridFeeHelper": "Heter ofta \"elöverföring\" eller \"överföringsavgift\". Från ditt nätbolag.",
+    "retailerMarkupHelper": "Heter ofta \"påslag\" eller \"rörliga kostnader\". Från ditt elbolag.",
+    "save": "Spara"
   },
   "paywall": {
-    "headline": "Lås upp Elpuls Pro",
-    "subheadline": "AI-förklaringar, solbonus-timmar, statistik och apparatrekommendationer.",
-    "mostPopular": "MEST POPULÄR",
-    "perMonth": "/ månad",
+    "headline": "Få ut mer av Elpuls med Pro",
+    "subheadline": "Allt i gratisappen, plus verktyg för att planera elen i ditt hem.",
     "fallbackPrice": "39 kr",
-    "trialHint": "7 dagars gratis provperiod, avsluta när som helst.",
-    "notAvailable": "Köp är inte tillgängliga ännu i den här versionen.",
+    "notAvailable": "Köp är inte tillgängliga just nu.",
     "retry": "Tryck för att försöka igen",
-    "subscribe": "Fortsätt med Pro",
-    "purchasing": "Startar…",
+    "subscribe": "Prenumerera för {{price}} i månaden",
     "purchaseFailed": "Köpet gick inte igenom. Försök igen.",
     "restore": "Återställ köp",
     "restoring": "Återställer…",
     "restoreFailed": "Kunde inte återställa köp.",
-    "continueFree": "Fortsätt gratis",
-    "lockedExplainerSubtitle": "Lås upp AI-förklaringen till varför dagens priser ser ut som de gör.",
-    "lockedSolarBonusSubtitle": "Lås upp soltimmar med extra bonus för egen produktion.",
-    "lockedStatsSubtitle": "Lås upp kostnadsspecifikation, elområdesjämförelse och förbrukningshistorik.",
-    "lockedRecommendationsSubtitle": "Lås upp en kostnadstip för varje apparat — se vad du ska köra nu och vad du kan vänta med.",
-    "lockedWeatherPrepSubtitle": "Lås upp förhandsvarningar för morgondagens väder, som kyla eller bra tvättorkningsväder.",
-    "lockedHeatingPlanSubtitle": "Lås upp en daglig värmeplan — när du ska lagra värme och när du kan låta den sjunka under kvällstoppen.",
+    "lockedStatsSubtitle": "Din elräkning uppdelad, avtalskoll och en jämförelse av alla elområden.",
+    "lockedRecommendationsSubtitle": "Se för varje apparat om du ska köra den nu eller vänta.",
     "features": {
-      "explainer": "AI-prisförklaring",
-      "solarBonus": "Solbonus-timmar",
-      "stats": "Statistik och kostnadsspecifikation",
-      "recommendations": "Apparatrekommendationer"
+      "explainer": "Daglig prisförklaring",
+      "solarBonus": "Bästa soltimmarna",
+      "stats": "Kostnadsuppdelning och statistik",
+      "recommendations": "Apparattips",
+      "heatingPlan": "Värmeplan",
+      "weatherPrep": "Vädertips"
     },
     "ownedByOtherAccount": "Prenumerationen på det här Apple-ID:t är kopplad till ett annat Elpuls-konto. Logga in på det kontot för att använda Pro.",
-    "nothingToRestore": "Ingen aktiv prenumeration hittades för det här Apple-ID:t."
+    "nothingToRestore": "Ingen aktiv prenumeration hittades för det här Apple-ID:t.",
+    "headlineOnboarding": "Prova Pro gratis i {{days}} dagar",
+    "headlineExplainer": "Förstå varför priset ändras",
+    "headlineProTips": "Dagliga tips för ditt hem",
+    "headlineStats": "Se vart pengarna tar vägen",
+    "headlineRecommendations": "Billigaste tiden för varje apparat",
+    "headlineTrial": "Behåll Pro efter provperioden",
+    "close": "Stäng",
+    "featureText": {
+      "explainer": "Varje morgon: vad som drar priset upp eller ner idag.",
+      "heatingPlan": "När du ska värma huset för att slippa kvällstoppen.",
+      "recommendations": "För varje apparat: kör nu eller vänta på en billigare timme.",
+      "weatherPrep": "Kalla morgnar, bra torkväder och liknande påminnelser.",
+      "solarBonus": "Timmarna då din egen solel är värd mest.",
+      "stats": "Din elräkning uppdelad, plus en jämförelse av alla fyra elområden."
+    },
+    "aiFootnote": "Den dagliga förklaringen skrivs av AI. Den är en vägledning och kan ha fel.",
+    "trialBig": "{{days}} dagar gratis",
+    "trialThen": "Sedan {{price}} i månaden.",
+    "pricePerMonth": "{{price}} i månaden",
+    "cancelAnytime": "Avsluta när du vill i App Store.",
+    "startTrial": "Starta {{days}} dagar gratis",
+    "notNow": "Inte nu"
   },
   "trialBanner": {
-    "title": "Elpuls Pro provperiod",
+    "title": "Pro gratis på prov",
     "daysLeft": "{{count}} dagar kvar",
     "cta": "Behåll Pro"
   },
@@ -375,5 +460,57 @@
     "exampleMonthlyKwh": "t.ex. 1200",
     "examplePriceAlert": "t.ex. 150",
     "retailerMarkupScanned": "Elhandlarens påslag: {{value}} öre/kWh, från din faktura. Tryck för att skanna en ny."
+  },
+  "ai": {
+    "badge": "AI",
+    "explainerNote": "Skriven av AI utifrån dagens priser och väder. Den kan ha fel, så se den som en vägledning.",
+    "scanNote": "Avläst av AI från din bild eller PDF. Jämför siffrorna med fakturan innan du sparar."
+  },
+  "pro": {
+    "tag": "Pro",
+    "tryFree": "Prova gratis i {{days}} dagar",
+    "example": "Exempel"
+  },
+  "setup": {
+    "title": "Se vad du verkligen betalar",
+    "subtitle": "Några minuter räcker för att göra spotpriset till ditt eget pris per kWh.",
+    "dismiss": "Dölj listan",
+    "progress": "{{done}} av {{total}} klara",
+    "gridFeeTitle": "Lägg till din nätavgift",
+    "gridFeeSubtitle": "Skanna fakturan eller skriv in den själv.",
+    "markupTitle": "Lägg till elbolagets påslag",
+    "markupSubtitle": "Står också på fakturan. Behövs för exakt pris.",
+    "applianceTitle": "Lägg till en apparat",
+    "applianceSubtitle": "Se vad en tvätt eller en billaddning kostar just nu.",
+    "alertsTitle": "Slå på prisvarningar",
+    "alertsSubtitle": "Få ett meddelande när morgondagen blir mycket dyr eller mycket billig."
+  },
+  "intro": {
+    "skip": "Hoppa över",
+    "next": "Nästa",
+    "start": "Kom igång",
+    "pageOf": "Sida {{page}} av {{total}}",
+    "page1Title": "Se vad elen verkligen kostar dig",
+    "page1Text": "Spotpriset i nyheterna är bara en del av elräkningen. Elpuls lägger till nätavgift, energiskatt och moms så att du ser priset du faktiskt betalar.",
+    "breakdownCaption": "En vanlig svensk elräkning, ungefär",
+    "breakdownA11y": "En vanlig elräkning: ungefär en fjärdedel är spotpris, en fjärdedel nätavgift och hälften energiskatt och moms.",
+    "breakdown": {
+      "spot": "Spotpris",
+      "grid": "Nätavgift",
+      "tax": "Energiskatt",
+      "vat": "Moms"
+    },
+    "page2Title": "Använd elen när den är billig",
+    "page2Text": "Priset ändras varje timme. Elpuls visar de billigaste timmarna och vad diskmaskinen, tvättmaskinen eller bilen kostar att köra nu eller senare.",
+    "exampleNow": "Diskmaskin nu",
+    "exampleLater": "Kl 02:00 i natt",
+    "exampleFootnote": "Exempel från en vinterdag i SE3.",
+    "page3Title": "Planera i förväg med Pro",
+    "page3Text": "Pro berättar varför priset ändras och när du ska värma huset. Gratis i {{days}} dagar, sedan 39 kr i månaden.",
+    "pro": {
+      "explainer": "Varför dagens priser ser ut som de gör",
+      "heating": "När du ska värma huset före kvällstoppen",
+      "weather": "Tips inför kalla morgnar och bra torkväder"
+    }
   }
 }

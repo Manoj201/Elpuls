@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { IconBellRinging, IconFlask, IconPencil, IconPlus, IconReceipt, IconTrash, IconUserCircle } from '@tabler/icons-react-native';
+import { IconBellRinging, IconCircle, IconCircleCheck, IconFlask, IconPencil, IconPlus, IconReceipt, IconSparkles, IconTrash, IconUserCircle } from '@tabler/icons-react-native';
 import { db } from '../lib/firebase';
-import { openManageSubscriptions } from '../lib/purchases';
+import { DEFAULT_TRIAL_DAYS, openManageSubscriptions } from '../lib/purchases';
 import { authErrorKey, currentEmail, isGuest, linkGuestToEmail } from '../lib/auth';
 import { useApplianceStore, type RegisteredAppliance } from '../stores/useApplianceStore';
 import { useCountryStore } from '../stores/useCountryStore';
@@ -193,9 +193,11 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
   const [priceAlertLowEnabled, setPriceAlertLowEnabled] = useState(user.priceAlertLowEnabled);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function handleSave() {
     setSaving(true);
+    setSaveError(null);
     const gridFeeFixedSekPerMonth = parsePositiveFloat(gridFeeFixedInput);
     const gridFeeVariableOre = parsePositiveFloat(gridFeeVariableInput);
     const estimatedMonthlyKwh = parsePositiveFloat(estimatedMonthlyKwhInput);
@@ -220,14 +222,73 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
       setPriceAlertPrefs(priceAlertHighThresholdOre, priceAlertLowEnabled);
       setActiveZone(info.zone);
       setSavedAt(Date.now());
+    } catch (err) {
+      console.log('Saving settings failed:', err);
+      setSaveError(t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
   }
 
+  // Hide the "Saved" note again after a moment.
+  useEffect(() => {
+    if (savedAt === null) return;
+    const timer = setTimeout(() => setSavedAt(null), 2500);
+    return () => clearTimeout(timer);
+  }, [savedAt]);
+
+  // Only show the Save bar when something on this screen differs from what's saved.
+  const isDirty =
+    zone !== (user.zone ?? config.zones[0]) ||
+    heatingType !== user.heatingType ||
+    hasSolar !== user.hasSolar ||
+    hasEv !== user.hasEv ||
+    parsePositiveFloat(gridFeeFixedInput) !== user.gridFeeFixedSekPerMonth ||
+    (parsePositiveFloat(gridFeeVariableInput) ?? null) !==
+      (user.gridFeeVariableSekPerKwh === null ? null : Number((user.gridFeeVariableSekPerKwh * 100).toFixed(2))) ||
+    parsePositiveFloat(estimatedMonthlyKwhInput) !== user.estimatedMonthlyKwh ||
+    parsePositiveFloat(priceAlertHighInput) !== user.priceAlertHighThresholdOre ||
+    priceAlertLowEnabled !== user.priceAlertLowEnabled;
+
+  const hasGridFee = user.gridFeeVariableSekPerKwh !== null;
+  const hasMarkup = user.retailerMarkupSekPerKwh !== null;
+
   return (
+    <View style={styles.root}>
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
-      <Text style={styles.title}>{t('settings.title')}</Text>
+      <Text style={styles.title} accessibilityRole="header">
+        {t('settings.title')}
+      </Text>
+
+      {!user.isProSubscriber && (
+        <Pressable onPress={() => showPaywall('settings')} accessibilityRole="button" style={styles.topCard}>
+          <Card style={styles.proCard}>
+            <InfoRow icon={IconSparkles} variant="amber" title={t('settings.proCardTitle')} subtitle={t('settings.proCardText')} />
+            <PrimaryButton size="compact" label={t('pro.tryFree', { days: DEFAULT_TRIAL_DAYS })} onPress={() => showPaywall('settings')} />
+          </Card>
+        </Pressable>
+      )}
+
+      <Card style={styles.realPriceCard}>
+        <InfoRow icon={IconReceipt} variant={hasGridFee && hasMarkup ? 'teal' : 'neutral'} title={t('settings.realPriceTitle')} subtitle={t('settings.realPriceText')} />
+        <View style={styles.statusList}>
+          {[
+            { key: 'gridFee', done: hasGridFee, value: hasGridFee ? t('settings.valueOre', { value: Number((user.gridFeeVariableSekPerKwh! * 100).toFixed(2)) }) : null },
+            { key: 'markup', done: hasMarkup, value: hasMarkup ? t('settings.valueOre', { value: Number((user.retailerMarkupSekPerKwh! * 100).toFixed(2)) }) : null },
+          ].map((row) => (
+            <View key={row.key} style={styles.statusRow}>
+              {row.done ? (
+                <IconCircleCheck size={22} color={theme.colors.positiveTeal} />
+              ) : (
+                <IconCircle size={22} color={theme.colors.textMuted} />
+              )}
+              <Text style={styles.statusLabel}>{t(`settings.realPrice.${row.key}`)}</Text>
+              <Text style={styles.statusValue}>{row.value ?? t('settings.notSet')}</Text>
+            </View>
+          ))}
+        </View>
+        <SecondaryButton size="compact" label={t(hasGridFee && hasMarkup ? 'settings.scanNewBill' : 'settings.scanBill')} onPress={onOpenBillScan} />
+      </Card>
 
       <GroupHeader first title={t('settings.groupHome')} subtitle={t('settings.groupHomeSubtitle')} />
       <Section title={t('settings.zoneTitle')}>
@@ -356,10 +417,6 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
         </Card>
       </Section>
 
-      <View style={styles.saveBlock}>
-      <PrimaryButton label={saving ? t('settings.saving') : t('settings.saveChanges')} onPress={handleSave} disabled={saving} />
-      {savedAt !== null && <Text style={styles.savedHint}>{t('settings.saved')}</Text>}
-      </View>
 
       <GroupHeader title={t('settings.groupApp')} />
       <Section title={t('settings.languageTitle')}>
@@ -404,14 +461,10 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
                 onChangeText={setAccountPassword}
               />
               <Text style={styles.accountHint}>{t('login.passwordHint')}</Text>
-              <PrimaryButton
-                label={creatingAccount ? t('settings.saving') : t('login.createAccount')}
-                onPress={handleCreateAccount}
-                disabled={creatingAccount}
-              />
+              <PrimaryButton size="compact" label={t('login.createAccount')} onPress={handleCreateAccount} loading={creatingAccount} />
             </>
           ) : (
-            <SecondaryButton label={signingOut ? t('settings.saving') : t('settings.signOut')} onPress={handleSignOut} disabled={signingOut} />
+            <SecondaryButton size="compact" label={t('settings.signOut')} onPress={handleSignOut} loading={signingOut} />
           )}
           {accountError && <Text style={styles.error}>{accountError}</Text>}
         </Card>
@@ -431,13 +484,14 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
           </View>
           <View style={styles.subscriptionDivider} />
           {user.isProSubscriber ? (
-            <PrimaryButton
-              label={managingSubscription ? t('settings.saving') : t('settings.manageSubscription')}
+            <SecondaryButton
+              size="compact"
+              label={t('settings.manageSubscription')}
               onPress={handleManageSubscription}
-              disabled={managingSubscription}
+              loading={managingSubscription}
             />
           ) : (
-            <PrimaryButton label={t('settings.upgrade')} onPress={showPaywall} />
+            <PrimaryButton size="compact" label={t('pro.tryFree', { days: DEFAULT_TRIAL_DAYS })} onPress={() => showPaywall('settings')} />
           )}
         </Card>
       </Section>
@@ -450,11 +504,7 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
             title={t('settings.deleteAccountTitle')}
             subtitle={user.isProSubscriber ? t('settings.deleteAccountSubtitlePro') : t('settings.deleteAccountSubtitle')}
           />
-          <SecondaryButton
-            label={deletingAccount ? t('settings.saving') : t('settings.deleteAccountButton')}
-            onPress={handleDeleteAccount}
-            disabled={deletingAccount}
-          />
+          <SecondaryButton size="compact" label={t('settings.deleteAccountButton')} onPress={handleDeleteAccount} loading={deletingAccount} />
           {deleteAccountError && <Text style={styles.error}>{deleteAccountError}</Text>}
         </Card>
       </Section>
@@ -472,16 +522,26 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
           </Card>
           <Card style={styles.devClearCard}>
             <InfoRow icon={IconTrash} variant="danger" title={t('settings.devClearStorageTitle')} subtitle={t('settings.devClearStorageSubtitle')} />
-            <SecondaryButton
-              label={resetting ? t('settings.saving') : t('settings.devClearStorageButton')}
-              onPress={handleDevReset}
-              disabled={resetting}
-            />
+            <SecondaryButton size="compact" label={t('settings.devClearStorageButton')} onPress={handleDevReset} loading={resetting} />
           </Card>
         </Section>
         </>
       )}
     </ScrollView>
+
+    {(isDirty || savedAt !== null || saveError) && (
+      <View style={styles.saveBar}>
+        {saveError && <Text style={styles.saveError}>{saveError}</Text>}
+        {isDirty ? (
+          <PrimaryButton label={t('settings.saveChanges')} onPress={handleSave} loading={saving} />
+        ) : savedAt !== null ? (
+          <Text style={styles.savedHint} accessibilityLiveRegion="polite">
+            {t('settings.saved')}
+          </Text>
+        ) : null}
+      </View>
+    )}
+    </View>
   );
 }
 
@@ -505,7 +565,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 const styles = StyleSheet.create({
   container: { padding: 16, paddingTop: 60, paddingBottom: 48 },
-  title: { fontFamily: theme.typography.display, fontSize: 26, color: theme.colors.textPrimary, marginBottom: 24 },
+  title: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary, marginBottom: 20 },
   section: { marginBottom: 24 },
   groupHeader: {
     borderTopWidth: 1,
@@ -514,25 +574,40 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
-  groupTitle: { fontFamily: theme.typography.display, fontSize: 20, color: theme.colors.textPrimary },
-  groupSubtitle: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textMuted, marginTop: 4, lineHeight: 18 },
+  groupTitle: { fontFamily: theme.typography.display, fontSize: theme.type.lg, color: theme.colors.textPrimary },
+  groupSubtitle: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 4, lineHeight: 20 },
   groupHeaderFirst: { borderTopWidth: 0, paddingTop: 0, marginTop: 0 },
-  saveBlock: { marginBottom: 32 },
+  root: { flex: 1 },
+  topCard: { marginBottom: 16 },
+  proCard: { gap: 14, borderColor: `${theme.colors.accentAmber}55` },
+  realPriceCard: { gap: 14, marginBottom: 24 },
+  statusList: { gap: 10 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 32 },
+  statusLabel: { flex: 1, fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  statusValue: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  saveBar: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  saveError: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.dangerEmber, textAlign: 'center' },
   accountCard: { gap: 14 },
   sectionTitle: {
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: theme.type.sm,
+    color: theme.colors.textSecondary,
     marginBottom: 10,
   },
   sectionSubtitle: {
     fontFamily: theme.typography.body,
-    fontSize: 13,
+    fontSize: theme.type.sm,
     color: theme.colors.textSecondary,
     marginBottom: 12,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   zoneRow: { flexDirection: 'row', gap: 8 },
   optionList: { gap: 10 },
@@ -544,32 +619,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     fontFamily: theme.typography.body,
-    fontSize: 15,
+    fontSize: theme.type.sm,
     color: theme.colors.textPrimary,
   },
-  accountHint: { fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.textFaint },
+  accountHint: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textFaint },
   entryCard: { marginTop: 4 },
   toggleCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   toggleText: { flex: 1 },
   applianceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   applianceRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
-  applianceLabel: { fontFamily: theme.typography.bodyMedium, fontSize: 15, color: theme.colors.textPrimary, flexShrink: 1 },
+  applianceLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, flexShrink: 1 },
   applianceRowActions: { flexDirection: 'row', gap: 16 },
   subscriptionCard: { gap: 14 },
   devClearCard: { gap: 14, marginTop: 12 },
   subscriptionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   subscriptionDivider: { height: 1, backgroundColor: theme.colors.borderMuted },
-  trialDaysText: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textMuted },
+  trialDaysText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted },
   savedHint: {
-    fontFamily: theme.typography.body,
-    fontSize: 13,
+    fontFamily: theme.typography.bodyMedium,
+    fontSize: theme.type.md,
     color: theme.colors.positiveTealDeep,
     textAlign: 'center',
-    marginTop: 10,
+    paddingVertical: 12,
   },
   error: {
     fontFamily: theme.typography.body,
-    fontSize: 13,
+    fontSize: theme.type.sm,
     color: theme.colors.dangerEmber,
   },
 });

@@ -17,7 +17,7 @@ export function TrialBanner() {
   const daysLeft = Math.max(0, Math.ceil((proExpirationMillis - Date.now()) / MS_PER_DAY));
 
   return (
-    <Pressable onPress={showPaywall}>
+    <Pressable onPress={() => showPaywall('trial')} accessibilityRole="button">
       <View style={styles.banner}>
         <View style={styles.textBlock}>
           <Text style={styles.title}>{t('trialBanner.title')}</Text>
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   textBlock: { flex: 1 },
-  title: { fontFamily: theme.typography.bodyMedium, fontSize: 14, color: theme.colors.onInkButton },
-  subtitle: { fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.onInkButton, opacity: 0.7, marginTop: 2 },
-  cta: { fontFamily: theme.typography.bodyMedium, fontSize: 13, color: theme.colors.onInkButton, textDecorationLine: 'underline' },
+  title: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.onInkButton },
+  subtitle: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.onInkButton, opacity: 0.7, marginTop: 2 },
+  cta: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.onInkButton, textDecorationLine: 'underline' },
 });

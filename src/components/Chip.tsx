@@ -35,7 +35,10 @@ export function Chip({ label, variant = 'neutral', onPress, selected, dot, style
   return (
     <Wrapper style={[styles.chip, chipStyle, style]} onPress={onPress}>
       {dot && <View style={[styles.dot, { backgroundColor: selected ? theme.colors.accentPurple : colors.dot }]} />}
-      <Text style={[styles.label, { color: textColor }]}>{label}</Text>
+      {/* Chips are short labels: keep them on one line, never break mid-word. */}
+      <Text style={[styles.label, { color: textColor }]} numberOfLines={1}>
+        {label}
+      </Text>
     </Wrapper>
   );
 }
@@ -58,6 +61,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 13,
+    fontSize: theme.type.sm,
   },
 });

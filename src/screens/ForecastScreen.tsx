@@ -33,16 +33,18 @@ const BLOCK_TAG_WIDTH = 92;
 // washed-out/almost invisible against the card, so it gets its own
 // slightly-raised pill instead, just for this screen.
 //
-// Fixed width on all four variants (incl. the non-Chip "normal" pill) so the
-// tags line up instead of each sizing to its own label's text length —
-// "Expensive"/"Avoid" otherwise come out visibly wider/narrower than
-// "Cheap"/"Normal" stacked one per block row.
+// Same minimum width on all four variants (incl. the non-Chip "normal" pill)
+// so the tags line up. It's a minimum, not a fixed width: with larger text
+// (bigger type scale or the phone's text-size setting) a fixed width made
+// "Expensive" break mid-word onto two lines.
 function BlockTag({ label }: { label: TimeBlockSummary['label'] }) {
   const { t } = useTranslation();
   if (label === 'normal') {
     return (
       <View style={styles.normalTag}>
-        <Text style={styles.normalTagText}>{t('forecast.tag.normal')}</Text>
+        <Text style={styles.normalTagText} numberOfLines={1}>
+          {t('forecast.tag.normal')}
+        </Text>
       </View>
     );
   }
@@ -147,37 +149,38 @@ export function ForecastScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 16, paddingTop: 60, paddingBottom: 40 },
-  title: { fontFamily: theme.typography.display, fontSize: 26, color: theme.colors.textPrimary },
-  subtitle: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted, marginTop: 4, marginBottom: 20 },
+  title: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
+  subtitle: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted, marginTop: 4, marginBottom: 20 },
   diffCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  diffLabel: { fontFamily: theme.typography.bodyMedium, fontSize: 14, color: theme.colors.textPrimary, flex: 1 },
-  diffValue: { fontFamily: theme.typography.display, fontSize: 20 },
+  diffLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, flex: 1 },
+  diffValue: { fontFamily: theme.typography.display, fontSize: theme.type.lg },
   dayCard: { marginBottom: 16 },
-  dayTitle: { fontFamily: theme.typography.displayMedium, fontSize: 16, color: theme.colors.textPrimary, marginBottom: 6 },
-  dayAverage: { fontFamily: theme.typography.display, fontSize: 30, color: theme.colors.textPrimary },
+  dayTitle: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginBottom: 6 },
+  dayAverage: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
   dayAverageUnit: {
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 11,
+    fontSize: theme.type.xs,
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 2,
     marginBottom: 18,
   },
-  empty: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted, marginBottom: 14 },
+  empty: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted, marginBottom: 14 },
   blockList: { gap: 14 },
   blockListPending: { opacity: 0.45 },
   blockRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   blockIndicator: { width: 4, alignSelf: 'stretch', borderRadius: 2, minHeight: 32 },
   blockTimeLabel: { flex: 1, gap: 2 },
-  blockTime: { fontFamily: theme.typography.bodyMedium, fontSize: 13, color: theme.colors.textSecondary },
-  blockLabel: { fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.textMuted },
-  blockValue: { alignItems: 'flex-end', gap: 4 },
-  blockPrice: { fontFamily: theme.typography.displayMedium, fontSize: 15, color: theme.colors.textPrimary },
-  blockPriceUnit: { fontFamily: theme.typography.body, fontSize: 11, color: theme.colors.textMuted },
-  blockPriceEmpty: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textFaint },
+  blockTime: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  blockLabel: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textMuted },
+  // Never squeezed: the time/label column on the left wraps instead.
+  blockValue: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+  blockPrice: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
+  blockPriceUnit: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textMuted },
+  blockPriceEmpty: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textFaint },
   normalTag: {
-    width: BLOCK_TAG_WIDTH,
+    minWidth: BLOCK_TAG_WIDTH,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -186,6 +189,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  normalTagText: { fontFamily: theme.typography.bodyMedium, fontSize: 13, color: theme.colors.textSecondary },
-  blockTagChip: { width: BLOCK_TAG_WIDTH, justifyContent: 'center' },
+  normalTagText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  blockTagChip: { minWidth: BLOCK_TAG_WIDTH, justifyContent: 'center', alignSelf: 'flex-end' },
 });

@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from '@firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases from 'react-native-purchases';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -15,6 +16,21 @@ import { useUserStore } from '../stores/useUserStore';
 import { useApplianceStore } from '../stores/useApplianceStore';
 
 let signInPromise: Promise<string> | null = null;
+
+/**
+ * Set when an email account signs out on this phone, so the Login screen can
+ * lead with "Sign in" for a returning person instead of "Create account".
+ * Cleared when the account is deleted. Holds no personal data.
+ */
+export const RETURNING_USER_KEY = 'elpuls.returningUser';
+
+export async function isReturningUser(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(RETURNING_USER_KEY)) === '1';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Ensures the app has a Firebase Auth user, signing in anonymously if
@@ -110,6 +126,9 @@ export async function signOutUser(): Promise<string> {
     await Purchases.logOut();
   } catch {
     // Not configured (no API key) or already anonymous in RevenueCat — fine.
+  }
+  if (auth.currentUser && !auth.currentUser.isAnonymous) {
+    await AsyncStorage.setItem(RETURNING_USER_KEY, '1').catch(() => {});
   }
   // Stop this phone receiving the signed-out account's notifications.
   const previousUid = auth.currentUser?.uid;

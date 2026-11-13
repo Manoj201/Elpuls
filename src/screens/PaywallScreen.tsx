@@ -1,20 +1,58 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconBolt, IconCheck } from '@tabler/icons-react-native';
+import {
+  IconChartBar,
+  IconFlame,
+  IconListCheck,
+  IconSnowflake,
+  IconSparkles,
+  IconSun,
+  IconX,
+} from '@tabler/icons-react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
-import { getCurrentOfferingPackage, getLastOfferingIssue, purchaseErrorKind, purchasePackage, restorePurchases } from '../lib/purchases';
-import { useUiStore } from '../stores/useUiStore';
+import {
+  DEFAULT_TRIAL_DAYS,
+  getCurrentOfferingPackage,
+  getLastOfferingIssue,
+  getTrialDays,
+  purchaseErrorKind,
+  purchasePackage,
+  restorePurchases,
+} from '../lib/purchases';
+import { useUiStore, type PaywallSource } from '../stores/useUiStore';
 import { theme } from '../theme';
-import { Chip } from '../components/Chip';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenBackground } from '../components/ScreenBackground';
 
-const FEATURE_KEYS = ['explainer', 'solarBonus', 'stats', 'recommendations'];
+const TERMS_URL = 'https://elpuls.ravenbees.com/terms';
+const PRIVACY_URL = 'https://elpuls.ravenbees.com/privacy';
+
+const FEATURES = [
+  { key: 'explainer', icon: IconSparkles, ai: true },
+  { key: 'heatingPlan', icon: IconFlame, ai: false },
+  { key: 'recommendations', icon: IconListCheck, ai: false },
+  { key: 'weatherPrep', icon: IconSnowflake, ai: false },
+  { key: 'solarBonus', icon: IconSun, ai: false },
+  { key: 'stats', icon: IconChartBar, ai: false },
+] as const;
+
+/** Headline key per entry point, so the paywall talks about what the user just tapped. */
+const HEADLINE_KEY: Record<PaywallSource, string> = {
+  onboarding: 'paywall.headlineOnboarding',
+  explainer: 'paywall.headlineExplainer',
+  proTips: 'paywall.headlineProTips',
+  stats: 'paywall.headlineStats',
+  recommendations: 'paywall.headlineRecommendations',
+  settings: 'paywall.headline',
+  trial: 'paywall.headlineTrial',
+  generic: 'paywall.headline',
+};
 
 export function PaywallScreen() {
   const { t } = useTranslation();
   const hidePaywall = useUiStore((s) => s.hidePaywall);
+  const source = useUiStore((s) => s.paywallSource);
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
   const [loadingOffering, setLoadingOffering] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -33,6 +71,12 @@ export function PaywallScreen() {
   }
 
   useEffect(loadOffering, []);
+
+  // Trial length comes from the store's intro offer. Before it loads (or if
+  // the store doesn't answer) we show the configured default; once a package
+  // is loaded without a free intro offer, trial wording disappears.
+  const trialDays = pkg ? getTrialDays(pkg) : DEFAULT_TRIAL_DAYS;
+  const price = pkg?.product.priceString ?? t('paywall.fallbackPrice');
 
   async function handlePurchase() {
     if (!pkg) return;
@@ -68,54 +112,101 @@ export function PaywallScreen() {
     }
   }
 
+  const ctaLabel = trialDays ? t('paywall.startTrial', { days: trialDays }) : t('paywall.subscribe', { price });
+
   return (
     <ScreenBackground style={styles.overlay}>
+      <Pressable
+        onPress={hidePaywall}
+        style={styles.close}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel={t('paywall.close')}
+      >
+        <IconX size={24} color={theme.colors.textSecondary} />
+      </Pressable>
+
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.iconCircle}>
-          <IconBolt size={28} color={theme.colors.accentAmberDeep} />
+        <View style={styles.proTag}>
+          <Text style={styles.proTagText}>{t('pro.tag')}</Text>
         </View>
-        <Text style={styles.headline}>{t('paywall.headline')}</Text>
+        <Text style={styles.headline} accessibilityRole="header">
+          {t(HEADLINE_KEY[source], { days: trialDays ?? DEFAULT_TRIAL_DAYS })}
+        </Text>
         <Text style={styles.subheadline}>{t('paywall.subheadline')}</Text>
 
         <View style={styles.featureList}>
-          {FEATURE_KEYS.map((key) => (
+          {FEATURES.map(({ key, icon: Icon, ai }) => (
             <View key={key} style={styles.featureRow}>
-              <IconCheck size={16} color={theme.colors.positiveTeal} />
-              <Text style={styles.featureText}>{t(`paywall.features.${key}`)}</Text>
+              <View style={styles.featureIcon}>
+                <Icon size={20} color={theme.colors.accentAmberDeep} />
+              </View>
+              <View style={styles.featureTextBlock}>
+                <View style={styles.featureTitleRow}>
+                  <Text style={styles.featureTitle}>{t(`paywall.features.${key}`)}</Text>
+                  {ai && (
+                    <View style={styles.aiBadge}>
+                      <Text style={styles.aiBadgeText}>{t('ai.badge')}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.featureText}>{t(`paywall.featureText.${key}`)}</Text>
+              </View>
             </View>
           ))}
         </View>
+        <Text style={styles.aiFootnote}>{t('paywall.aiFootnote')}</Text>
 
         <View style={styles.priceCard}>
-          <Chip label={t('paywall.mostPopular')} variant="amber" />
           {loadingOffering ? (
             <ActivityIndicator color={theme.colors.accentAmber} style={styles.priceLoading} />
           ) : (
-            <Text style={styles.price}>
-              {pkg ? pkg.product.priceString : t('paywall.fallbackPrice')}
-              <Text style={styles.priceUnit}> {t('paywall.perMonth')}</Text>
-            </Text>
+            <>
+              {trialDays ? (
+                <>
+                  <Text style={styles.priceBig}>{t('paywall.trialBig', { days: trialDays })}</Text>
+                  <Text style={styles.priceSmall}>{t('paywall.trialThen', { price })}</Text>
+                </>
+              ) : (
+                <Text style={styles.priceBig}>{t('paywall.pricePerMonth', { price })}</Text>
+              )}
+              <Text style={styles.priceSmall}>{t('paywall.cancelAnytime')}</Text>
+            </>
           )}
-          <Text style={styles.trialHint}>{t('paywall.trialHint')}</Text>
           {!loadingOffering && !pkg && (
-            <Pressable onPress={loadOffering}>
+            <Pressable onPress={loadOffering} accessibilityRole="button" style={styles.unavailable}>
               <Text style={styles.unavailableHint}>{t('paywall.notAvailable')}</Text>
-              {offeringIssue && <Text style={styles.offeringIssue}>{offeringIssue} · {t('paywall.retry')}</Text>}
+              {__DEV__ && offeringIssue && <Text style={styles.offeringIssue}>{offeringIssue}</Text>}
+              <Text style={styles.unavailableHint}>{t('paywall.retry')}</Text>
             </Pressable>
           )}
         </View>
 
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && (
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {error}
+          </Text>
+        )}
 
-        <PrimaryButton label={purchasing ? t('paywall.purchasing') : t('paywall.subscribe')} onPress={handlePurchase} disabled={purchasing || !pkg} />
+        <PrimaryButton label={ctaLabel} onPress={handlePurchase} disabled={!pkg} loading={purchasing} />
 
-        <Pressable onPress={handleRestore} disabled={restoring} style={styles.restoreLink}>
-          <Text style={styles.restoreLinkText}>{restoring ? t('paywall.restoring') : t('paywall.restore')}</Text>
+        <Pressable onPress={hidePaywall} style={styles.textButton} hitSlop={8} accessibilityRole="button">
+          <Text style={styles.notNow}>{t('paywall.notNow')}</Text>
         </Pressable>
 
-        <Pressable onPress={hidePaywall} style={styles.continueFreeLink}>
-          <Text style={styles.continueFreeLinkText}>{t('paywall.continueFree')}</Text>
+        <Pressable onPress={handleRestore} disabled={restoring} style={styles.textButton} hitSlop={8} accessibilityRole="button">
+          <Text style={styles.smallLink}>{restoring ? t('paywall.restoring') : t('paywall.restore')}</Text>
         </Pressable>
+
+        <View style={styles.legalLinks}>
+          <Pressable onPress={() => Linking.openURL(TERMS_URL)} hitSlop={8} accessibilityRole="link">
+            <Text style={styles.legalLink}>{t('login.termsLink')}</Text>
+          </Pressable>
+          <Text style={styles.legalDot}>·</Text>
+          <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} hitSlop={8} accessibilityRole="link">
+            <Text style={styles.legalLink}>{t('login.privacyLink')}</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </ScreenBackground>
   );
@@ -123,48 +214,76 @@ export function PaywallScreen() {
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, zIndex: 10 },
-  container: { padding: 24, paddingTop: 72, paddingBottom: 48, alignItems: 'center' },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.accentAmberSoft,
+  close: {
+    position: 'absolute',
+    top: 56,
+    right: 16,
+    zIndex: 2,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
   },
-  headline: { fontFamily: theme.typography.display, fontSize: 24, color: theme.colors.textPrimary, textAlign: 'center' },
-  subheadline: {
-    fontFamily: theme.typography.body,
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  featureList: { alignSelf: 'stretch', gap: 12, marginBottom: 24 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  featureText: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textPrimary, flex: 1 },
-  priceCard: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.accentAmber,
+  container: { paddingHorizontal: 24, paddingTop: 104, paddingBottom: 48 },
+  proTag: {
+    alignSelf: 'flex-start',
     backgroundColor: theme.colors.accentAmberSoft,
-    borderRadius: theme.radius.lg,
-    padding: 20,
-    marginBottom: 20,
-    gap: 8,
+    borderColor: `${theme.colors.accentAmber}33`,
+    borderWidth: 1,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 14,
   },
-  priceLoading: { marginVertical: 6 },
-  price: { fontFamily: theme.typography.display, fontSize: 28, color: theme.colors.textPrimary },
-  priceUnit: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted },
-  trialHint: { fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.textMuted },
-  unavailableHint: { fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.textFaint, textAlign: 'center' },
-  offeringIssue: { fontFamily: theme.typography.body, fontSize: 11, color: theme.colors.textFaint, textAlign: 'center', marginTop: 4 },
-  error: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.dangerEmber, marginBottom: 12, textAlign: 'center' },
-  restoreLink: { marginTop: 16 },
-  restoreLinkText: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textSecondary },
-  continueFreeLink: { marginTop: 12 },
-  continueFreeLinkText: { fontFamily: theme.typography.bodyMedium, fontSize: 14, color: theme.colors.textPrimary },
+  proTagText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.accentAmberDeep },
+  headline: { fontFamily: theme.typography.display, fontSize: theme.type.xl, lineHeight: 30, color: theme.colors.textPrimary },
+  subheadline: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.textSecondary, marginTop: 10, marginBottom: 24 },
+  featureList: { gap: 16 },
+  featureRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
+  featureIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.accentAmberSoft,
+  },
+  featureTextBlock: { flex: 1 },
+  featureTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  featureTitle: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  featureText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 2 },
+  aiBadge: {
+    backgroundColor: theme.colors.accentPurpleSoft,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accentPurple}55`,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  aiBadgeText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.accentPurpleDeep },
+  aiFootnote: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 16 },
+  priceCard: {
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.accentAmberSoft,
+    borderColor: theme.colors.accentAmber,
+    borderWidth: 1.5,
+    borderRadius: theme.radius.xl,
+    padding: 20,
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  priceLoading: { marginVertical: 12 },
+  priceBig: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary, textAlign: 'center' },
+  priceSmall: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.textSecondary, textAlign: 'center' },
+  unavailable: { alignItems: 'center', marginTop: 8, gap: 2 },
+  unavailableHint: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, textAlign: 'center' },
+  offeringIssue: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textFaint, textAlign: 'center' },
+  error: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.dangerEmber, marginBottom: 12, textAlign: 'center' },
+  textButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  notNow: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  smallLink: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  legalLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 4 },
+  legalLink: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, textDecorationLine: 'underline' },
+  legalDot: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted },
 });

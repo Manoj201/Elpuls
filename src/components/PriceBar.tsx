@@ -14,7 +14,7 @@ interface PriceBarProps {
 
 const BAR_MAX_HEIGHT = 140;
 const BAR_WIDTH = 14;
-const COLUMN_WIDTH = 28;
+const COLUMN_WIDTH = 38;
 const CHART_PADDING_HORIZONTAL = 16;
 
 function barColor(price: number, min: number, max: number): string {
@@ -89,10 +89,10 @@ const styles = StyleSheet.create({
     height: BAR_MAX_HEIGHT + 50,
   },
   column: { alignItems: 'center', width: COLUMN_WIDTH, justifyContent: 'flex-end' },
-  price: { fontFamily: theme.typography.body, fontSize: 9, color: theme.colors.textMuted, marginBottom: 4 },
+  price: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textMuted, marginBottom: 4 },
   priceCurrent: { fontFamily: theme.typography.bodyMedium, color: theme.colors.textPrimary },
   currentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.textPrimary, marginBottom: 4 },
   bar: { width: BAR_WIDTH, borderRadius: 7 },
-  hour: { fontFamily: theme.typography.body, fontSize: 10, color: theme.colors.textFaint, marginTop: 4 },
+  hour: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textFaint, marginTop: 4 },
   hourCurrent: { fontFamily: theme.typography.bodyMedium, color: theme.colors.textPrimary },
 });
