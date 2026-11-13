@@ -1,6 +1,7 @@
 import { httpsCallable } from 'firebase/functions';
 import { functions } from './firebase';
-import { signOutLocally } from './auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RETURNING_USER_KEY, signOutLocally } from './auth';
 import { useApplianceStore } from '../stores/useApplianceStore';
 import { useCountryStore } from '../stores/useCountryStore';
 import { useUserStore } from '../stores/useUserStore';
@@ -16,6 +17,7 @@ const deleteMyAccountCallable = httpsCallable<void, { deleted: boolean }>(functi
 export async function deleteMyAccount(): Promise<void> {
   await deleteMyAccountCallable();
   await signOutLocally();
+  await AsyncStorage.removeItem(RETURNING_USER_KEY).catch(() => {});
 
   useUserStore.getState().resetProfile();
   useApplianceStore.setState({ appliances: [] });

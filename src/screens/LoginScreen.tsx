@@ -1,38 +1,64 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  Animated,
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconBolt, IconCalculator, IconCloud } from '@tabler/icons-react-native';
-import { authErrorKey, linkGuestToEmail, sendPasswordReset, signInWithEmail } from '../lib/auth';
+import { IconArrowLeft, IconEye, IconEyeOff } from '@tabler/icons-react-native';
+import { authErrorKey, isReturningUser, linkGuestToEmail, sendPasswordReset, signInWithEmail } from '../lib/auth';
 import { theme } from '../theme';
-import { Chip } from '../components/Chip';
-import { InfoRow } from '../components/InfoRow';
+import { LabeledInput } from '../components/LabeledInput';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { SecondaryButton } from '../components/SecondaryButton';
 
 interface LoginScreenProps {
   onSignedIn: (uid: string) => Promise<void>;
   onSkip: () => void;
 }
 
-type Mode = 'signup' | 'signin';
+/** `start`: one decision (get started or sign in). `signin` / `signup`: the email form for that action. */
+type View_ = 'start' | 'signin' | 'signup';
 
-const TRUST_ROWS: { icon: typeof IconBolt; titleKey: string; subtitleKey: string }[] = [
-  { icon: IconBolt, titleKey: 'login.trust.priceTitle', subtitleKey: 'login.trust.priceSubtitle' },
-  { icon: IconCloud, titleKey: 'login.trust.aiTitle', subtitleKey: 'login.trust.aiSubtitle' },
-  { icon: IconCalculator, titleKey: 'login.trust.costCheckTitle', subtitleKey: 'login.trust.costCheckSubtitle' },
-];
+const TERMS_URL = 'https://elpuls.ravenbees.com/terms';
+const PRIVACY_URL = 'https://elpuls.ravenbees.com/privacy';
 
 export function LoginScreen({ onSignedIn, onSkip }: LoginScreenProps) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<Mode>('signup');
+  const [view, setView] = useState<View_>('start');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Someone who signed out on this phone most likely wants to sign back in.
+  const [returning, setReturning] = useState(false);
 
-  function switchMode(next: Mode) {
-    setMode(next);
+  useEffect(() => {
+    isReturningUser().then(setReturning);
+  }, []);
+
+  // One gentle fade-in on first show, skipped when the phone asks for less motion.
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduce) => {
+        if (reduce) fade.setValue(1);
+        else Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+      })
+      .catch(() => fade.setValue(1));
+  }, [fade]);
+
+  function openView(next: View_) {
+    setView(next);
     setError(null);
     setErrorKey(null);
     setInfo(null);
@@ -56,30 +82,8 @@ export function LoginScreen({ onSignedIn, onSkip }: LoginScreenProps) {
     }
   }
 
-  // Entrance animation for the marketing/trust content only — the form
-  // below stays static so it doesn't delay or distract from actually
-  // signing in.
-  const introAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(introAnim, {
-      toValue: 1,
-      duration: 550,
-      useNativeDriver: true,
-    }).start();
-  }, [introAnim]);
-
-  const introStyle = {
-    opacity: introAnim,
-    transform: [
-      {
-        translateY: introAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }),
-      },
-    ],
-  };
-
   async function handleSubmit() {
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setError(t('login.missingFields'));
       return;
     }
@@ -90,7 +94,7 @@ export function LoginScreen({ onSignedIn, onSkip }: LoginScreenProps) {
     setLoading(true);
 
     try {
-      const uid = mode === 'signup' ? await linkGuestToEmail(email, password) : await signInWithEmail(email, password);
+      const uid = view === 'signup' ? await linkGuestToEmail(email, password) : await signInWithEmail(email, password);
       await onSignedIn(uid);
     } catch (err) {
       console.log('Auth failed:', err);
@@ -102,206 +106,202 @@ export function LoginScreen({ onSignedIn, onSkip }: LoginScreenProps) {
     }
   }
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
-        <Animated.View style={[styles.introSection, introStyle]}>
-          <Image source={require('../../assets/icon.png')} style={styles.iconMark} />
-          <Text style={styles.wordmark}>Elpuls</Text>
-          <Text style={styles.tagline}>{t('login.tagline')}</Text>
-          <Text style={styles.description}>{t('login.description')}</Text>
+  const legal = (
+    <View style={styles.legal}>
+      <Text style={styles.legalText}>{t('login.legal')}</Text>
+      <View style={styles.legalLinks}>
+        <Pressable onPress={() => Linking.openURL(TERMS_URL)} hitSlop={8} accessibilityRole="link">
+          <Text style={styles.legalLink}>{t('login.termsLink')}</Text>
+        </Pressable>
+        <Text style={styles.legalText}>·</Text>
+        <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} hitSlop={8} accessibilityRole="link">
+          <Text style={styles.legalLink}>{t('login.privacyLink')}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
 
-          <View style={styles.trustList}>
-            {TRUST_ROWS.map(({ icon, titleKey, subtitleKey }, i) => (
-              <View key={titleKey} style={i > 0 ? styles.trustRowDivider : undefined}>
-                <InfoRow icon={icon} variant="amber" title={t(titleKey)} subtitle={t(subtitleKey)} />
-              </View>
-            ))}
-          </View>
+  if (view === 'start') {
+    return (
+      <ScrollView contentContainerStyle={styles.startContainer}>
+        <Animated.View style={[styles.brandBlock, { opacity: fade }]}>
+          <Image source={require('../../assets/icon.png')} style={styles.icon} accessibilityIgnoresInvertColors />
+          <Text style={styles.wordmark} accessibilityRole="header">
+            Elpuls
+          </Text>
+          <Text style={styles.tagline}>{t('login.tagline')}</Text>
         </Animated.View>
 
-        <View style={styles.modeToggle}>
-          <Chip
-            label={t('login.createAccount')}
-            selected={mode === 'signup'}
-            onPress={() => switchMode('signup')}
-            style={styles.modeChip}
-          />
-          <Chip
-            label={t('login.signIn')}
-            selected={mode === 'signin'}
-            onPress={() => switchMode('signin')}
-            style={styles.modeChip}
-          />
+        {/* Account first: Create account is the one primary action, Sign in
+            is secondary (flipped for someone who signed out on this phone). Guest access stays (App Store guideline 5.1.1 does
+            not allow forcing an account for features that work without one)
+            but only as a small text link at the bottom. */}
+        <View style={styles.actions}>
+          {returning ? (
+            <>
+              <Text style={styles.accountBenefit}>{t('login.welcomeBack')}</Text>
+              <PrimaryButton label={t('login.signIn')} onPress={() => openView('signin')} />
+              <SecondaryButton label={t('login.createFreeAccount')} onPress={() => openView('signup')} />
+            </>
+          ) : (
+            <>
+              <Text style={styles.accountBenefit}>{t('login.accountBenefit')}</Text>
+              <PrimaryButton label={t('login.createFreeAccount')} onPress={() => openView('signup')} />
+              <SecondaryButton label={t('login.signIn')} onPress={() => openView('signin')} />
+            </>
+          )}
         </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder={t('login.emailPlaceholder')}
-          placeholderTextColor={theme.colors.textFaint}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          textContentType="username"
-          autoComplete="username"
-          returnKeyType="next"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder={t('login.passwordPlaceholder')}
-          placeholderTextColor={theme.colors.textFaint}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          // Sign-in: normal password AutoFill (Keychain). Create account:
-          // 'oneTimeCode' opts out of iOS "Automatic Strong Password", which
-          // without associated domains shows a yellow "cover view text" box.
-          textContentType={mode === 'signup' ? 'oneTimeCode' : 'password'}
-          autoComplete={mode === 'signup' ? 'off' : 'password'}
-          returnKeyType="go"
-          onSubmitEditing={handleSubmit}
-          value={password}
-          onChangeText={setPassword}
-        />
-        {mode === 'signup' && <Text style={styles.hint}>{t('login.passwordHint')}</Text>}
-
-        {error && <Text style={styles.error}>{error}</Text>}
-        {errorKey === 'authErrors.emailInUse' && mode === 'signup' && (
-          <Pressable onPress={() => switchMode('signin')}>
-            <Text style={styles.inlineLink}>{t('login.signInInstead')}</Text>
+        <View>
+          <Pressable onPress={onSkip} style={styles.textButton} accessibilityRole="button" hitSlop={8}>
+            <Text style={styles.guestLink}>{t('login.continueWithoutAccount')}</Text>
           </Pressable>
-        )}
-        {info && <Text style={styles.info}>{info}</Text>}
+          {legal}
+        </View>
+      </ScrollView>
+    );
+  }
 
-        {loading ? (
-          <ActivityIndicator color={theme.colors.accentPurple} style={styles.loading} />
-        ) : (
-          <PrimaryButton label={mode === 'signup' ? t('login.createAccount') : t('login.signIn')} onPress={handleSubmit} />
-        )}
+  const isSignup = view === 'signup';
 
-        {mode === 'signin' && (
-          <Pressable onPress={handleForgotPassword} style={styles.forgotButton}>
-            <Text style={styles.inlineLink}>{t('login.forgotPassword')}</Text>
+  return (
+    <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
+      <Pressable
+        onPress={() => openView('start')}
+        style={styles.backRow}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel={t('common.back')}
+      >
+        <IconArrowLeft size={22} color={theme.colors.textSecondary} />
+        <Text style={styles.backText}>{t('common.back')}</Text>
+      </Pressable>
+
+      <Text style={styles.formTitle} accessibilityRole="header">
+        {t(isSignup ? 'login.signupTitle' : 'login.signinTitle')}
+      </Text>
+      <Text style={styles.formSubtitle}>{t(isSignup ? 'login.signupSubtitle' : 'login.signinSubtitle')}</Text>
+
+      <LabeledInput
+        label={t('login.emailLabel')}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="email-address"
+        textContentType="username"
+        autoComplete="username"
+        returnKeyType="next"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <LabeledInput
+        label={t('login.passwordLabel')}
+        helper={isSignup ? t('login.passwordHint') : undefined}
+        secureTextEntry={!showPassword}
+        autoCapitalize="none"
+        autoCorrect={false}
+        // Sign-in: normal password AutoFill (Keychain). Create account:
+        // 'oneTimeCode' opts out of iOS "Automatic Strong Password", which
+        // without associated domains shows a yellow "cover view text" box.
+        textContentType={isSignup ? 'oneTimeCode' : 'password'}
+        autoComplete={isSignup ? 'off' : 'password'}
+        returnKeyType="go"
+        onSubmitEditing={handleSubmit}
+        value={password}
+        onChangeText={setPassword}
+        accessory={
+          <Pressable
+            onPress={() => setShowPassword((v) => !v)}
+            hitSlop={12}
+            style={styles.eyeButton}
+            accessibilityRole="button"
+            accessibilityLabel={t(showPassword ? 'login.hidePassword' : 'login.showPassword')}
+          >
+            {showPassword ? (
+              <IconEyeOff size={22} color={theme.colors.textSecondary} />
+            ) : (
+              <IconEye size={22} color={theme.colors.textSecondary} />
+            )}
           </Pressable>
-        )}
+        }
+      />
 
-        <Pressable onPress={onSkip} style={styles.skipButton}>
-          <Text style={styles.skipText}>{t('login.continueWithoutAccount')}</Text>
+      {error && (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
+      {errorKey === 'authErrors.emailInUse' && isSignup && (
+        <Pressable onPress={() => openView('signin')} hitSlop={8} accessibilityRole="button">
+          <Text style={styles.inlineLink}>{t('login.signInInstead')}</Text>
         </Pressable>
+      )}
+      {info && (
+        <Text style={styles.info} accessibilityLiveRegion="polite">
+          {info}
+        </Text>
+      )}
 
-        <Text style={styles.legal}>{t('login.legal')}</Text>
-        <View style={styles.legalLinks}>
-          <Pressable onPress={() => Linking.openURL('https://elpuls.ravenbees.com/terms')}>
-            <Text style={styles.legalLink}>{t('login.termsLink')}</Text>
-          </Pressable>
-          <Text style={styles.legalLinkDivider}>·</Text>
-          <Pressable onPress={() => Linking.openURL('https://elpuls.ravenbees.com/privacy')}>
-            <Text style={styles.legalLink}>{t('login.privacyLink')}</Text>
-          </Pressable>
-        </View>
+      <View style={styles.submit}>
+        <PrimaryButton label={t(isSignup ? 'login.createAccount' : 'login.signIn')} onPress={handleSubmit} loading={loading} />
       </View>
+
+      {!isSignup && (
+        <Pressable onPress={handleForgotPassword} style={styles.textButton} hitSlop={8} accessibilityRole="button">
+          <Text style={styles.textButtonLabel}>{t('login.forgotPassword')}</Text>
+        </Pressable>
+      )}
+
+      <Pressable
+        onPress={() => openView(isSignup ? 'signin' : 'signup')}
+        style={styles.textButton}
+        hitSlop={8}
+        accessibilityRole="button"
+      >
+        <Text style={styles.switchText}>{t(isSignup ? 'login.switchToSignin' : 'login.switchToSignup')}</Text>
+      </Pressable>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    paddingVertical: 40,
-  },
-  card: { width: '100%', maxWidth: 360, alignItems: 'center' },
-  introSection: { alignItems: 'center', alignSelf: 'stretch' },
-  iconMark: {
-    width: 72,
-    height: 72,
-    borderRadius: theme.radius.lg,
-    marginBottom: 14,
-  },
-  wordmark: { fontFamily: theme.typography.display, fontSize: 22, color: theme.colors.textPrimary },
+  startContainer: { flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 28, paddingTop: 96, paddingBottom: 40 },
+  brandBlock: { alignItems: 'center' },
+  icon: { width: 96, height: 96, borderRadius: 22, marginBottom: 20 },
+  wordmark: { fontFamily: theme.typography.display, fontSize: theme.type.xxl, color: theme.colors.textPrimary },
   tagline: {
-    fontFamily: theme.typography.bodyMedium,
-    fontSize: 14,
+    fontFamily: theme.typography.body,
+    fontSize: theme.type.lg,
+    lineHeight: 24,
     color: theme.colors.textSecondary,
-    marginTop: 4,
     textAlign: 'center',
+    marginTop: 10,
+    maxWidth: 300,
   },
-  description: {
+  actions: { alignItems: 'stretch', gap: 12, marginTop: 40 },
+  accountBenefit: {
     fontFamily: theme.typography.body,
-    fontSize: 13,
-    color: theme.colors.textMuted,
-    marginTop: 8,
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-  trustList: {
-    alignSelf: 'stretch',
-    marginBottom: 24,
-  },
-  trustRowDivider: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderMuted,
-    marginTop: 14,
-    paddingTop: 14,
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    gap: 8,
-    alignSelf: 'stretch',
-    marginBottom: 16,
-  },
-  modeChip: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontFamily: theme.typography.body,
-    fontSize: 15,
-    color: theme.colors.textPrimary,
-    marginBottom: 10,
-  },
-  error: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.dangerEmber, marginBottom: 10, textAlign: 'center' },
-  info: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.positiveTeal, marginBottom: 10, textAlign: 'center' },
-  hint: { alignSelf: 'flex-start', fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.textFaint, marginTop: -4, marginBottom: 10 },
-  inlineLink: { fontFamily: theme.typography.bodyMedium, fontSize: 13, color: theme.colors.textSecondary, textDecorationLine: 'underline', marginBottom: 10 },
-  forgotButton: { marginTop: 12 },
-  loading: { marginVertical: 14 },
-  skipButton: { marginTop: 20 },
-  skipText: { fontFamily: theme.typography.bodyMedium, fontSize: 14, color: theme.colors.textPrimary },
-  legal: {
-    fontFamily: theme.typography.body,
-    fontSize: 10.5,
-    color: theme.colors.textFaint,
-    marginTop: 24,
-    textAlign: 'center',
-  },
-  legalLinks: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 6,
-  },
-  legalLink: {
-    fontFamily: theme.typography.bodyMedium,
-    fontSize: 11,
+    fontSize: theme.type.md,
+    lineHeight: 24,
     color: theme.colors.textSecondary,
-    textDecorationLine: 'underline',
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  legalLinkDivider: {
-    fontFamily: theme.typography.body,
-    fontSize: 11,
-    color: theme.colors.textFaint,
-  },
+  guestLink: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, textDecorationLine: 'underline' },
+  textButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  textButtonLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.accentPurpleDeep },
+  legal: { alignItems: 'center', marginTop: 12, gap: 4 },
+  legalText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, textAlign: 'center' },
+  legalLinks: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  legalLink: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary, textDecorationLine: 'underline' },
+  formContainer: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, alignSelf: 'flex-start', marginBottom: 20 },
+  backText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textSecondary },
+  formTitle: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
+  formSubtitle: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.textSecondary, marginTop: 8, marginBottom: 28 },
+  eyeButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
+  error: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.dangerEmber, marginBottom: 8 },
+  info: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.positiveTeal, marginBottom: 8 },
+  inlineLink: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.accentPurpleDeep, textDecorationLine: 'underline', marginBottom: 8 },
+  submit: { marginTop: 12, marginBottom: 8 },
+  switchText: { fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.textSecondary },
 });

@@ -8,6 +8,7 @@ import { pickImage, scanAppliancePhoto, type ApplianceScanResult } from '../lib/
 import { useApplianceStore, type RegisteredAppliance } from '../stores/useApplianceStore';
 import { theme } from '../theme';
 import { Card } from '../components/Card';
+import { AiNote } from '../components/AiNote';
 import { Chip } from '../components/Chip';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
@@ -101,10 +102,13 @@ export function ApplianceScanScreen({ uid, onBack, editAppliance }: ApplianceSca
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>{t(editAppliance ? 'applianceScan.editTitle' : 'applianceScan.confirmTitle')}</Text>
         {!isManual && (
-          <Chip
-            label={t(result.source === 'label' ? 'applianceScan.sourceLabel' : 'applianceScan.sourceEstimate')}
-            variant={result.confidence === 'high' ? 'teal' : 'amber'}
-          />
+          <>
+            <Chip
+              label={t(result.source === 'label' ? 'applianceScan.sourceLabel' : 'applianceScan.sourceEstimate')}
+              variant={result.confidence === 'high' ? 'teal' : 'amber'}
+            />
+            <AiNote kind="scan" />
+          </>
         )}
 
         <Text style={styles.fieldLabel}>{t('applianceScan.labelField')}</Text>
@@ -123,7 +127,7 @@ export function ApplianceScanScreen({ uid, onBack, editAppliance }: ApplianceSca
         {saveError && <Text style={styles.saveErrorText}>{saveError}</Text>}
 
         <View style={styles.saveButtonWrapper}>
-          <PrimaryButton label={saving ? t('settings.saving') : t('common.finish')} onPress={handleSave} disabled={saving} />
+          <PrimaryButton label={t('common.finish')} onPress={handleSave} loading={saving} />
         </View>
       </ScrollView>
     );
@@ -173,16 +177,16 @@ const styles = StyleSheet.create({
   container: { padding: 16, paddingTop: 60, paddingBottom: 48 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, gap: 16 },
   backRow: { marginBottom: 12, alignSelf: 'flex-start' },
-  title: { fontFamily: theme.typography.display, fontSize: 24, color: theme.colors.textPrimary },
-  subtitle: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted, marginTop: 4, marginBottom: 24 },
+  title: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
+  subtitle: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted, marginTop: 4, marginBottom: 24 },
   captureCard: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
-  captureLabel: { fontFamily: theme.typography.bodyMedium, fontSize: 15, color: theme.colors.textPrimary },
+  captureLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
   manualLink: { marginTop: 12, alignSelf: 'center' },
-  manualLinkText: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textSecondary },
-  scanningLabel: { fontFamily: theme.typography.body, fontSize: 15, color: theme.colors.textSecondary },
+  manualLinkText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  scanningLabel: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
   fieldLabel: {
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 12,
+    fontSize: theme.type.xs,
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -196,11 +200,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     fontFamily: theme.typography.body,
-    fontSize: 15,
+    fontSize: theme.type.sm,
     color: theme.colors.textPrimary,
   },
   saveButtonWrapper: { marginTop: 28 },
-  saveErrorText: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.dangerEmber, marginTop: 20 },
-  failedText: { fontFamily: theme.typography.body, fontSize: 15, color: theme.colors.textSecondary, textAlign: 'center' },
+  saveErrorText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.dangerEmber, marginTop: 20 },
+  failedText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, textAlign: 'center' },
   failedButtonWrapper: { minWidth: 200 },
 });

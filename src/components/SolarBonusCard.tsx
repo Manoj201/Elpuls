@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     top: 4,
     right: '26%',
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 13,
+    fontSize: theme.type.sm,
     letterSpacing: 2,
     color: theme.colors.textMuted,
   },
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   },
   caption: {
     fontFamily: theme.typography.body,
-    fontSize: 13,
+    fontSize: theme.type.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: 4,

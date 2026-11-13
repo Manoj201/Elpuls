@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconClockHour4 } from '@tabler/icons-react-native';
+import { IconChartBar, IconClockHour4 } from '@tabler/icons-react-native';
 import { useCountryStore } from '../stores/useCountryStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { useUserStore } from '../stores/useUserStore';
@@ -14,7 +14,7 @@ import { theme } from '../theme';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
 import { InfoRow } from '../components/InfoRow';
-import { ProLockedCard } from '../components/ProLockedCard';
+import { PreviewRow, ProLockedCard } from '../components/ProLockedCard';
 
 const USAGE_STEPS = [-20, -10, 0, 10, 20];
 const SHIFT_STEPS = [0, 25, 50, 75, 100];
@@ -103,14 +103,27 @@ export function StatsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('stats.title')}</Text>
-        <Chip label={t('stats.proTag')} variant="amber" />
-      </View>
+      <Text style={styles.title} accessibilityRole="header">
+        {t('stats.title')}
+      </Text>
       <Text style={styles.subtitle}>{t('stats.subtitle')}</Text>
 
       {!isProSubscriber ? (
-        <ProLockedCard title={t('stats.title')} subtitle={t('paywall.lockedStatsSubtitle')} />
+        <ProLockedCard
+          icon={IconChartBar}
+          title={t('paywall.headlineStats')}
+          subtitle={t('paywall.lockedStatsSubtitle')}
+          source="stats"
+          preview={
+            <View>
+              <PreviewRow label={t('stats.spot')} value={t('stats.sample.spot')} />
+              <PreviewRow label={t('stats.gridFee')} value={t('stats.sample.gridFee')} />
+              <PreviewRow label={t('stats.energyTax')} value={t('stats.sample.energyTax')} />
+              <PreviewRow label={t('stats.vat')} value={t('stats.sample.vat')} />
+              <PreviewRow label={t('stats.total')} value={t('stats.sample.total')} strong />
+            </View>
+          }
+        />
       ) : (
         <>
           <Text style={styles.sectionTitle}>{t('stats.costBreakdown')}</Text>
@@ -249,33 +262,32 @@ function BreakdownRow({
 
 const styles = StyleSheet.create({
   container: { padding: 16, paddingTop: 60, paddingBottom: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontFamily: theme.typography.display, fontSize: 26, color: theme.colors.textPrimary },
-  subtitle: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted, marginTop: 4, marginBottom: 20 },
-  sectionTitle: { fontFamily: theme.typography.displayMedium, fontSize: 16, color: theme.colors.textPrimary, marginTop: 20, marginBottom: 10 },
+  title: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
+  subtitle: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted, marginTop: 4, marginBottom: 20 },
+  sectionTitle: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginTop: 20, marginBottom: 10 },
   sectionCard: { marginBottom: 4 },
-  empty: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted },
+  empty: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted },
   breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 6, gap: 12 },
   breakdownLabelBlock: { flex: 1 },
-  breakdownLabel: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textSecondary },
+  breakdownLabel: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
   breakdownLabelBold: { fontFamily: theme.typography.displayMedium, color: theme.colors.textPrimary },
-  breakdownEstimateHint: { fontFamily: theme.typography.body, fontSize: 11, color: theme.colors.accentAmberDeep, marginTop: 2 },
+  breakdownEstimateHint: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.accentAmberDeep, marginTop: 2 },
   breakdownValue: {
     fontFamily: theme.typography.body,
-    fontSize: 14,
+    fontSize: theme.type.sm,
     color: theme.colors.textPrimary,
     fontVariant: ['tabular-nums'],
     flexShrink: 0,
   },
-  breakdownValueBold: { fontFamily: theme.typography.displayMedium, fontSize: 16 },
+  breakdownValueBold: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.md },
   breakdownDivider: { height: 1, backgroundColor: theme.colors.borderMuted, marginVertical: 8 },
-  contractHealthHero: { fontFamily: theme.typography.display, fontSize: 30, color: theme.colors.textPrimary },
-  contractHealthResult: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 },
-  whatIfStepperLabel: { fontFamily: theme.typography.bodyMedium, fontSize: 13, color: theme.colors.textSecondary, marginBottom: 8 },
+  contractHealthHero: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
+  contractHealthResult: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 4 },
+  whatIfStepperLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginBottom: 8 },
   whatIfStepperLabelSpaced: { marginTop: 16 },
   whatIfStepperRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 16 },
-  whatIfPerMonth: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted },
+  whatIfPerMonth: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted },
   zoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
   zoneRowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
-  zonePrice: { fontFamily: theme.typography.displayMedium, fontSize: 14, color: theme.colors.textPrimary },
+  zonePrice: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
 });

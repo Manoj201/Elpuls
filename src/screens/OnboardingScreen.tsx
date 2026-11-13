@@ -12,6 +12,9 @@ import { OptionCard } from '../components/OptionCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
 import { LabeledInput } from '../components/LabeledInput';
+import { InfoRow } from '../components/InfoRow';
+import { IconReceipt } from '@tabler/icons-react-native';
+import { BillScanScreen } from './BillScanScreen';
 
 interface OnboardingScreenProps {
   uid: string;
@@ -45,6 +48,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
   const [gridFeeFixedInput, setGridFeeFixedInput] = useState('');
   const [gridFeeVariableInput, setGridFeeVariableInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [billScanOpen, setBillScanOpen] = useState(false);
 
   const canContinue =
     (step === 0 && ageConfirmed) ||
@@ -84,7 +88,6 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
       gridFeeVariableSekPerKwh: gridFeeVariableOre === null ? null : gridFeeVariableOre / 100,
     };
 
-    if (__DEV__) console.log('[auth-debug] onboarding save uid=', uid, 'zone=', info.zone);
     try {
       // setDoc waits for the server to confirm the write — if Firestore can't
       // be reached it never settles, so cap it instead of hanging forever.
@@ -101,6 +104,22 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
     setOnboardingInfo(info);
     setActiveZone(info.zone);
     onDone();
+  }
+
+  // The bill scan saves the grid fee and retailer markup itself. Copy the
+  // saved grid fee back into this step's field, so finishing onboarding
+  // doesn't overwrite it with an empty value.
+  if (billScanOpen) {
+    return (
+      <BillScanScreen
+        uid={uid}
+        onBack={() => {
+          const saved = useUserStore.getState().gridFeeVariableSekPerKwh;
+          if (saved !== null) setGridFeeVariableInput(String(Number((saved * 100).toFixed(2))).replace('.', ','));
+          setBillScanOpen(false);
+        }}
+      />
+    );
   }
 
   return (
@@ -174,6 +193,20 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
 
       {step === 5 && (
         <Step title={t('onboarding.gridFeeTitle')} subtitle={t('onboarding.gridFeeSubtitle')}>
+          <View style={styles.scanCard}>
+            <InfoRow icon={IconReceipt} variant="teal" title={t('onboarding.scanBillTitle')} subtitle={t('onboarding.scanBillText')} />
+            <SecondaryButton size="compact" label={t('onboarding.scanBillButton')} onPress={() => setBillScanOpen(true)} />
+          </View>
+          <Text style={styles.orText}>{t('onboarding.orTypeIt')}</Text>
+          <LabeledInput
+            label={t('fields.gridFeeVariableLabel')}
+            unit={t('fields.unitOrePerKwh')}
+            helper={t('onboarding.gridFeeVariableHelper')}
+            placeholder={t('fields.exampleGridFeeVariable')}
+            keyboardType="decimal-pad"
+            value={gridFeeVariableInput}
+            onChangeText={setGridFeeVariableInput}
+          />
           <LabeledInput
             label={t('fields.gridFeeFixedLabel')}
             unit={t('fields.unitKrPerMonth')}
@@ -182,15 +215,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
             value={gridFeeFixedInput}
             onChangeText={setGridFeeFixedInput}
           />
-          <LabeledInput
-            label={t('fields.gridFeeVariableLabel')}
-            unit={t('fields.unitOrePerKwh')}
-            placeholder={t('fields.exampleGridFeeVariable')}
-            keyboardType="decimal-pad"
-            value={gridFeeVariableInput}
-            onChangeText={setGridFeeVariableInput}
-          />
-          <Pressable onPress={handleContinue}>
+          <Pressable onPress={handleContinue} style={styles.skipButton} hitSlop={8} accessibilityRole="button">
             <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
           </Pressable>
         </Step>
@@ -207,7 +232,8 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
           <PrimaryButton
             label={step < STEP_COUNT - 1 ? t('common.continue') : t('common.finish')}
             onPress={handleContinue}
-            disabled={!canContinue || saving}
+            disabled={!canContinue}
+            loading={saving}
           />
         </View>
       </View>
@@ -237,54 +263,66 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, paddingTop: 60 },
   stepScroll: { flex: 1 },
   progressTrack: {
-    height: 4,
+    height: 6,
     borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.borderMuted,
     marginBottom: 32,
   },
   progressFill: {
-    height: 4,
+    height: 6,
     borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.accentAmber,
   },
   step: { flex: 1 },
-  stepTitle: { fontFamily: theme.typography.display, fontSize: 18, color: theme.colors.textPrimary },
+  stepTitle: { fontFamily: theme.typography.display, fontSize: theme.type.xl, lineHeight: 30, color: theme.colors.textPrimary },
   stepSubtitle: {
     fontFamily: theme.typography.body,
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    marginTop: 4,
+    fontSize: theme.type.md,
+    lineHeight: 24,
+    color: theme.colors.textSecondary,
+    marginTop: 8,
     marginBottom: 24,
   },
-  stepOptions: { gap: 10 },
+  stepOptions: { gap: 12 },
+  scanCard: {
+    gap: 14,
+    padding: 16,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: `${theme.colors.positiveTeal}33`,
+    backgroundColor: theme.colors.positiveTealSoft,
+  },
+  orText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary, textAlign: 'center', marginVertical: 4 },
   postcodeInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     paddingVertical: 14,
     paddingHorizontal: 16,
+    minHeight: 48,
     fontFamily: theme.typography.body,
-    fontSize: 15,
+    fontSize: theme.type.md,
     color: theme.colors.textPrimary,
   },
   postcodeGuessHint: {
     fontFamily: theme.typography.body,
-    fontSize: 13,
+    fontSize: theme.type.sm,
+    lineHeight: 20,
     color: theme.colors.accentAmberDeep,
   },
   zoneRow: { flexDirection: 'row', gap: 8 },
   zoneInfoText: {
     fontFamily: theme.typography.body,
-    fontSize: 13,
-    color: theme.colors.textMuted,
-    lineHeight: 18,
-  },
-  skipText: {
-    fontFamily: theme.typography.body,
-    fontSize: 13,
+    fontSize: theme.type.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 8,
+    lineHeight: 20,
+  },
+  skipButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  skipText: {
+    fontFamily: theme.typography.bodyMedium,
+    fontSize: theme.type.md,
+    color: theme.colors.textSecondary,
+    textDecorationLine: 'underline',
   },
   footer: { flexDirection: 'row', gap: 10, paddingTop: 16, paddingBottom: 12 },
   backButton: { flex: 1 },

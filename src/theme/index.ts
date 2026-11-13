@@ -41,7 +41,9 @@ export const theme = {
     accentPurpleDeep: '#C9BBFF',
     // Primary button fill — bright brand purple so it pops against the
     // dark background (a literal dark "ink" button would nearly vanish).
-    inkButton: '#7C5CFF',
+    // Deeper than accentPurple on purpose (2026-11-14): white 16px labels on
+    // #7C5CFF were only 4.0:1; #6C48FF gives 4.9:1 (WCAG AA). Same hue.
+    inkButton: '#6C48FF',
     // Content color for anything sitting on an inkButton fill (button
     // labels, icons) — kept separate from `surface` on purpose: surface
     // must stay dark for cards, inkButton content must stay light-on-purple.
@@ -49,6 +51,19 @@ export const theme = {
   },
   radius: { sm: 10, md: 14, lg: 18, xl: 20, pill: 999 },
   spacing: (n: number) => n * 4,
+  // One type scale for the whole app (UI/UX Pro Max: consistent modular
+  // scale 12/14/16/18/24/32, body text 16 on mobile, nothing important below
+  // 12). Text still scales with the phone's text-size setting (Dynamic Type),
+  // which is how people who need bigger text get it.
+  type: {
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 18,
+    xl: 24,
+    xxl: 32,
+    display: 44,
+  },
   typography: {
     // Font family names as exported by @expo-google-fonts/* + loaded via
     // expo-font's useFonts in App.tsx. Not the same naming convention as
@@ -58,6 +73,7 @@ export const theme = {
     displayMedium: 'SpaceGrotesk_500Medium',
     body: 'Inter_400Regular',
     bodyMedium: 'Inter_500Medium',
+    bodySemibold: 'Inter_600SemiBold',
   },
 } as const;
 

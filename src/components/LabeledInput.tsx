@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { theme } from '../theme';
 
@@ -8,9 +9,11 @@ interface LabeledInputProps extends Omit<TextInputProps, 'style'> {
   unit?: string;
   /** Optional small helper text under the field. */
   helper?: string;
+  /** Optional control inside the field on the right, e.g. a show/hide password button. */
+  accessory?: ReactNode;
 }
 
-export function LabeledInput({ label, unit, helper, placeholderTextColor, ...inputProps }: LabeledInputProps) {
+export function LabeledInput({ label, unit, helper, accessory, placeholderTextColor, ...inputProps }: LabeledInputProps) {
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
@@ -22,6 +25,7 @@ export function LabeledInput({ label, unit, helper, placeholderTextColor, ...inp
           {...inputProps}
         />
         {unit ? <Text style={styles.unit}>{unit}</Text> : null}
+        {accessory}
       </View>
       {helper ? <Text style={styles.helper}>{helper}</Text> : null}
     </View>
@@ -29,12 +33,12 @@ export function LabeledInput({ label, unit, helper, placeholderTextColor, ...inp
 }
 
 const styles = StyleSheet.create({
-  wrapper: { alignSelf: 'stretch', marginBottom: 12 },
+  wrapper: { alignSelf: 'stretch', marginBottom: 16 },
   label: {
     fontFamily: theme.typography.bodyMedium,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginBottom: 6,
+    fontSize: theme.type.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
   },
   field: {
     flexDirection: 'row',
@@ -46,21 +50,23 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    minHeight: 48,
     fontFamily: theme.typography.body,
-    fontSize: 15,
+    fontSize: theme.type.md,
     color: theme.colors.textPrimary,
   },
   unit: {
     fontFamily: theme.typography.body,
-    fontSize: 13,
-    color: theme.colors.textMuted,
+    fontSize: theme.type.sm,
+    color: theme.colors.textSecondary,
     marginLeft: 8,
   },
   helper: {
     fontFamily: theme.typography.body,
-    fontSize: 12,
-    color: theme.colors.textFaint,
-    marginTop: 4,
+    fontSize: theme.type.sm,
+    lineHeight: 20,
+    color: theme.colors.textSecondary,
+    marginTop: 6,
   },
 });

@@ -23,6 +23,6 @@ export function LanguageSwitcher() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6 },
   item: { paddingVertical: 4, paddingHorizontal: 6 },
-  label: { fontFamily: theme.typography.bodyMedium, fontSize: 12, color: theme.colors.textFaint },
+  label: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.textFaint },
   labelActive: { color: theme.colors.textPrimary },
 });

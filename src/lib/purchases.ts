@@ -116,6 +116,31 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<void> {
   syncProStatus(customerInfo);
 }
 
+/** Trial length used in copy when the store gives no intro offer details. Matches App Store Connect. */
+export const DEFAULT_TRIAL_DAYS = 14;
+
+/**
+ * Free-trial length in days from the store's introductory offer, or null
+ * when the package has no free intro offer (e.g. the user already used it).
+ */
+export function getTrialDays(pkg: PurchasesPackage | null): number | null {
+  const intro = pkg?.product.introPrice;
+  if (!intro || intro.price !== 0) return null;
+  const units = intro.periodNumberOfUnits;
+  switch (intro.periodUnit) {
+    case 'DAY':
+      return units;
+    case 'WEEK':
+      return units * 7;
+    case 'MONTH':
+      return units * 30;
+    case 'YEAR':
+      return units * 365;
+    default:
+      return null;
+  }
+}
+
 /** Restores purchases; resolves true only if Pro is actually active afterwards. */
 export async function restorePurchases(): Promise<boolean> {
   const info = await Purchases.restorePurchases();

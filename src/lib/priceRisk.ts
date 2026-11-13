@@ -1,8 +1,15 @@
 import type { HourlyForecast } from '../providers/types';
 
+export interface PriceRiskFactor {
+  kind: 'cold' | 'lowWind';
+  /** Day average: °C for `cold`, m/s for `lowWind`. */
+  value: number;
+}
+
 export interface PriceRiskAssessment {
   level: 'low' | 'medium' | 'high';
-  factors: string[];
+  /** Structured so the UI can show them in the user's language (see home.riskFactors.*). */
+  factors: PriceRiskFactor[];
 }
 
 type Severity = 'none' | 'medium' | 'high';
@@ -49,9 +56,9 @@ export function assessPriceRisk(
   const cold = coldSeverity(avgTempC);
   const lowWind = lowWindSeverity(avgWindMs);
 
-  const factors: string[] = [];
-  if (cold !== 'none') factors.push(`Cold weather (${avgTempC.toFixed(1)}°C avg)`);
-  if (lowWind !== 'none') factors.push(`Low wind speeds (${avgWindMs.toFixed(1)} m/s avg)`);
+  const factors: PriceRiskFactor[] = [];
+  if (cold !== 'none') factors.push({ kind: 'cold', value: avgTempC });
+  if (lowWind !== 'none') factors.push({ kind: 'lowWind', value: avgWindMs });
 
   const level: PriceRiskAssessment['level'] =
     cold === 'high' || lowWind === 'high' ? 'high' : cold === 'medium' || lowWind === 'medium' ? 'medium' : 'low';

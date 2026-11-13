@@ -30,6 +30,12 @@ interface UserState {
   onboardedAt: number | null;
   /** When the user picked Create account / Sign in / Continue as guest on the Login screen (epoch ms). Until then the app always opens on Login — a background guest session alone doesn't count. Cleared on sign-out and account deletion. */
   entryChosenAt: number | null;
+  /** When the welcome intro was finished or skipped (epoch ms). */
+  introSeenAt: number | null;
+  /** When the one-time Pro offer after onboarding was shown (epoch ms). */
+  proOfferSeenAt: number | null;
+  /** When the user dismissed the Home setup checklist (epoch ms). */
+  setupDismissedAt: number | null;
   /** True once the persisted profile has been read back from AsyncStorage on app start. Not persisted itself. */
   hasHydrated: boolean;
   setUid: (uid: string | null) => void;
@@ -49,6 +55,9 @@ interface UserState {
   /** Clears every profile field and the onboarded flag — used by sign-out, account deletion and the dev reset tool. */
   resetProfile: () => void;
   markEntryChosen: () => void;
+  markIntroSeen: () => void;
+  markProOfferSeen: () => void;
+  dismissSetup: () => void;
 }
 
 /** The profile fields that make up a saved onboarding profile — persisted locally and mirrored to users/{uid}. */
@@ -66,7 +75,12 @@ export type UserProfile = Pick<
   | 'priceAlertLowEnabled'
 >;
 
-const EMPTY_PROFILE: UserProfile & { onboardedAt: number | null; entryChosenAt: number | null } = {
+const EMPTY_PROFILE: UserProfile & {
+  onboardedAt: number | null;
+  entryChosenAt: number | null;
+  proOfferSeenAt: number | null;
+  setupDismissedAt: number | null;
+} = {
   zone: null,
   heatingType: null,
   hasEv: false,
@@ -79,6 +93,8 @@ const EMPTY_PROFILE: UserProfile & { onboardedAt: number | null; entryChosenAt: 
   priceAlertLowEnabled: false,
   onboardedAt: null,
   entryChosenAt: null,
+  proOfferSeenAt: null,
+  setupDismissedAt: null,
 };
 
 /** Snapshot of the current profile, in the shape written to users/{uid}. */
@@ -116,6 +132,9 @@ export const useUserStore = create<UserState>()(
   proExpirationMillis: null,
   onboardedAt: null,
   entryChosenAt: null,
+  introSeenAt: null,
+  proOfferSeenAt: null,
+  setupDismissedAt: null,
   hasHydrated: false,
   setUid: (uid) => set({ uid }),
   setOnboardingInfo: (info) => set((state) => ({ ...info, onboardedAt: state.onboardedAt ?? Date.now() })),
@@ -129,6 +148,9 @@ export const useUserStore = create<UserState>()(
   resetProfile: () =>
     set({ ...EMPTY_PROFILE, uid: null, isProSubscriber: false, proPeriodType: null, proExpirationMillis: null }),
   markEntryChosen: () => set((state) => ({ entryChosenAt: state.entryChosenAt ?? Date.now() })),
+  markIntroSeen: () => set((state) => ({ introSeenAt: state.introSeenAt ?? Date.now() })),
+  markProOfferSeen: () => set((state) => ({ proOfferSeenAt: state.proOfferSeenAt ?? Date.now() })),
+  dismissSetup: () => set({ setupDismissedAt: Date.now() }),
     }),
     {
       name: 'elpuls-user-profile',
@@ -136,7 +158,16 @@ export const useUserStore = create<UserState>()(
       storage: createJSONStorage(() => AsyncStorage),
       // Profile only — uid comes from Firebase Auth and Pro status from
       // RevenueCat on every launch, so neither is cached here.
-      partialize: (state) => ({ ...selectProfile(state), onboardedAt: state.onboardedAt, entryChosenAt: state.entryChosenAt }),
+      // introSeenAt deliberately survives resetProfile (sign-out): someone
+      // who has seen the intro once doesn't need it again on this phone.
+      partialize: (state) => ({
+        ...selectProfile(state),
+        onboardedAt: state.onboardedAt,
+        entryChosenAt: state.entryChosenAt,
+        introSeenAt: state.introSeenAt,
+        proOfferSeenAt: state.proOfferSeenAt,
+        setupDismissedAt: state.setupDismissedAt,
+      }),
       onRehydrateStorage: () => () => {
         useUserStore.setState({ hasHydrated: true });
       },
