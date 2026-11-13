@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -105,6 +105,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
         <View style={[styles.progressFill, { width: `${((step + 1) / STEP_COUNT) * 100}%` }]} />
       </View>
 
+      <ScrollView style={styles.stepScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       {step === 0 && (
         <Step title={t('onboarding.ageTitle')} subtitle={t('onboarding.ageSubtitle')}>
           <OptionCard
@@ -190,6 +191,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
           </Pressable>
         </Step>
       )}
+      </ScrollView>
 
       <View style={styles.footer}>
         <PrimaryButton
@@ -222,6 +224,7 @@ function Step({
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, paddingTop: 60 },
+  stepScroll: { flex: 1 },
   progressTrack: {
     height: 4,
     borderRadius: theme.radius.pill,

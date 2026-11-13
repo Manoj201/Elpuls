@@ -10,6 +10,15 @@ let signInPromise: Promise<string> | null = null;
  * (push subscriptions, later onboarding profile) before a real login
  * screen exists; they link cleanly to a real account later via
  * linkWithCredential.
+ *
+ * Deliberately waits for the FIRST onAuthStateChanged callback before
+ * deciding whether to sign in — checking `auth.currentUser` synchronously
+ * here (the previous bug) is unreliable, since restoring a persisted
+ * session from AsyncStorage (see firebase.ts) is inherently async:
+ * `currentUser` reads as null on a cold start even when a valid session
+ * exists, which minted a brand-new anonymous uid on every app restart and
+ * orphaned the previous uid's Firestore profile (TestFlight bug: "closing
+ * the app forces a re-login / re-onboarding").
  */
 export function ensureAnonymousSignIn(): Promise<string> {
   if (signInPromise) {
@@ -20,20 +29,17 @@ export function ensureAnonymousSignIn(): Promise<string> {
     const unsubscribe = onAuthStateChanged(
       auth,
       (user) => {
+        unsubscribe();
         if (user) {
-          unsubscribe();
           resolve(user.uid);
+        } else {
+          signInAnonymously(auth)
+            .then((credential) => resolve(credential.user.uid))
+            .catch(reject);
         }
       },
       reject,
     );
-
-    if (!auth.currentUser) {
-      signInAnonymously(auth).catch((err) => {
-        unsubscribe();
-        reject(err);
-      });
-    }
   });
 
   return signInPromise;
