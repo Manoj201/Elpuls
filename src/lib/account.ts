@@ -17,22 +17,7 @@ export async function deleteMyAccount(): Promise<void> {
   await deleteMyAccountCallable();
   await signOutLocally();
 
-  useUserStore.setState({
-    uid: null,
-    zone: null,
-    heatingType: null,
-    hasEv: false,
-    hasSolar: false,
-    gridFeeFixedSekPerMonth: null,
-    gridFeeVariableSekPerKwh: null,
-    retailerMarkupSekPerKwh: null,
-    estimatedMonthlyKwh: null,
-    priceAlertHighThresholdOre: null,
-    priceAlertLowEnabled: false,
-    isProSubscriber: false,
-    proPeriodType: null,
-    proExpirationMillis: null,
-  });
+  useUserStore.getState().resetProfile();
   useApplianceStore.setState({ appliances: [] });
 
   const zones = useCountryStore.getState().config.zones;

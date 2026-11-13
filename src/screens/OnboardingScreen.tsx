@@ -10,6 +10,8 @@ import { theme } from '../theme';
 import { Chip } from '../components/Chip';
 import { OptionCard } from '../components/OptionCard';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { SecondaryButton } from '../components/SecondaryButton';
+import { LabeledInput } from '../components/LabeledInput';
 
 interface OnboardingScreenProps {
   uid: string;
@@ -20,8 +22,9 @@ const HEATING_VALUES: NonNullable<HeatingType>[] = ['district', 'electric', 'hea
 
 const STEP_COUNT = 6;
 
+/** Accepts Swedish decimal commas ("24,5") as well as dots. */
 function parsePositiveFloat(value: string): number | null {
-  const parsed = parseFloat(value);
+  const parsed = parseFloat(value.replace(',', '.'));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
@@ -81,6 +84,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
       gridFeeVariableSekPerKwh: gridFeeVariableOre === null ? null : gridFeeVariableOre / 100,
     };
 
+    if (__DEV__) console.log('[auth-debug] onboarding save uid=', uid, 'zone=', info.zone);
     try {
       // setDoc waits for the server to confirm the write — if Firestore can't
       // be reached it never settles, so cap it instead of hanging forever.
@@ -170,19 +174,19 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
 
       {step === 5 && (
         <Step title={t('onboarding.gridFeeTitle')} subtitle={t('onboarding.gridFeeSubtitle')}>
-          <TextInput
-            style={styles.gridFeeInput}
-            placeholder={t('onboarding.gridFeeFixedPlaceholder')}
-            placeholderTextColor={theme.colors.textFaint}
-            keyboardType="numeric"
+          <LabeledInput
+            label={t('fields.gridFeeFixedLabel')}
+            unit={t('fields.unitKrPerMonth')}
+            placeholder={t('fields.exampleGridFeeFixed')}
+            keyboardType="decimal-pad"
             value={gridFeeFixedInput}
             onChangeText={setGridFeeFixedInput}
           />
-          <TextInput
-            style={styles.gridFeeInput}
-            placeholder={t('onboarding.gridFeeVariablePlaceholder')}
-            placeholderTextColor={theme.colors.textFaint}
-            keyboardType="numeric"
+          <LabeledInput
+            label={t('fields.gridFeeVariableLabel')}
+            unit={t('fields.unitOrePerKwh')}
+            placeholder={t('fields.exampleGridFeeVariable')}
+            keyboardType="decimal-pad"
             value={gridFeeVariableInput}
             onChangeText={setGridFeeVariableInput}
           />
@@ -194,11 +198,18 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <PrimaryButton
-          label={step < STEP_COUNT - 1 ? t('common.continue') : t('common.finish')}
-          onPress={handleContinue}
-          disabled={!canContinue || saving}
-        />
+        {step > 0 && (
+          <View style={styles.backButton}>
+            <SecondaryButton label={t('common.back')} onPress={() => setStep(step - 1)} disabled={saving} />
+          </View>
+        )}
+        <View style={styles.nextButton}>
+          <PrimaryButton
+            label={step < STEP_COUNT - 1 ? t('common.continue') : t('common.finish')}
+            onPress={handleContinue}
+            disabled={!canContinue || saving}
+          />
+        </View>
       </View>
     </View>
   );
@@ -268,16 +279,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     lineHeight: 18,
   },
-  gridFeeInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    fontFamily: theme.typography.body,
-    fontSize: 15,
-    color: theme.colors.textPrimary,
-  },
   skipText: {
     fontFamily: theme.typography.body,
     fontSize: 13,
@@ -285,5 +286,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  footer: { paddingTop: 16, paddingBottom: 12 },
+  footer: { flexDirection: 'row', gap: 10, paddingTop: 16, paddingBottom: 12 },
+  backButton: { flex: 1 },
+  nextButton: { flex: 2 },
 });

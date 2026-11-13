@@ -1,8 +1,8 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Platform, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { IconChartBar, IconChartLine, IconGauge, IconSettings } from '@tabler/icons-react-native';
 import { useFonts as useSpaceGrotesk, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold } from '@expo-google-fonts/space-grotesk';
 import { useFonts as useInter, Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
@@ -19,14 +19,14 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ScreenBackground } from './src/components/ScreenBackground';
 import { usePushRegistration } from './src/hooks/usePushRegistration';
-import { ensureAnonymousSignIn } from './src/lib/auth';
+import { ensureAnonymousSignIn, signOutUser } from './src/lib/auth';
 import { clearLocalAppStorage } from './src/lib/devTools';
 import { deleteMyAccount } from './src/lib/account';
-import { db } from './src/lib/firebase';
+import { auth, db } from './src/lib/firebase';
 import { configurePurchases } from './src/lib/purchases';
 import { useCountryStore } from './src/stores/useCountryStore';
 import { useUiStore } from './src/stores/useUiStore';
-import { useUserStore } from './src/stores/useUserStore';
+import { selectProfile, useUserStore } from './src/stores/useUserStore';
 import type { RegisteredAppliance } from './src/stores/useApplianceStore';
 import { initI18n, syncCurrentLanguageToFirestore } from './src/i18n';
 import { theme } from './src/theme';
@@ -50,8 +50,14 @@ const TABS: { id: TabScreen; labelKey: string; icon: ComponentType<{ size?: numb
  * blank defaults in the UI on every restart, even though Firestore still
  * has the real values.
  */
+// TEMP debug (dev builds only) — remove once the sign-in → onboarding bug is confirmed fixed.
+export function authDebug(...args: unknown[]) {
+  if (__DEV__) console.log('[auth-debug]', ...args);
+}
+
 async function hydrateUserProfile(uid: string): Promise<boolean> {
   const snap = await getDoc(doc(db, 'users', uid));
+  authDebug('firestore users/', uid, 'exists=', snap.exists(), 'zone=', snap.exists() ? snap.data().zone : undefined, 'keys=', snap.exists() ? Object.keys(snap.data()) : []);
   if (!snap.exists() || !snap.data().zone) {
     return false;
   }
@@ -73,11 +79,88 @@ async function hydrateUserProfile(uid: string): Promise<boolean> {
   return true;
 }
 
+/** Whether this device has a completed onboarding profile cached locally (useUserStore persist). */
+function hasCachedProfile(): boolean {
+  const state = useUserStore.getState();
+  return state.onboardedAt !== null && state.zone !== null;
+}
+
+/**
+ * Writes this device's cached profile to users/{uid}. Used when the uid has
+ * no Firestore profile but the device does — e.g. a guest signing in to an
+ * account for the first time, or a session that had to be re-created —
+ * so Cloud Functions (push alerts, daily briefing) see the same profile.
+ */
+async function uploadCachedProfile(uid: string): Promise<void> {
+  const profile = selectProfile(useUserStore.getState());
+  await setDoc(doc(db, 'users', uid), { ...profile, onboardedAt: serverTimestamp() }, { merge: true });
+}
+
+/**
+ * Decides where a user lands for a given uid:
+ * 1. Firestore profile exists → main (hydrated from Firestore).
+ * 2. This device has a cached profile → main, and the cache is (re)uploaded.
+ * 3. Otherwise → onboarding.
+ * Offline/Firestore errors fall back to the cache, so a returning user
+ * always gets straight into the app; only a user with no cache sees the error.
+ */
+async function resolveLanding(uid: string): Promise<'main' | 'onboarding'> {
+  authDebug('resolveLanding uid=', uid, 'authUser=', auth.currentUser?.uid, 'anon=', auth.currentUser?.isAnonymous, 'cache=', hasCachedProfile());
+  try {
+    if (await hydrateUserProfile(uid)) return 'main';
+  } catch (err) {
+    authDebug('profile read FAILED', err);
+    if (!hasCachedProfile()) throw err;
+    console.log('Profile read failed, using cached profile:', err);
+    useCountryStore.getState().setZone(useUserStore.getState().zone!);
+    return 'main';
+  }
+
+  if (hasCachedProfile()) {
+    useCountryStore.getState().setZone(useUserStore.getState().zone!);
+    uploadCachedProfile(uid).catch((err) => console.log('Profile self-heal upload failed:', err));
+    return 'main';
+  }
+  return 'onboarding';
+}
+
+/** Waits until useUserStore has read its cached profile back from AsyncStorage. */
+function waitForProfileCache(): Promise<void> {
+  if (useUserStore.persist.hasHydrated()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsubscribe = useUserStore.persist.onFinishHydration(() => {
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
+/**
+ * True while the on-screen keyboard is up. The tab bar hides then — otherwise
+ * ScreenBackground's KeyboardAvoidingView lifts it above the keyboard, where
+ * it covers the form being typed into (e.g. Settings → Create account).
+ */
+function useKeyboardVisible(): boolean {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, () => setVisible(true));
+    const hide = Keyboard.addListener(hideEvent, () => setVisible(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return visible;
+}
+
 export default function App() {
   usePushRegistration();
   const { t } = useTranslation();
   const setUid = useUserStore((s) => s.setUid);
   const isPaywallVisible = useUiStore((s) => s.isPaywallVisible);
+  const keyboardVisible = useKeyboardVisible();
 
   const [appState, setAppState] = useState<AppState>('loading');
   const [activeUid, setActiveUid] = useState<string | null>(null);
@@ -100,13 +183,21 @@ export default function App() {
 
     async function init() {
       try {
+        await waitForProfileCache();
         const uid = await ensureAnonymousSignIn();
         if (cancelled) return;
         setUid(uid);
         setActiveUid(uid);
         configurePurchases(uid);
         syncCurrentLanguageToFirestore();
-        setAppState((await hydrateUserProfile(uid)) ? 'main' : 'login');
+        const landing = await resolveLanding(uid);
+        if (cancelled) return;
+        authDebug('init uid=', uid, 'landing=', landing, 'entryChosenAt=', useUserStore.getState().entryChosenAt);
+        // No profile yet: onboarding only if the user already chose Create
+        // account / Sign in / Guest on the Login screen (and quit mid-way).
+        // A background guest session alone — fresh install, or the one
+        // started after sign-out/account deletion — always gets Login.
+        setAppState(landing === 'main' ? 'main' : useUserStore.getState().entryChosenAt !== null ? 'onboarding' : 'login');
       } catch (err) {
         console.error('App init failed:', err);
         if (!cancelled) setInitError(err instanceof Error ? err.message : String(err));
@@ -120,12 +211,32 @@ export default function App() {
     };
   }, [setUid, initAttempt]);
 
+  // After Create account (same guest uid) or Sign in (the account's uid):
+  // the account's own profile wins; otherwise a guest profile on this
+  // device carries over; only with neither does onboarding run.
   async function handleSignedIn(uid: string) {
+    authDebug('handleSignedIn uid=', uid);
+    useUserStore.getState().markEntryChosen();
     setUid(uid);
     setActiveUid(uid);
     configurePurchases(uid);
     syncCurrentLanguageToFirestore();
-    setAppState((await hydrateUserProfile(uid)) ? 'main' : 'onboarding');
+    const landing = await resolveLanding(uid);
+    authDebug('handleSignedIn landing=', landing);
+    setAppState(landing);
+  }
+
+  async function handleSignedOut() {
+    authDebug('signOut from uid=', auth.currentUser?.uid);
+    const guestUid = await signOutUser();
+    authDebug('signOut new guest uid=', guestUid);
+    setUid(guestUid);
+    setActiveUid(guestUid);
+    configurePurchases(guestUid);
+    setTab('overview');
+    setStackScreen(null);
+    setEditingAppliance(null);
+    setAppState('login');
   }
 
   // Dev-only: wipes the local session/storage, then re-runs the same init
@@ -187,7 +298,10 @@ export default function App() {
   if (appState === 'login') {
     return (
       <ScreenBackground>
-        <LoginScreen onSignedIn={handleSignedIn} onSkip={() => setAppState('onboarding')} />
+        <LoginScreen onSignedIn={handleSignedIn} onSkip={() => {
+            useUserStore.getState().markEntryChosen();
+            setAppState('onboarding');
+          }} />
         <StatusBar style="light" />
       </ScreenBackground>
     );
@@ -243,13 +357,15 @@ export default function App() {
                 onOpenBillScan={() => setStackScreen('billScan')}
                 onDevReset={handleDevReset}
                 onAccountDeleted={handleAccountDeleted}
+                onSignedIn={handleSignedIn}
+                onSignedOut={handleSignedOut}
               />
             )}
           </>
         )}
       </View>
 
-      {!stackScreen && (
+      {!stackScreen && !keyboardVisible && (
         <SafeAreaView style={styles.tabBar}>
           {TABS.map(({ id, labelKey, icon: Icon }) => (
             <Pressable key={id} style={styles.tab} onPress={() => setTab(id)}>

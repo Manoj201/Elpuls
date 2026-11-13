@@ -1,6 +1,18 @@
 // @firebase/auth directly, not firebase/auth — see src/lib/firebase.ts.
-import { onAuthStateChanged, signInAnonymously, signOut } from '@firebase/auth';
-import { auth } from './firebase';
+import {
+  EmailAuthProvider,
+  linkWithCredential,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signOut,
+} from '@firebase/auth';
+import Purchases from 'react-native-purchases';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { auth, db } from './firebase';
+import { useUserStore } from '../stores/useUserStore';
+import { useApplianceStore } from '../stores/useApplianceStore';
 
 let signInPromise: Promise<string> | null = null;
 
@@ -54,4 +66,88 @@ export function ensureAnonymousSignIn(): Promise<string> {
 export async function signOutLocally(): Promise<void> {
   await signOut(auth);
   signInPromise = null;
+}
+
+/** True when the current session is a guest (anonymous) user, not an email account. */
+export function isGuest(): boolean {
+  return auth.currentUser?.isAnonymous ?? true;
+}
+
+/** Email of the signed-in account, or null for guests. */
+export function currentEmail(): string | null {
+  return auth.currentUser?.isAnonymous ? null : (auth.currentUser?.email ?? null);
+}
+
+/**
+ * Turns the current guest into an email account. Keeps the same uid, so
+ * the onboarding profile, appliances and push subscription all carry over.
+ */
+export async function linkGuestToEmail(email: string, password: string): Promise<string> {
+  await ensureAnonymousSignIn();
+  const credential = EmailAuthProvider.credential(email.trim(), password);
+  const result = await linkWithCredential(auth.currentUser!, credential);
+  return result.user.uid;
+}
+
+/** Signs in to an existing email account (replaces the current guest session). */
+export async function signInWithEmail(email: string, password: string): Promise<string> {
+  const result = await signInWithEmailAndPassword(auth, email.trim(), password);
+  signInPromise = Promise.resolve(result.user.uid);
+  return result.user.uid;
+}
+
+export async function sendPasswordReset(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email.trim());
+}
+
+/**
+ * Signs out of an email account and wipes this device's cached profile,
+ * then starts a fresh guest session so the Login screen has a uid to
+ * onboard with if the user picks "Continue as guest". Returns that uid.
+ */
+export async function signOutUser(): Promise<string> {
+  try {
+    await Purchases.logOut();
+  } catch {
+    // Not configured (no API key) or already anonymous in RevenueCat — fine.
+  }
+  // Stop this phone receiving the signed-out account's notifications.
+  const previousUid = auth.currentUser?.uid;
+  if (previousUid) {
+    await deleteDoc(doc(db, 'pushSubscriptions', previousUid)).catch(() => {});
+  }
+  await signOut(auth);
+  signInPromise = null;
+  useUserStore.getState().resetProfile();
+  useApplianceStore.setState({ appliances: [] });
+  return ensureAnonymousSignIn();
+}
+
+/** Maps a Firebase Auth error to an i18n key under `authErrors`. */
+export function authErrorKey(err: unknown): string {
+  const code = (err as { code?: string } | null)?.code ?? '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+    case 'auth/invalid-login-credentials':
+      return 'authErrors.invalidCredentials';
+    case 'auth/email-already-in-use':
+    case 'auth/credential-already-in-use':
+      return 'authErrors.emailInUse';
+    case 'auth/invalid-email':
+      return 'authErrors.invalidEmail';
+    case 'auth/weak-password':
+      return 'authErrors.weakPassword';
+    case 'auth/missing-password':
+      return 'authErrors.missingPassword';
+    case 'auth/network-request-failed':
+      return 'authErrors.network';
+    case 'auth/too-many-requests':
+      return 'authErrors.tooManyRequests';
+    case 'auth/requires-recent-login':
+      return 'authErrors.recentLogin';
+    default:
+      return 'authErrors.generic';
+  }
 }

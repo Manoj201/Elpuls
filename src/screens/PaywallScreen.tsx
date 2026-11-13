@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useTranslation } from 'react-i18next';
 import { IconBolt, IconCheck } from '@tabler/icons-react-native';
 import type { PurchasesPackage } from 'react-native-purchases';
-import { getCurrentOfferingPackage, purchasePackage, restorePurchases } from '../lib/purchases';
+import { getCurrentOfferingPackage, getLastOfferingIssue, purchaseErrorKind, purchasePackage, restorePurchases } from '../lib/purchases';
 import { useUiStore } from '../stores/useUiStore';
 import { theme } from '../theme';
 import { Chip } from '../components/Chip';
@@ -20,12 +20,19 @@ export function PaywallScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [offeringIssue, setOfferingIssue] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadOffering() {
+    setLoadingOffering(true);
     getCurrentOfferingPackage()
-      .then(setPkg)
+      .then((p) => {
+        setPkg(p);
+        setOfferingIssue(p ? null : getLastOfferingIssue());
+      })
       .finally(() => setLoadingOffering(false));
-  }, []);
+  }
+
+  useEffect(loadOffering, []);
 
   async function handlePurchase() {
     if (!pkg) return;
@@ -36,7 +43,9 @@ export function PaywallScreen() {
       hidePaywall();
     } catch (err) {
       console.log('Purchase failed:', err);
-      setError(t('paywall.purchaseFailed'));
+      const kind = purchaseErrorKind(err);
+      if (kind === 'otherAccount') setError(t('paywall.ownedByOtherAccount'));
+      else if (kind !== 'cancelled') setError(t('paywall.purchaseFailed'));
     } finally {
       setPurchasing(false);
     }
@@ -46,11 +55,14 @@ export function PaywallScreen() {
     setRestoring(true);
     setError(null);
     try {
-      await restorePurchases();
-      hidePaywall();
+      if (await restorePurchases()) {
+        hidePaywall();
+      } else {
+        setError(t('paywall.nothingToRestore'));
+      }
     } catch (err) {
       console.log('Restore failed:', err);
-      setError(t('paywall.restoreFailed'));
+      setError(t(purchaseErrorKind(err) === 'otherAccount' ? 'paywall.ownedByOtherAccount' : 'paywall.restoreFailed'));
     } finally {
       setRestoring(false);
     }
@@ -85,7 +97,12 @@ export function PaywallScreen() {
             </Text>
           )}
           <Text style={styles.trialHint}>{t('paywall.trialHint')}</Text>
-          {!loadingOffering && !pkg && <Text style={styles.unavailableHint}>{t('paywall.notAvailable')}</Text>}
+          {!loadingOffering && !pkg && (
+            <Pressable onPress={loadOffering}>
+              <Text style={styles.unavailableHint}>{t('paywall.notAvailable')}</Text>
+              {offeringIssue && <Text style={styles.offeringIssue}>{offeringIssue} · {t('paywall.retry')}</Text>}
+            </Pressable>
+          )}
         </View>
 
         {error && <Text style={styles.error}>{error}</Text>}
@@ -144,6 +161,7 @@ const styles = StyleSheet.create({
   priceUnit: { fontFamily: theme.typography.body, fontSize: 14, color: theme.colors.textMuted },
   trialHint: { fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.textMuted },
   unavailableHint: { fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.textFaint, textAlign: 'center' },
+  offeringIssue: { fontFamily: theme.typography.body, fontSize: 11, color: theme.colors.textFaint, textAlign: 'center', marginTop: 4 },
   error: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.dangerEmber, marginBottom: 12, textAlign: 'center' },
   restoreLink: { marginTop: 16 },
   restoreLinkText: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textSecondary },

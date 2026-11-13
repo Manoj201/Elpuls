@@ -56,9 +56,13 @@ export async function sendExpoPushToZone(
   const subscriptions = await db.collection('pushSubscriptions').where('zone', '==', zone).get();
 
   const tokensByLanguage = new Map<ServerLanguage, string[]>();
+  // One device = one push, even if stale duplicate subscriptions for the
+  // same token still exist (see dedupePushTokens.ts).
+  const seenTokens = new Set<string>();
   for (const sub of subscriptions.docs) {
     const subscription = sub.data() as PushSubscription;
-    if (!subscription.expoPushToken) continue;
+    if (!subscription.expoPushToken || seenTokens.has(subscription.expoPushToken)) continue;
+    seenTokens.add(subscription.expoPushToken);
     const language = resolveServerLanguage(subscription.language);
     const tokens = tokensByLanguage.get(language) ?? [];
     tokens.push(subscription.expoPushToken);
@@ -77,7 +81,7 @@ export async function sendExpoPushToZone(
     }
   }
 
-  logger.info(`Sent to ${zone} (${subscriptions.size} device(s)).`);
+  logger.info(`Sent to ${zone} (${seenTokens.size} device(s)).`);
 }
 
 /**

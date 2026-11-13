@@ -1,36 +1,37 @@
 import { useEffect } from 'react';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { ensureAnonymousSignIn } from '../lib/auth';
 import { registerForPushNotificationsAsync } from '../lib/notifications';
 import { db } from '../lib/firebase';
 import { useCountryStore } from '../stores/useCountryStore';
 import { useUserStore } from '../stores/useUserStore';
 
 /**
- * On mount, and whenever the selected price zone changes, ensures the user
- * has a (possibly anonymous) Firebase Auth session and an up-to-date push
- * subscription in Firestore so Cloud Functions can notify them when tomorrow's
- * prices for their zone are published.
+ * Keeps `pushSubscriptions/{uid}` up to date so Cloud Functions can notify
+ * the user about THEIR price zone. Uses the user's home zone from their
+ * onboarding profile (useUserStore) — not useCountryStore's zone, which also
+ * changes when someone just taps SE1–SE4 on Översikt to look at another
+ * zone (that used to move their notifications to the browsed zone).
+ * Nothing is registered until onboarding has set a home zone.
  */
 export function usePushRegistration() {
-  const zone = useCountryStore((s) => s.zone);
+  const zone = useUserStore((s) => s.zone);
   const countryCode = useCountryStore((s) => s.countryCode);
-  const setUid = useUserStore((s) => s.setUid);
+  // The uid App.tsx settled on (guest or signed-in account). Reading it from
+  // the store — rather than re-running ensureAnonymousSignIn here — keeps
+  // the subscription on the right account after sign-in/sign-out.
+  const uid = useUserStore((s) => s.uid);
 
   useEffect(() => {
+    if (!uid || !zone) return;
     let cancelled = false;
 
     async function register() {
       try {
-        const uid = await ensureAnonymousSignIn();
-        if (cancelled) return;
-        setUid(uid);
-
         const expoPushToken = await registerForPushNotificationsAsync();
         if (cancelled || !expoPushToken) return;
 
         await setDoc(
-          doc(db, 'pushSubscriptions', uid),
+          doc(db, 'pushSubscriptions', uid!),
           { zone, countryCode, expoPushToken, updatedAt: serverTimestamp() },
           { merge: true },
         );
@@ -44,5 +45,5 @@ export function usePushRegistration() {
     return () => {
       cancelled = true;
     };
-  }, [zone, countryCode, setUid]);
+  }, [zone, countryCode, uid]);
 }

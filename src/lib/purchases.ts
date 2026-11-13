@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL, type CustomerInfo, type PurchasesPackage } from 'react-native-purchases';
+import Purchases, { LOG_LEVEL, PURCHASES_ERROR_CODE, type CustomerInfo, type PurchasesPackage } from 'react-native-purchases';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { useUserStore } from '../stores/useUserStore';
@@ -8,6 +8,17 @@ import { useUserStore } from '../stores/useUserStore';
 export const PRO_ENTITLEMENT_ID = 'pro';
 
 let configured = false;
+
+/**
+ * Why the last getCurrentOfferingPackage() call came back empty, or null if it
+ * succeeded. Surfaced in small print on the paywall so a disabled subscribe
+ * button in a TestFlight/release build is diagnosable without a debugger.
+ */
+let lastOfferingIssue: string | null = null;
+
+export function getLastOfferingIssue(): string | null {
+  return lastOfferingIssue;
+}
 
 function apiKeyForPlatform(): string | null {
   const key = Platform.OS === 'ios' ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
@@ -48,6 +59,14 @@ export async function configurePurchases(uid: string): Promise<void> {
   }
 
   try {
+    if (configured) {
+      // Already configured this session (e.g. guest → signed-in): switch the
+      // RevenueCat user instead of configuring a second instance and
+      // registering a duplicate listener.
+      const { customerInfo } = await Purchases.logIn(uid);
+      syncProStatus(customerInfo);
+      return;
+    }
     if (__DEV__) {
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     }
@@ -69,14 +88,25 @@ export async function configurePurchases(uid: string): Promise<void> {
  * isn't configured (no API key) or no real offering exists yet.
  */
 export async function getCurrentOfferingPackage(): Promise<PurchasesPackage | null> {
-  if (!configured) return null;
+  if (!configured) {
+    lastOfferingIssue = apiKeyForPlatform() ? 'RevenueCat not configured yet' : 'No RevenueCat API key in this build';
+    return null;
+  }
   try {
     const offerings = await Purchases.getOfferings();
     const current = offerings.current;
-    if (!current) return null;
-    return current.monthly ?? current.availablePackages[0] ?? null;
+    if (!current) {
+      const ids = Object.keys(offerings.all);
+      lastOfferingIssue = ids.length ? `No current offering (found: ${ids.join(', ')})` : 'No offerings returned';
+      return null;
+    }
+    const pkg = current.monthly ?? current.availablePackages[0] ?? null;
+    lastOfferingIssue = pkg ? null : `Offering "${current.identifier}" has no packages`;
+    return pkg;
   } catch (err) {
     console.log('RevenueCat getOfferings failed:', err);
+    const e = err as { code?: string | number; message?: string; underlyingErrorMessage?: string };
+    lastOfferingIssue = [e.code != null ? `[${e.code}]` : null, e.message, e.underlyingErrorMessage].filter(Boolean).join(' ') || String(err);
     return null;
   }
 }
@@ -86,9 +116,31 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<void> {
   syncProStatus(customerInfo);
 }
 
-export async function restorePurchases(): Promise<void> {
+/** Restores purchases; resolves true only if Pro is actually active afterwards. */
+export async function restorePurchases(): Promise<boolean> {
   const info = await Purchases.restorePurchases();
   syncProStatus(info);
+  return Boolean(info.entitlements.active[PRO_ENTITLEMENT_ID]);
+}
+
+/**
+ * Classifies a purchase/restore error. 'otherAccount' = this Apple ID's
+ * active subscription is linked to a different Elpuls account (RevenueCat
+ * "Transfer if there are no active subscriptions" keeps it there), so the
+ * user needs to sign in to that account instead.
+ */
+export function purchaseErrorKind(err: unknown): 'cancelled' | 'otherAccount' | 'other' {
+  const code = String((err as { code?: string | number } | null)?.code ?? '');
+  if ((err as { userCancelled?: boolean } | null)?.userCancelled || code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) {
+    return 'cancelled';
+  }
+  if (
+    code === PURCHASES_ERROR_CODE.RECEIPT_ALREADY_IN_USE_ERROR ||
+    code === PURCHASES_ERROR_CODE.RECEIPT_IN_USE_BY_OTHER_SUBSCRIBER_ERROR
+  ) {
+    return 'otherAccount';
+  }
+  return 'other';
 }
 
 export async function openManageSubscriptions(): Promise<void> {

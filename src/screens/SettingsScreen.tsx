@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { IconBellRinging, IconFlask, IconPencil, IconPlus, IconReceipt, IconTrash } from '@tabler/icons-react-native';
+import { IconBellRinging, IconFlask, IconPencil, IconPlus, IconReceipt, IconTrash, IconUserCircle } from '@tabler/icons-react-native';
 import { db } from '../lib/firebase';
 import { openManageSubscriptions } from '../lib/purchases';
+import { authErrorKey, currentEmail, isGuest, linkGuestToEmail } from '../lib/auth';
 import { useApplianceStore, type RegisteredAppliance } from '../stores/useApplianceStore';
 import { useCountryStore } from '../stores/useCountryStore';
 import { useUiStore } from '../stores/useUiStore';
@@ -17,6 +18,7 @@ import { OptionCard } from '../components/OptionCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { LabeledInput } from '../components/LabeledInput';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -28,14 +30,17 @@ interface SettingsScreenProps {
   onOpenBillScan: () => void;
   onDevReset: () => Promise<void>;
   onAccountDeleted: () => Promise<void>;
+  onSignedIn: (uid: string) => Promise<void>;
+  onSignedOut: () => Promise<void>;
 }
 
+/** Accepts Swedish decimal commas ("24,5") as well as dots. */
 function parsePositiveFloat(value: string): number | null {
-  const parsed = parseFloat(value);
+  const parsed = parseFloat(value.replace(',', '.'));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDevReset, onAccountDeleted }: SettingsScreenProps) {
+export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDevReset, onAccountDeleted, onSignedIn, onSignedOut }: SettingsScreenProps) {
   const { t } = useTranslation();
   const config = useCountryStore((s) => s.config);
   const setActiveZone = useCountryStore((s) => s.setZone);
@@ -96,6 +101,58 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
     }
   }
 
+  // Account status is read from Firebase Auth on render; bumped after
+  // create-account so the card switches from "Guest" to "Signed in".
+  const [, setAccountVersion] = useState(0);
+  const guest = isGuest();
+  const email = currentEmail();
+  const [accountEmail, setAccountEmail] = useState('');
+  const [accountPassword, setAccountPassword] = useState('');
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+
+  async function handleCreateAccount() {
+    if (!accountEmail.trim() || !accountPassword) {
+      setAccountError(t('login.missingFields'));
+      return;
+    }
+    setCreatingAccount(true);
+    setAccountError(null);
+    try {
+      const newUid = await linkGuestToEmail(accountEmail, accountPassword);
+      setAccountPassword('');
+      setAccountVersion((v) => v + 1);
+      await onSignedIn(newUid);
+    } catch (err) {
+      console.log('Create account failed:', err);
+      setAccountError(t(authErrorKey(err)));
+    } finally {
+      setCreatingAccount(false);
+    }
+  }
+
+  function handleSignOut() {
+    Alert.alert(t('settings.signOutConfirmTitle'), t(user.isProSubscriber ? 'settings.signOutConfirmMessagePro' : 'settings.signOutConfirmMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('settings.signOut'),
+        style: 'destructive',
+        onPress: async () => {
+          setSigningOut(true);
+          setAccountError(null);
+          try {
+            await onSignedOut();
+          } catch (err) {
+            console.log('Sign out failed:', err);
+            setAccountError(t(authErrorKey(err)));
+            setSigningOut(false);
+          }
+        },
+      },
+    ]);
+  }
+
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
@@ -125,7 +182,7 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
     user.gridFeeFixedSekPerMonth !== null ? String(user.gridFeeFixedSekPerMonth) : '',
   );
   const [gridFeeVariableInput, setGridFeeVariableInput] = useState(
-    user.gridFeeVariableSekPerKwh !== null ? String(Math.round(user.gridFeeVariableSekPerKwh * 100)) : '',
+    user.gridFeeVariableSekPerKwh !== null ? String(Number((user.gridFeeVariableSekPerKwh * 100).toFixed(2))) : '',
   );
   const [estimatedMonthlyKwhInput, setEstimatedMonthlyKwhInput] = useState(
     user.estimatedMonthlyKwh !== null ? String(user.estimatedMonthlyKwh) : '',
@@ -169,54 +226,10 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
       <Text style={styles.title}>{t('settings.title')}</Text>
 
-      <Section title={t('settings.subscriptionTitle')}>
-        <Card style={styles.subscriptionCard}>
-          <View style={styles.subscriptionRow}>
-            <Chip label={user.isProSubscriber ? t('settings.proStatus') : t('settings.freeStatus')} variant={user.isProSubscriber ? 'amber' : 'neutral'} />
-            <Text style={styles.trialDaysText}>
-              {user.isProSubscriber && user.proPeriodType === 'TRIAL' && user.proExpirationMillis !== null
-                ? t('trialBanner.daysLeft', { count: Math.max(0, Math.ceil((user.proExpirationMillis - Date.now()) / MS_PER_DAY)) })
-                : user.isProSubscriber
-                  ? t('settings.proActiveStatus')
-                  : t('settings.freeStatusHint')}
-            </Text>
-          </View>
-          <View style={styles.subscriptionDivider} />
-          {user.isProSubscriber ? (
-            <PrimaryButton
-              label={managingSubscription ? t('settings.saving') : t('settings.manageSubscription')}
-              onPress={handleManageSubscription}
-              disabled={managingSubscription}
-            />
-          ) : (
-            <PrimaryButton label={t('settings.upgrade')} onPress={showPaywall} />
-          )}
-        </Card>
-      </Section>
-
-      {__DEV__ && (
-        <Section title={t('settings.devToolsTitle')}>
-          <Card style={styles.subscriptionCard}>
-            <InfoRow icon={IconFlask} variant="amber" title={t('settings.devForceProTitle')} subtitle={t('settings.devForceProSubtitle')} />
-            <View style={styles.yesNoRow}>
-              <Chip label={t('common.yes')} selected={user.isProSubscriber} onPress={() => setDevProOverride(true)} />
-              <Chip label={t('common.no')} selected={!user.isProSubscriber} onPress={() => setDevProOverride(false)} />
-            </View>
-          </Card>
-          <Card style={styles.devClearCard}>
-            <InfoRow icon={IconTrash} variant="danger" title={t('settings.devClearStorageTitle')} subtitle={t('settings.devClearStorageSubtitle')} />
-            <SecondaryButton
-              label={resetting ? t('settings.saving') : t('settings.devClearStorageButton')}
-              onPress={handleDevReset}
-              disabled={resetting}
-            />
-          </Card>
-        </Section>
-      )}
-
+      <GroupHeader first title={t('settings.groupHome')} subtitle={t('settings.groupHomeSubtitle')} />
       <Section title={t('settings.zoneTitle')}>
         <View style={styles.zoneRow}>
           {config.zones.map((z) => (
@@ -253,52 +266,45 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
       </Section>
 
       <Section title={t('onboarding.gridFeeTitle')}>
-        <TextInput
-          style={styles.gridFeeInput}
-          placeholder={t('onboarding.gridFeeFixedPlaceholder')}
-          placeholderTextColor={theme.colors.textFaint}
-          keyboardType="numeric"
+        <LabeledInput
+          label={t('fields.gridFeeFixedLabel')}
+          unit={t('fields.unitKrPerMonth')}
+          placeholder={t('fields.exampleGridFeeFixed')}
+          keyboardType="decimal-pad"
           value={gridFeeFixedInput}
           onChangeText={setGridFeeFixedInput}
         />
-        <TextInput
-          style={styles.gridFeeInput}
-          placeholder={t('onboarding.gridFeeVariablePlaceholder')}
-          placeholderTextColor={theme.colors.textFaint}
-          keyboardType="numeric"
+        <LabeledInput
+          label={t('fields.gridFeeVariableLabel')}
+          unit={t('fields.unitOrePerKwh')}
+          placeholder={t('fields.exampleGridFeeVariable')}
+          keyboardType="decimal-pad"
           value={gridFeeVariableInput}
           onChangeText={setGridFeeVariableInput}
         />
-        <TextInput
-          style={styles.gridFeeInput}
-          placeholder={t('settings.estimatedMonthlyKwhPlaceholder')}
-          placeholderTextColor={theme.colors.textFaint}
-          keyboardType="numeric"
+        <LabeledInput
+          label={t('fields.estimatedMonthlyKwhLabel')}
+          unit={t('fields.unitKwhPerMonth')}
+          placeholder={t('fields.exampleMonthlyKwh')}
+          helper={t('fields.estimatedMonthlyKwhHelper')}
+          keyboardType="decimal-pad"
           value={estimatedMonthlyKwhInput}
           onChangeText={setEstimatedMonthlyKwhInput}
         />
         <Pressable onPress={onOpenBillScan}>
           <Card style={styles.entryCard}>
-            <InfoRow icon={IconReceipt} title={t('settings.billScanTitle')} subtitle={t('settings.billScanSubtitle')} />
+            <InfoRow
+              icon={IconReceipt}
+              variant={user.retailerMarkupSekPerKwh !== null ? 'teal' : 'neutral'}
+              title={t('settings.billScanTitle')}
+              subtitle={
+                user.retailerMarkupSekPerKwh !== null
+                  ? t('fields.retailerMarkupScanned', { value: Number((user.retailerMarkupSekPerKwh * 100).toFixed(2)) })
+                  : t('settings.billScanSubtitle')
+              }
+            />
           </Card>
         </Pressable>
-      </Section>
-
-      <Section title={t('settings.priceAlertsTitle')}>
-        <Text style={styles.sectionSubtitle}>{t('settings.priceAlertsSubtitle')}</Text>
-        <TextInput
-          style={styles.gridFeeInput}
-          placeholder={t('settings.priceAlertHighPlaceholder')}
-          placeholderTextColor={theme.colors.textFaint}
-          keyboardType="numeric"
-          value={priceAlertHighInput}
-          onChangeText={setPriceAlertHighInput}
-        />
-        <InfoRow icon={IconBellRinging} title={t('settings.priceAlertLowTitle')} subtitle={t('settings.priceAlertLowSubtitle')} />
-        <View style={[styles.yesNoRow, styles.priceAlertLowRow]}>
-          <Chip label={t('common.yes')} selected={priceAlertLowEnabled} onPress={() => setPriceAlertLowEnabled(true)} />
-          <Chip label={t('common.no')} selected={!priceAlertLowEnabled} onPress={() => setPriceAlertLowEnabled(false)} />
-        </View>
       </Section>
 
       <Section title={t('settings.appliancesTitle')}>
@@ -325,12 +331,119 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
         </Pressable>
       </Section>
 
+      <GroupHeader title={t('settings.groupNotifications')} />
+      <Section title={t('settings.priceAlertsTitle')}>
+        <Text style={styles.sectionSubtitle}>{t('settings.priceAlertsSubtitle')}</Text>
+        <LabeledInput
+          label={t('fields.priceAlertHighLabel')}
+          unit={t('fields.unitOrePerKwh')}
+          placeholder={t('fields.examplePriceAlert')}
+          helper={t('fields.priceAlertHighHelper')}
+          keyboardType="decimal-pad"
+          value={priceAlertHighInput}
+          onChangeText={setPriceAlertHighInput}
+        />
+        <Card style={styles.toggleCard}>
+          <View style={styles.toggleText}>
+            <InfoRow icon={IconBellRinging} title={t('settings.priceAlertLowTitle')} subtitle={t('settings.priceAlertLowSubtitle')} />
+          </View>
+          <Switch
+            value={priceAlertLowEnabled}
+            onValueChange={setPriceAlertLowEnabled}
+            trackColor={{ false: theme.colors.borderMuted, true: theme.colors.accentPurple }}
+            accessibilityLabel={t('settings.priceAlertLowTitle')}
+          />
+        </Card>
+      </Section>
+
+      <View style={styles.saveBlock}>
+      <PrimaryButton label={saving ? t('settings.saving') : t('settings.saveChanges')} onPress={handleSave} disabled={saving} />
+      {savedAt !== null && <Text style={styles.savedHint}>{t('settings.saved')}</Text>}
+      </View>
+
+      <GroupHeader title={t('settings.groupApp')} />
       <Section title={t('settings.languageTitle')}>
         <LanguageSwitcher />
       </Section>
 
+      <GroupHeader title={t('settings.groupAccount')} />
       <Section title={t('settings.accountTitle')}>
-        <Card style={styles.devClearCard}>
+        <Card style={styles.accountCard}>
+          <InfoRow
+            icon={IconUserCircle}
+            title={guest ? t('settings.accountGuestTitle') : t('settings.accountSignedInTitle', { email: email ?? '' })}
+            subtitle={guest ? t('settings.accountGuestSubtitle') : t('settings.accountSignedInSubtitle')}
+          />
+          {guest ? (
+            <>
+              <TextInput
+                style={styles.accountInput}
+                placeholder={t('login.emailPlaceholder')}
+                placeholderTextColor={theme.colors.textFaint}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="username"
+                autoComplete="username"
+                value={accountEmail}
+                onChangeText={setAccountEmail}
+              />
+              <TextInput
+                style={styles.accountInput}
+                placeholder={t('login.passwordPlaceholder')}
+                placeholderTextColor={theme.colors.textFaint}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                // 'oneTimeCode' opts out of iOS "Automatic Strong Password",
+                // which without associated domains shows a yellow
+                // "cover view text" box over this create-account field.
+                textContentType="oneTimeCode"
+                autoComplete="off"
+                value={accountPassword}
+                onChangeText={setAccountPassword}
+              />
+              <Text style={styles.accountHint}>{t('login.passwordHint')}</Text>
+              <PrimaryButton
+                label={creatingAccount ? t('settings.saving') : t('login.createAccount')}
+                onPress={handleCreateAccount}
+                disabled={creatingAccount}
+              />
+            </>
+          ) : (
+            <SecondaryButton label={signingOut ? t('settings.saving') : t('settings.signOut')} onPress={handleSignOut} disabled={signingOut} />
+          )}
+          {accountError && <Text style={styles.error}>{accountError}</Text>}
+        </Card>
+      </Section>
+
+      <Section title={t('settings.subscriptionTitle')}>
+        <Card style={styles.subscriptionCard}>
+          <View style={styles.subscriptionRow}>
+            <Chip label={user.isProSubscriber ? t('settings.proStatus') : t('settings.freeStatus')} variant={user.isProSubscriber ? 'amber' : 'neutral'} />
+            <Text style={styles.trialDaysText}>
+              {user.isProSubscriber && user.proPeriodType === 'TRIAL' && user.proExpirationMillis !== null
+                ? t('trialBanner.daysLeft', { count: Math.max(0, Math.ceil((user.proExpirationMillis - Date.now()) / MS_PER_DAY)) })
+                : user.isProSubscriber
+                  ? t('settings.proActiveStatus')
+                  : t('settings.freeStatusHint')}
+            </Text>
+          </View>
+          <View style={styles.subscriptionDivider} />
+          {user.isProSubscriber ? (
+            <PrimaryButton
+              label={managingSubscription ? t('settings.saving') : t('settings.manageSubscription')}
+              onPress={handleManageSubscription}
+              disabled={managingSubscription}
+            />
+          ) : (
+            <PrimaryButton label={t('settings.upgrade')} onPress={showPaywall} />
+          )}
+        </Card>
+      </Section>
+
+      <Section title={t('settings.dangerZoneTitle')}>
+        <Card style={styles.accountCard}>
           <InfoRow
             icon={IconTrash}
             variant="danger"
@@ -346,9 +459,38 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
         </Card>
       </Section>
 
-      <PrimaryButton label={saving ? t('settings.saving') : t('settings.save')} onPress={handleSave} disabled={saving} />
-      {savedAt !== null && <Text style={styles.savedHint}>{t('settings.saved')}</Text>}
+      {__DEV__ && (
+        <>
+          <GroupHeader title={t('settings.groupDeveloper')} subtitle={t('settings.groupDeveloperSubtitle')} />
+        <Section title={t('settings.devToolsTitle')}>
+          <Card style={styles.subscriptionCard}>
+            <InfoRow icon={IconFlask} variant="amber" title={t('settings.devForceProTitle')} subtitle={t('settings.devForceProSubtitle')} />
+            <View style={styles.yesNoRow}>
+              <Chip label={t('common.yes')} selected={user.isProSubscriber} onPress={() => setDevProOverride(true)} />
+              <Chip label={t('common.no')} selected={!user.isProSubscriber} onPress={() => setDevProOverride(false)} />
+            </View>
+          </Card>
+          <Card style={styles.devClearCard}>
+            <InfoRow icon={IconTrash} variant="danger" title={t('settings.devClearStorageTitle')} subtitle={t('settings.devClearStorageSubtitle')} />
+            <SecondaryButton
+              label={resetting ? t('settings.saving') : t('settings.devClearStorageButton')}
+              onPress={handleDevReset}
+              disabled={resetting}
+            />
+          </Card>
+        </Section>
+        </>
+      )}
     </ScrollView>
+  );
+}
+
+function GroupHeader({ title, subtitle, first }: { title: string; subtitle?: string; first?: boolean }) {
+  return (
+    <View style={[styles.groupHeader, first && styles.groupHeaderFirst]}>
+      <Text style={styles.groupTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.groupSubtitle}>{subtitle}</Text> : null}
+    </View>
   );
 }
 
@@ -365,6 +507,18 @@ const styles = StyleSheet.create({
   container: { padding: 16, paddingTop: 60, paddingBottom: 48 },
   title: { fontFamily: theme.typography.display, fontSize: 26, color: theme.colors.textPrimary, marginBottom: 24 },
   section: { marginBottom: 24 },
+  groupHeader: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderMuted,
+    paddingTop: 20,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  groupTitle: { fontFamily: theme.typography.display, fontSize: 20, color: theme.colors.textPrimary },
+  groupSubtitle: { fontFamily: theme.typography.body, fontSize: 13, color: theme.colors.textMuted, marginTop: 4, lineHeight: 18 },
+  groupHeaderFirst: { borderTopWidth: 0, paddingTop: 0, marginTop: 0 },
+  saveBlock: { marginBottom: 32 },
+  accountCard: { gap: 14 },
   sectionTitle: {
     fontFamily: theme.typography.bodyMedium,
     fontSize: 12,
@@ -383,19 +537,20 @@ const styles = StyleSheet.create({
   zoneRow: { flexDirection: 'row', gap: 8 },
   optionList: { gap: 10 },
   yesNoRow: { flexDirection: 'row', gap: 8 },
-  priceAlertLowRow: { marginTop: 10 },
-  gridFeeInput: {
+  accountInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     fontFamily: theme.typography.body,
     fontSize: 15,
     color: theme.colors.textPrimary,
-    marginBottom: 10,
   },
+  accountHint: { fontFamily: theme.typography.body, fontSize: 12, color: theme.colors.textFaint },
   entryCard: { marginTop: 4 },
+  toggleCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  toggleText: { flex: 1 },
   applianceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   applianceRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
   applianceLabel: { fontFamily: theme.typography.bodyMedium, fontSize: 15, color: theme.colors.textPrimary, flexShrink: 1 },

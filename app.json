@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "se.elpuls.app",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "icon": "./assets/icon.png",
       "appleTeamId": "WJAVTP2LM7",
       "entitlements": {

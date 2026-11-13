@@ -15,19 +15,7 @@ export async function clearLocalAppStorage(): Promise<void> {
   await signOutLocally();
   await AsyncStorage.clear();
 
-  useUserStore.setState({
-    uid: null,
-    zone: null,
-    heatingType: null,
-    hasEv: false,
-    hasSolar: false,
-    gridFeeFixedSekPerMonth: null,
-    gridFeeVariableSekPerKwh: null,
-    retailerMarkupSekPerKwh: null,
-    isProSubscriber: false,
-    proPeriodType: null,
-    proExpirationMillis: null,
-  });
+  useUserStore.getState().resetProfile();
   useApplianceStore.setState({ appliances: [] });
 
   const zones = useCountryStore.getState().config.zones;

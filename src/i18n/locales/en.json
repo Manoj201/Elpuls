@@ -114,7 +114,7 @@
     "passwordPlaceholder": "Password",
     "createAccount": "Create account",
     "signIn": "Sign in",
-    "continueWithoutAccount": "Continue without an account",
+    "continueWithoutAccount": "Continue as guest",
     "legal": "By continuing you agree to Elpuls' Terms of Service and Privacy Policy.",
     "termsLink": "Terms of Service",
     "privacyLink": "Privacy Policy",
@@ -125,7 +125,12 @@
       "aiSubtitle": "Understand why electricity is cheap or expensive right now.",
       "costCheckTitle": "Cost check before you start",
       "costCheckSubtitle": "See if it's worth waiting to run the dishwasher or laundry."
-    }
+    },
+    "passwordHint": "At least 6 characters.",
+    "forgotPassword": "Forgot password?",
+    "enterEmailForReset": "Enter your email above, then tap “Forgot password?” again.",
+    "resetSent": "We sent a password reset link to {{email}}.",
+    "signInInstead": "Sign in with this email instead"
   },
   "onboarding": {
     "ageTitle": "Before we start",
@@ -251,7 +256,24 @@
     "proActiveStatus": "Active subscription",
     "freeStatusHint": "Upgrade anytime to unlock Pro features",
     "manageSubscription": "Manage subscription",
-    "upgrade": "Upgrade to Pro"
+    "upgrade": "Upgrade to Pro",
+    "accountGuestTitle": "You’re using Elpuls as a guest",
+    "accountGuestSubtitle": "Your settings are saved on this phone only. Create an account to keep them if you change phone.",
+    "accountSignedInTitle": "Signed in as {{email}}",
+    "accountSignedInSubtitle": "Your settings are saved to your account.",
+    "signOut": "Sign out",
+    "signOutConfirmTitle": "Sign out?",
+    "signOutConfirmMessage": "Your settings stay saved in your account. Sign in again any time to get them back.",
+    "signOutConfirmMessagePro": "Elpuls Pro is linked to this account. Sign in again to keep using Pro. Signing out doesn’t cancel your subscription — manage it in the App Store.",
+    "groupHome": "Your home",
+    "groupHomeSubtitle": "What you told us during setup. Used for prices, costs and tips.",
+    "groupNotifications": "Notifications",
+    "groupApp": "App",
+    "groupAccount": "Account",
+    "groupDeveloper": "Developer",
+    "groupDeveloperSubtitle": "Only visible in development builds.",
+    "dangerZoneTitle": "Delete account",
+    "saveChanges": "Save changes"
   },
   "applianceRecommendations": {
     "title": "Appliance recommendations",
@@ -299,6 +321,7 @@
     "fallbackPrice": "39 kr",
     "trialHint": "7-day free trial, cancel anytime.",
     "notAvailable": "Purchases aren't available yet in this version.",
+    "retry": "Tap to retry",
     "subscribe": "Continue with Pro",
     "purchasing": "Starting…",
     "purchaseFailed": "The purchase didn't go through. Try again.",
@@ -317,11 +340,40 @@
       "solarBonus": "Solar bonus hours",
       "stats": "Stats and cost breakdown",
       "recommendations": "Appliance recommendations"
-    }
+    },
+    "ownedByOtherAccount": "This Apple ID’s subscription is linked to another Elpuls account. Sign in to that account to use Pro.",
+    "nothingToRestore": "No active subscription found for this Apple ID."
   },
   "trialBanner": {
     "title": "Elpuls Pro trial",
     "daysLeft": "{{count}} days left",
     "cta": "Keep Pro"
+  },
+  "authErrors": {
+    "invalidCredentials": "Wrong email or password.",
+    "emailInUse": "An account with this email already exists.",
+    "invalidEmail": "That email address doesn’t look right.",
+    "weakPassword": "Password must be at least 6 characters.",
+    "missingPassword": "Enter your password.",
+    "network": "No connection. Check your internet and try again.",
+    "tooManyRequests": "Too many attempts. Wait a moment and try again.",
+    "recentLogin": "Please sign in again and retry.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "fields": {
+    "gridFeeFixedLabel": "Fixed grid fee",
+    "gridFeeVariableLabel": "Variable grid fee",
+    "estimatedMonthlyKwhLabel": "Estimated usage",
+    "estimatedMonthlyKwhHelper": "Used for the contract check and what-if simulator.",
+    "priceAlertHighLabel": "Alert when price goes above",
+    "priceAlertHighHelper": "Leave empty to turn this alert off.",
+    "unitKrPerMonth": "kr/month",
+    "unitOrePerKwh": "öre/kWh",
+    "unitKwhPerMonth": "kWh/month",
+    "exampleGridFeeFixed": "e.g. 350",
+    "exampleGridFeeVariable": "e.g. 24,5",
+    "exampleMonthlyKwh": "e.g. 1200",
+    "examplePriceAlert": "e.g. 150",
+    "retailerMarkupScanned": "Retailer markup: {{value}} öre/kWh, from your bill. Tap to scan a new one."
   }
 }

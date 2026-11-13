@@ -114,7 +114,7 @@
     "passwordPlaceholder": "Lösenord",
     "createAccount": "Skapa konto",
     "signIn": "Logga in",
-    "continueWithoutAccount": "Fortsätt utan konto",
+    "continueWithoutAccount": "Fortsätt som gäst",
     "legal": "Genom att fortsätta godkänner du Elpuls användarvillkor och integritetspolicy.",
     "termsLink": "Användarvillkor",
     "privacyLink": "Integritetspolicy",
@@ -125,7 +125,12 @@
       "aiSubtitle": "Förstå varför elen är dyr eller billig just nu.",
       "costCheckTitle": "Kostnadskoll innan du startar",
       "costCheckSubtitle": "Se om det lönar sig att vänta med disk eller tvätt."
-    }
+    },
+    "passwordHint": "Minst 6 tecken.",
+    "forgotPassword": "Glömt lösenordet?",
+    "enterEmailForReset": "Fyll i din e-post ovan och tryck sedan på ”Glömt lösenordet?” igen.",
+    "resetSent": "Vi har skickat en länk för att återställa lösenordet till {{email}}.",
+    "signInInstead": "Logga in med den här e-posten i stället"
   },
   "onboarding": {
     "ageTitle": "Innan vi börjar",
@@ -251,7 +256,24 @@
     "proActiveStatus": "Aktivt abonnemang",
     "freeStatusHint": "Uppgradera när du vill för att låsa upp Pro-funktioner",
     "manageSubscription": "Hantera prenumeration",
-    "upgrade": "Uppgradera till Pro"
+    "upgrade": "Uppgradera till Pro",
+    "accountGuestTitle": "Du använder Elpuls som gäst",
+    "accountGuestSubtitle": "Dina inställningar sparas bara på den här telefonen. Skapa ett konto för att behålla dem om du byter telefon.",
+    "accountSignedInTitle": "Inloggad som {{email}}",
+    "accountSignedInSubtitle": "Dina inställningar sparas på ditt konto.",
+    "signOut": "Logga ut",
+    "signOutConfirmTitle": "Logga ut?",
+    "signOutConfirmMessage": "Dina inställningar finns kvar på ditt konto. Logga in igen när du vill för att få tillbaka dem.",
+    "signOutConfirmMessagePro": "Elpuls Pro är kopplat till det här kontot. Logga in igen för att fortsätta använda Pro. Att logga ut avslutar inte prenumerationen — hantera den i App Store.",
+    "groupHome": "Ditt hem",
+    "groupHomeSubtitle": "Det du angav vid start. Används för priser, kostnader och tips.",
+    "groupNotifications": "Aviseringar",
+    "groupApp": "App",
+    "groupAccount": "Konto",
+    "groupDeveloper": "Utvecklare",
+    "groupDeveloperSubtitle": "Visas bara i utvecklingsversioner.",
+    "dangerZoneTitle": "Ta bort konto",
+    "saveChanges": "Spara ändringar"
   },
   "applianceRecommendations": {
     "title": "Apparatrekommendationer",
@@ -299,6 +321,7 @@
     "fallbackPrice": "39 kr",
     "trialHint": "7 dagars gratis provperiod, avsluta när som helst.",
     "notAvailable": "Köp är inte tillgängliga ännu i den här versionen.",
+    "retry": "Tryck för att försöka igen",
     "subscribe": "Fortsätt med Pro",
     "purchasing": "Startar…",
     "purchaseFailed": "Köpet gick inte igenom. Försök igen.",
@@ -317,11 +340,40 @@
       "solarBonus": "Solbonus-timmar",
       "stats": "Statistik och kostnadsspecifikation",
       "recommendations": "Apparatrekommendationer"
-    }
+    },
+    "ownedByOtherAccount": "Prenumerationen på det här Apple-ID:t är kopplad till ett annat Elpuls-konto. Logga in på det kontot för att använda Pro.",
+    "nothingToRestore": "Ingen aktiv prenumeration hittades för det här Apple-ID:t."
   },
   "trialBanner": {
     "title": "Elpuls Pro provperiod",
     "daysLeft": "{{count}} dagar kvar",
     "cta": "Behåll Pro"
+  },
+  "authErrors": {
+    "invalidCredentials": "Fel e-post eller lösenord.",
+    "emailInUse": "Det finns redan ett konto med den här e-posten.",
+    "invalidEmail": "E-postadressen ser inte rätt ut.",
+    "weakPassword": "Lösenordet måste ha minst 6 tecken.",
+    "missingPassword": "Fyll i ditt lösenord.",
+    "network": "Ingen anslutning. Kontrollera internet och försök igen.",
+    "tooManyRequests": "För många försök. Vänta en stund och försök igen.",
+    "recentLogin": "Logga in igen och försök på nytt.",
+    "generic": "Något gick fel. Försök igen."
+  },
+  "fields": {
+    "gridFeeFixedLabel": "Fast nätavgift",
+    "gridFeeVariableLabel": "Rörlig nätavgift",
+    "estimatedMonthlyKwhLabel": "Uppskattad förbrukning",
+    "estimatedMonthlyKwhHelper": "Används för avtalskollen och vad-händer-om-simulatorn.",
+    "priceAlertHighLabel": "Varna när priset går över",
+    "priceAlertHighHelper": "Lämna tomt för att stänga av varningen.",
+    "unitKrPerMonth": "kr/mån",
+    "unitOrePerKwh": "öre/kWh",
+    "unitKwhPerMonth": "kWh/mån",
+    "exampleGridFeeFixed": "t.ex. 350",
+    "exampleGridFeeVariable": "t.ex. 24,5",
+    "exampleMonthlyKwh": "t.ex. 1200",
+    "examplePriceAlert": "t.ex. 150",
+    "retailerMarkupScanned": "Elhandlarens påslag: {{value}} öre/kWh, från din faktura. Tryck för att skanna en ny."
   }
 }
