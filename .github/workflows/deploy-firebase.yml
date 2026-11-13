@@ -1,0 +1,97 @@
+name: Deploy Firebase
+
+# Manual Firebase-only deploy — no tag, no GitHub Release, no iOS build.
+# Use it for backend fixes (Cloud Functions, Firestore rules/indexes) that
+# shouldn't wait for an app release, or to retry a single function, e.g. a
+# first-time Eventarc/IAM failure. Full releases still go through
+# "Deploy to Production", which deploys Firebase and iOS together.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit to deploy (e.g. main, release/1.2.0, v1.2.0)
+        type: string
+        default: main
+      target:
+        description: What to deploy
+        type: choice
+        default: functions + firestore
+        options:
+          - functions + firestore
+          - functions
+          - firestore
+      only_functions:
+        description: Optional — deploy only these functions, comma-separated (e.g. dedupePushTokens,fetchPrices). Ignored for "firestore".
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# Never run two Firebase deploys at once (also shared with nothing else, so
+# an iOS build in "Deploy to Production" doesn't block this).
+concurrency:
+  group: deploy-firebase
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      # Functions run on the nodejs22 runtime; deploys also need Node 22+
+      # locally (Cloud Functions discovery requires ESM modules — see CLAUDE.md §12).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: functions/yarn.lock
+
+      - name: Install functions dependencies
+        working-directory: functions
+        run: yarn install --frozen-lockfile
+
+      - name: Typecheck functions
+        working-directory: functions
+        run: yarn typecheck
+
+      - name: Work out the --only target
+        id: only
+        env:
+          TARGET: ${{ inputs.target }}
+          ONLY_FUNCTIONS: ${{ inputs.only_functions }}
+        run: |
+          # Strip spaces from the function list.
+          FNS=$(echo "$ONLY_FUNCTIONS" | tr -d '[:space:]')
+          if [ -n "$FNS" ] && ! echo "$FNS" | grep -Eq '^[A-Za-z0-9_]+(,[A-Za-z0-9_]+)*$'; then
+            echo "::error::only_functions must be comma-separated function names, got '$FNS'"; exit 1
+          fi
+          case "$TARGET" in
+            "firestore")
+              ONLY="firestore" ;;
+            "functions")
+              if [ -n "$FNS" ]; then ONLY=$(echo "$FNS" | sed 's/[^,]*/functions:&/g'); else ONLY="functions"; fi ;;
+            *)
+              if [ -n "$FNS" ]; then ONLY="$(echo "$FNS" | sed 's/[^,]*/functions:&/g'),firestore"; else ONLY="functions,firestore"; fi ;;
+          esac
+          echo "only=$ONLY" >> "$GITHUB_OUTPUT"
+          echo "Deploying --only $ONLY"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # The predeploy hook in firebase.json compiles functions with tsc.
+      # --force: don't block on prompts (e.g. deleting a removed function).
+      - name: Deploy
+        run: npx --yes firebase-tools@latest deploy --only "${{ steps.only.outputs.only }}" --project elpuls --non-interactive --force
+
+      - name: Summary
+        run: |
+          echo "### Firebase deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Ref: \`${{ inputs.ref }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Target: \`--only ${{ steps.only.outputs.only }}\`" >> "$GITHUB_STEP_SUMMARY"
