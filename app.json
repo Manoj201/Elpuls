@@ -2,7 +2,7 @@
   "expo": {
     "name": "Elpuls",
     "slug": "elpuls",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,7 +12,9 @@
       "icon": "./assets/icon.png",
       "appleTeamId": "WJAVTP2LM7",
       "entitlements": {
-        "com.apple.security.application-groups": ["group.se.elpuls.app"]
+        "com.apple.security.application-groups": [
+          "group.se.elpuls.app"
+        ]
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
