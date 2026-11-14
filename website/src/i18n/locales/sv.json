@@ -84,7 +84,7 @@
       "Månatlig kostnadsspecifikation och elområdesjämförelse"
     ],
     "priceUnit": "/ månad",
-    "priceTrial": "7 dagars gratis provperiod, avsluta när som helst.",
+    "priceTrial": "14 dagar gratis, sedan 39 kr i månaden. Avsluta när du vill.",
     "screenshotLabel": "Översikt"
   },
   "cta": {
@@ -107,15 +107,47 @@
     },
     "dataWeCollect": {
       "heading": "Uppgifter vi samlar in",
-      "tableHeaders": ["Uppgift", "Samlas in när", "Krävs?"],
+      "tableHeaders": [
+        "Uppgift",
+        "Samlas in när",
+        "Krävs?"
+      ],
       "rows": [
-        ["Anonymt konto-ID", "Alltid, automatiskt, vid första appstart", "Ja"],
-        ["E-post + lösenord", "Endast om du väljer att skapa ett konto istället för att fortsätta anonymt", "Nej"],
-        ["Elområde, uppvärmningstyp, elbil/solceller-flaggor, nätavgiftssiffror", "Onboarding eller Inställningar", "Nej, men behövs för personliga råd"],
-        ["Uppskattad månadsförbrukning, prisvarningsgränser, språk", "Inställningar, valfritt", "Nej"],
-        ["Foto på apparatens märkplåt, foto/PDF av elräkning", "Endast om du väljer att skanna en", "Nej, du kan ange uppgifterna manuellt istället"],
-        ["Pushnotistoken", "Endast om du aktiverar notiser", "Nej"],
-        ["Prenumerations-/provstatus", "När du startar en Pro-provperiod eller prenumererar", "Nej"]
+        [
+          "Anonymt konto-ID",
+          "Alltid, automatiskt, vid första appstart",
+          "Ja"
+        ],
+        [
+          "E-post + lösenord",
+          "Endast om du väljer att skapa ett konto istället för att fortsätta anonymt",
+          "Nej"
+        ],
+        [
+          "Elområde, uppvärmningstyp, elbil/solceller-flaggor, nätavgiftssiffror",
+          "Onboarding eller Inställningar",
+          "Nej, men behövs för personliga råd"
+        ],
+        [
+          "Uppskattad månadsförbrukning, prisvarningsgränser, språk",
+          "Inställningar, valfritt",
+          "Nej"
+        ],
+        [
+          "Foto på apparatens märkplåt, foto/PDF av elräkning",
+          "Endast om du väljer att skanna en",
+          "Nej, du kan ange uppgifterna manuellt istället"
+        ],
+        [
+          "Pushnotistoken",
+          "Endast om du aktiverar notiser",
+          "Nej"
+        ],
+        [
+          "Prenumerations-/provstatus",
+          "När du startar en Pro-provperiod eller prenumererar",
+          "Nej"
+        ]
       ],
       "note": "Vi samlar inte in exakt plats, kontakter, foton utöver det du medvetet laddar upp för att skanna, eller någon data från din enhet utöver det som listas ovan."
     },
@@ -132,23 +164,59 @@
     },
     "thirdParties": {
       "heading": "Tredje parter vi delar uppgifter med",
-      "tableHeaders": ["Tjänst", "Vad den tar emot", "Varför"],
+      "tableHeaders": [
+        "Tjänst",
+        "Vad den tar emot",
+        "Varför"
+      ],
       "rows": [
-        ["Firebase / Google Cloud", "Konto-ID, profildata, pushtoken", "Autentisering, databas, serverlös backend, diagnostik"],
-        ["Anthropic (Claude API)", "En apparat- eller elräkningsbild/PDF, endast när du väljer att skanna en", "Läser märkplåten/radposterna; behandlas för just den förfrågan, sparas inte av Elpuls efteråt"],
-        ["RevenueCat", "Konto-ID, prenumerations-/rättighetsstatus", "Hanterar din Pro-prenumeration och provperiod"],
-        ["Expo", "Pushnotistoken", "Levererar pushnotiser till din enhet"],
-        ["elprisetjustnu.se (Nord Pool) / SMHI", "Inget personligt — Elpuls läser bara deras publika pris- och väderdata", "Driver pris- och väderfunktionerna för alla"]
+        [
+          "Firebase / Google Cloud",
+          "Konto-ID, profildata, pushtoken",
+          "Autentisering, databas, serverlös backend, diagnostik"
+        ],
+        [
+          "Anthropic (Claude API)",
+          "En apparat- eller elräkningsbild/PDF, endast när du väljer att skanna en",
+          "Läser märkplåten/radposterna; behandlas för just den förfrågan, sparas inte av Elpuls efteråt"
+        ],
+        [
+          "RevenueCat",
+          "Konto-ID, prenumerations-/rättighetsstatus",
+          "Hanterar din Pro-prenumeration och provperiod"
+        ],
+        [
+          "Expo",
+          "Pushnotistoken",
+          "Levererar pushnotiser till din enhet"
+        ],
+        [
+          "elprisetjustnu.se (Nord Pool) / SMHI",
+          "Inget personligt — Elpuls läser bara deras publika pris- och väderdata",
+          "Driver pris- och väderfunktionerna för alla"
+        ]
       ],
       "note": "Bekräfta varje leverantörs faktiska personuppgiftsbiträdesavtal innan den här policyn publiceras."
     },
     "retention": {
       "heading": "Lagring av uppgifter",
       "items": [
-        { "label": "Apparat- och elräkningsbilder/PDF:er", "body": "behandlas i minnet för en enda förfrågan och kasseras omedelbart efteråt — sparas aldrig i någon lagring." },
-        { "label": "Konto- och profildata", "body": "sparas så länge ditt konto finns." },
-        { "label": "Pushtoken", "body": "sparas så länge notiser är aktiverade; tas bort när du inaktiverar dem eller slutar använda appen." },
-        { "label": "Pris- och väderdata", "body": "aggregerad, på elområdesnivå, inte personlig — sparas på obestämd tid för att driva appen." }
+        {
+          "label": "Apparat- och elräkningsbilder/PDF:er",
+          "body": "behandlas i minnet för en enda förfrågan och kasseras omedelbart efteråt — sparas aldrig i någon lagring."
+        },
+        {
+          "label": "Konto- och profildata",
+          "body": "sparas så länge ditt konto finns."
+        },
+        {
+          "label": "Pushtoken",
+          "body": "sparas så länge notiser är aktiverade; tas bort när du inaktiverar dem eller slutar använda appen."
+        },
+        {
+          "label": "Pris- och väderdata",
+          "body": "aggregerad, på elområdesnivå, inte personlig — sparas på obestämd tid för att driva appen."
+        }
       ],
       "note": "Du kan radera ditt konto och all din data när som helst från Inställningar → Konto → Ta bort mitt konto, utöver att kontakta oss på adressen nedan."
     },
@@ -156,12 +224,30 @@
       "heading": "Dina rättigheter (GDPR)",
       "intro": "Som EU/svensk användare har du rätt att:",
       "items": [
-        { "label": "Få tillgång till", "body": "de personuppgifter vi har om dig" },
-        { "label": "Rätta", "body": "felaktiga uppgifter" },
-        { "label": "Radera", "body": "dina uppgifter (\"rätten att bli bortglömd\")" },
-        { "label": "Exportera", "body": "dina uppgifter i ett portabelt format" },
-        { "label": "Invända mot eller begränsa", "body": "viss behandling" },
-        { "label": "Lämna in ett klagomål", "body": "till IMY (Integritetsskyddsmyndigheten), Sveriges dataskyddsmyndighet, på imy.se" }
+        {
+          "label": "Få tillgång till",
+          "body": "de personuppgifter vi har om dig"
+        },
+        {
+          "label": "Rätta",
+          "body": "felaktiga uppgifter"
+        },
+        {
+          "label": "Radera",
+          "body": "dina uppgifter (\"rätten att bli bortglömd\")"
+        },
+        {
+          "label": "Exportera",
+          "body": "dina uppgifter i ett portabelt format"
+        },
+        {
+          "label": "Invända mot eller begränsa",
+          "body": "viss behandling"
+        },
+        {
+          "label": "Lämna in ett klagomål",
+          "body": "till IMY (Integritetsskyddsmyndigheten), Sveriges dataskyddsmyndighet, på imy.se"
+        }
       ],
       "note": "Du kan redigera ditt elområde, uppvärmningstyp, nätavgift och apparater direkt i appens Inställningar när som helst. För allt annat — inklusive fullständig kontoradering — kontakta oss på",
       "emailPlaceholder": "manoj.gam201@gmail.com"
@@ -187,7 +273,7 @@
   },
   "terms": {
     "title": "Elpuls användarvillkor",
-    "updated": "Senast uppdaterad: 2026-11-12",
+    "updated": "Senast uppdaterad: 2026-11-14",
     "acceptance": {
       "heading": "Godkännande av villkor",
       "body": "Genom att skapa ett konto, fortsätta som gäst, eller på annat sätt använda Elpuls godkänner du dessa användarvillkor. Om du inte godkänner dem, vänligen använd inte appen."
@@ -206,7 +292,9 @@
     },
     "subscription": {
       "heading": "Elpuls Pro-prenumeration",
-      "body": "Elpuls Pro är en valfri betald prenumeration (just nu 39 kr/månad) som låser upp ytterligare funktioner, med en 7 dagars gratis provperiod för nya prenumeranter. Prenumerationer faktureras och hanteras helt via Apple App Store eller Google Play Store — Elpuls behandlar aldrig dina betalningsuppgifter direkt. Prenumerationer förnyas automatiskt om de inte avslutas innan förnyelsedatumet; avsluta när som helst via dina konto-inställningar i App Store eller Play Store. Återbetalningar följer Apples eller Googles egna återbetalningspolicyer, inte Elpuls."
+      "body": "Elpuls Pro är en valfri betald prenumeration (just nu 39 kr i månaden) som ger fler funktioner. Nya prenumeranter får 14 dagar gratis. Betalningen dras från ditt Apple-ID eller Google-konto, och Elpuls hanterar aldrig dina betalningsuppgifter. Prenumerationen förnyas automatiskt varje månad om du inte avslutar den minst 24 timmar innan den aktuella perioden tar slut. Du hanterar och avslutar den i inställningarna för ditt App Store- eller Google Play-konto. Återbetalningar följer Apples eller Googles egna regler.",
+      "eula": "På iPhone gäller också Apples standardavtal för användning av appen,",
+      "eulaLink": "Licensed Application End User License Agreement (EULA)"
     },
     "acceptableUse": {
       "heading": "Tillåten användning",

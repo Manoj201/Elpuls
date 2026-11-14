@@ -31,6 +31,13 @@ export function Terms() {
 
         <h2>{t('terms.subscription.heading')}</h2>
         <p>{t('terms.subscription.body')}</p>
+        <p>
+          {t('terms.subscription.eula')}{' '}
+          <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer">
+            {t('terms.subscription.eulaLink')}
+          </a>
+          .
+        </p>
 
         <h2>{t('terms.acceptableUse.heading')}</h2>
         <p>{t('terms.acceptableUse.body')}</p>

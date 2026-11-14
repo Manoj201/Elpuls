@@ -84,7 +84,7 @@
       "Monthly cost breakdown and zone comparison"
     ],
     "priceUnit": "/ month",
-    "priceTrial": "7-day free trial, cancel anytime.",
+    "priceTrial": "14 days free, then 39 kr a month. Cancel anytime.",
     "screenshotLabel": "Overview"
   },
   "cta": {
@@ -107,15 +107,47 @@
     },
     "dataWeCollect": {
       "heading": "Data We Collect",
-      "tableHeaders": ["Data", "Collected when", "Required?"],
+      "tableHeaders": [
+        "Data",
+        "Collected when",
+        "Required?"
+      ],
       "rows": [
-        ["Anonymous account ID", "Always, automatically, on first app open", "Yes"],
-        ["Email + password", "Only if you choose to create an account instead of continuing anonymously", "No"],
-        ["Price zone, heating type, EV/solar flags, grid fee figures", "Onboarding or Settings", "No, but needed for personalized advice"],
-        ["Estimated monthly usage, price-alert thresholds, language", "Settings, optional", "No"],
-        ["Appliance rating-label photo, electricity bill photo/PDF", "Only if you choose to scan one", "No, you can enter values manually instead"],
-        ["Push notification token", "Only if you enable notifications", "No"],
-        ["Subscription/trial status", "When you start a Pro trial or subscribe", "No"]
+        [
+          "Anonymous account ID",
+          "Always, automatically, on first app open",
+          "Yes"
+        ],
+        [
+          "Email + password",
+          "Only if you choose to create an account instead of continuing anonymously",
+          "No"
+        ],
+        [
+          "Price zone, heating type, EV/solar flags, grid fee figures",
+          "Onboarding or Settings",
+          "No, but needed for personalized advice"
+        ],
+        [
+          "Estimated monthly usage, price-alert thresholds, language",
+          "Settings, optional",
+          "No"
+        ],
+        [
+          "Appliance rating-label photo, electricity bill photo/PDF",
+          "Only if you choose to scan one",
+          "No, you can enter values manually instead"
+        ],
+        [
+          "Push notification token",
+          "Only if you enable notifications",
+          "No"
+        ],
+        [
+          "Subscription/trial status",
+          "When you start a Pro trial or subscribe",
+          "No"
+        ]
       ],
       "note": "We don't collect precise location, contacts, photos beyond what you deliberately upload to scan, or any data from your device beyond what's listed above."
     },
@@ -132,23 +164,59 @@
     },
     "thirdParties": {
       "heading": "Third Parties We Share Data With",
-      "tableHeaders": ["Service", "What it receives", "Why"],
+      "tableHeaders": [
+        "Service",
+        "What it receives",
+        "Why"
+      ],
       "rows": [
-        ["Firebase / Google Cloud", "Account ID, profile data, push token", "Authentication, database, serverless backend, diagnostics"],
-        ["Anthropic (Claude API)", "An appliance or bill photo/PDF, only when you choose to scan one", "Reads the label/line items; processed for that one request, not stored by Elpuls afterward"],
-        ["RevenueCat", "Account ID, subscription/entitlement status", "Manages your Pro subscription and trial"],
-        ["Expo", "Push notification token", "Delivers push notifications to your device"],
-        ["elprisetjustnu.se (Nord Pool) / SMHI", "Nothing personal — Elpuls only reads their public price and weather data", "Powers the price and weather features for everyone"]
+        [
+          "Firebase / Google Cloud",
+          "Account ID, profile data, push token",
+          "Authentication, database, serverless backend, diagnostics"
+        ],
+        [
+          "Anthropic (Claude API)",
+          "An appliance or bill photo/PDF, only when you choose to scan one",
+          "Reads the label/line items; processed for that one request, not stored by Elpuls afterward"
+        ],
+        [
+          "RevenueCat",
+          "Account ID, subscription/entitlement status",
+          "Manages your Pro subscription and trial"
+        ],
+        [
+          "Expo",
+          "Push notification token",
+          "Delivers push notifications to your device"
+        ],
+        [
+          "elprisetjustnu.se (Nord Pool) / SMHI",
+          "Nothing personal — Elpuls only reads their public price and weather data",
+          "Powers the price and weather features for everyone"
+        ]
       ],
       "note": "Confirm each vendor's actual Data Processing Agreement before publishing this policy."
     },
     "retention": {
       "heading": "Data Retention",
       "items": [
-        { "label": "Appliance and bill photos/PDFs", "body": "processed in memory for a single request and discarded immediately after — never written to any storage." },
-        { "label": "Account and profile data", "body": "kept while your account exists." },
-        { "label": "Push token", "body": "kept while notifications are enabled; removed when you disable them or stop using the app." },
-        { "label": "Price and weather data", "body": "aggregate, zone-level, not personal — kept indefinitely to power the app." }
+        {
+          "label": "Appliance and bill photos/PDFs",
+          "body": "processed in memory for a single request and discarded immediately after — never written to any storage."
+        },
+        {
+          "label": "Account and profile data",
+          "body": "kept while your account exists."
+        },
+        {
+          "label": "Push token",
+          "body": "kept while notifications are enabled; removed when you disable them or stop using the app."
+        },
+        {
+          "label": "Price and weather data",
+          "body": "aggregate, zone-level, not personal — kept indefinitely to power the app."
+        }
       ],
       "note": "You can delete your account and all your data at any time from Settings → Account → Delete my account, in addition to contacting us at the address below."
     },
@@ -156,12 +224,30 @@
       "heading": "Your Rights (GDPR)",
       "intro": "As an EU/Swedish user, you have the right to:",
       "items": [
-        { "label": "Access", "body": "the personal data we hold about you" },
-        { "label": "Correct", "body": "inaccurate data" },
-        { "label": "Erase", "body": "your data (\"right to be forgotten\")" },
-        { "label": "Export", "body": "your data in a portable format" },
-        { "label": "Object to or restrict", "body": "certain processing" },
-        { "label": "Lodge a complaint", "body": "with IMY (Integritetsskyddsmyndigheten), Sweden's data protection authority, at imy.se" }
+        {
+          "label": "Access",
+          "body": "the personal data we hold about you"
+        },
+        {
+          "label": "Correct",
+          "body": "inaccurate data"
+        },
+        {
+          "label": "Erase",
+          "body": "your data (\"right to be forgotten\")"
+        },
+        {
+          "label": "Export",
+          "body": "your data in a portable format"
+        },
+        {
+          "label": "Object to or restrict",
+          "body": "certain processing"
+        },
+        {
+          "label": "Lodge a complaint",
+          "body": "with IMY (Integritetsskyddsmyndigheten), Sweden's data protection authority, at imy.se"
+        }
       ],
       "note": "You can edit your zone, heating type, grid fee, and appliances directly in the app's Settings at any time. For anything else — including full account deletion — contact us at",
       "emailPlaceholder": "manoj.gam201@gmail.com"
@@ -187,7 +273,7 @@
   },
   "terms": {
     "title": "Elpuls Terms of Service",
-    "updated": "Last updated: 2026-11-12",
+    "updated": "Last updated: 2026-11-14",
     "acceptance": {
       "heading": "Acceptance of Terms",
       "body": "By creating an account, continuing as a guest, or otherwise using Elpuls, you agree to these Terms of Service. If you don't agree, please don't use the app."
@@ -206,7 +292,9 @@
     },
     "subscription": {
       "heading": "Elpuls Pro Subscription",
-      "body": "Elpuls Pro is an optional paid subscription (currently 39 kr/month) that unlocks additional features, with a 7-day free trial for new subscribers. Subscriptions are billed and managed entirely through the Apple App Store or Google Play Store — Elpuls never processes your payment details directly. Subscriptions automatically renew unless cancelled before the renewal date; cancel anytime through your App Store or Play Store account settings. Refunds are subject to Apple's or Google's own refund policies, not Elpuls'."
+      "body": "Elpuls Pro is an optional paid subscription (currently 39 kr a month) that unlocks extra features. New subscribers get a 14-day free trial. Payment is charged to your Apple ID or Google account, and Elpuls never handles your payment details. The subscription renews automatically each month unless you cancel at least 24 hours before the current period ends. You can manage or cancel it in your App Store or Google Play account settings. Refunds follow Apple's or Google's own refund policies.",
+      "eula": "On iPhone, your use of the app is also covered by Apple's standard",
+      "eulaLink": "Licensed Application End User License Agreement (EULA)"
     },
     "acceptableUse": {
       "heading": "Acceptable Use",
