@@ -330,7 +330,13 @@
     "valueOre": "{{value}} öre/kWh",
     "notSet": "Inte tillagt",
     "scanBill": "Skanna min faktura",
-    "scanNewBill": "Skanna en nyare faktura"
+    "scanNewBill": "Skanna en nyare faktura",
+    "householdIntro": "Elpuls utgår från ett vanligt hushåll. Stäng av det du inte har.",
+    "householdReplaced": "Använder din egen apparat nedan",
+    "householdHasA11y": "Jag har {{appliance}}",
+    "registeredAppliancesTitle": "Dina egna apparater",
+    "editApplianceA11y": "Ändra {{appliance}}",
+    "deleteApplianceA11y": "Ta bort {{appliance}}"
   },
   "applianceRecommendations": {
     "title": "Apparatrekommendationer",

@@ -8,10 +8,9 @@ import {
   compareApplianceCost,
   findCheapestWindow,
   findCurrentPrice,
-  groupPricesByHour,
   type CheapestWindow,
 } from '../lib/priceUtils';
-import { formatOre, formatPrice } from '../lib/formatNumber';
+import { formatClock, formatOre, formatPrice } from '../lib/formatNumber';
 import { findRelatableComparison } from '../lib/relatableCost';
 import type { HourlyPrice } from '../providers/types';
 import type { SupportedLanguage } from '../i18n';
@@ -42,7 +41,7 @@ function findSundayBatchCookWindow(tomorrowPrices: HourlyPrice[], today: Date): 
     return null;
   }
 
-  const afternoon = groupPricesByHour(tomorrowPrices).filter((p) => {
+  const afternoon = tomorrowPrices.filter((p) => {
     const hour = p.hour.getHours();
     return hour >= BATCH_COOK_AFTERNOON_START_HOUR && hour < BATCH_COOK_AFTERNOON_END_HOUR;
   });
@@ -134,10 +133,8 @@ export function TickerScreen({ uid, onBack }: TickerScreenProps) {
     return () => clearInterval(interval);
   }, [ticker]);
 
-  const combinedHourly = useMemo(
-    () => [...groupPricesByHour(todayPrices), ...groupPricesByHour(tomorrowPrices)],
-    [todayPrices, tomorrowPrices],
-  );
+  // Real 15-minute prices, so the best window can start on any quarter-hour.
+  const combinedSlots = useMemo(() => [...todayPrices, ...tomorrowPrices], [todayPrices, tomorrowPrices]);
 
   const batchCookWindow = useMemo(
     () => findSundayBatchCookWindow(tomorrowPrices, new Date(now)),
@@ -192,7 +189,7 @@ export function TickerScreen({ uid, onBack }: TickerScreenProps) {
     const label = resolveApplianceLabel(selectedAppliance, t);
     const { costNow, cheapestWindow, costAtWindow, showWaitOption } = compareApplianceCost(
       selectedAppliance,
-      combinedHourly,
+      combinedSlots,
       new Date(now),
     );
 
@@ -224,7 +221,7 @@ export function TickerScreen({ uid, onBack }: TickerScreenProps) {
         {showWaitOption && cheapestWindow && costAtWindow !== null && costNow !== null && (
           <Card style={StyleSheet.flatten([styles.decisionCard, { backgroundColor: theme.colors.positiveTealSoft, borderColor: theme.colors.positiveTealSoft }])}>
             <Text style={[styles.decisionLabel, { color: theme.colors.positiveTealDeep }]}>
-              {t('ticker.costAtTime', { time: `${cheapestWindow.start.hour.getHours()}:00` })}
+              {t('ticker.costAtTime', { time: formatClock(cheapestWindow.start.hour) })}
             </Text>
             <Text style={styles.decisionPrice}>
               {formatPrice(costAtWindow, language)} {config.currency}
@@ -260,7 +257,7 @@ export function TickerScreen({ uid, onBack }: TickerScreenProps) {
             icon={IconFlame}
             variant="amber"
             title={t('ticker.batchCookTitle')}
-            subtitle={t('ticker.batchCookWindow', { time: `${batchCookWindow.start.hour.getHours()}:00` })}
+            subtitle={t('ticker.batchCookWindow', { time: formatClock(batchCookWindow.start.hour) })}
           />
         </Card>
       )}

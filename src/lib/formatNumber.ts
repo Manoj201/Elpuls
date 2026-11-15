@@ -27,3 +27,8 @@ export function formatOre(valueSekPerKwh: number, language: SupportedLanguage): 
     maximumFractionDigits: 1,
   });
 }
+
+/** Clock time like "10:45" (24-hour, as used in Sweden), for window start times on quarter-hours. */
+export function formatClock(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}

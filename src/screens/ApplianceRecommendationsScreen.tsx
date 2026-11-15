@@ -2,10 +2,10 @@ import { useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { IconArrowLeft, IconBolt } from '@tabler/icons-react-native';
-import { APPLIANCE_PRESETS, type AppliancePreset } from '../config/appliances';
-import { APPLIANCE_ICONS, resolveApplianceLabel, toAppliancePreset } from '../lib/applianceDisplay';
-import { compareApplianceCost, groupPricesByHour } from '../lib/priceUtils';
-import { formatPrice } from '../lib/formatNumber';
+import type { AppliancePreset } from '../config/appliances';
+import { APPLIANCE_ICONS, getHouseholdAppliances, resolveApplianceLabel } from '../lib/applianceDisplay';
+import { compareApplianceCost } from '../lib/priceUtils';
+import { formatClock, formatPrice } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
 import { useApplianceStore } from '../stores/useApplianceStore';
 import { useCountryStore } from '../stores/useCountryStore';
@@ -29,14 +29,12 @@ function ApplianceRow({ appliance, uid }: { appliance: AppliancePreset; uid: str
   const registered = useApplianceStore((s) => s.appliances.find((a) => a.id === appliance.id));
   const setNotifyEnabled = useApplianceStore((s) => s.setNotifyEnabled);
 
-  const combinedHourly = useMemo(
-    () => [...groupPricesByHour(todayPrices), ...groupPricesByHour(tomorrowPrices)],
-    [todayPrices, tomorrowPrices],
-  );
+  // Real 15-minute prices, so the best window can start on any quarter-hour.
+  const combinedSlots = useMemo(() => [...todayPrices, ...tomorrowPrices], [todayPrices, tomorrowPrices]);
 
   const { costNow, cheapestWindow, costAtWindow, showWaitOption } = useMemo(
-    () => compareApplianceCost(appliance, combinedHourly, new Date()),
-    [appliance, combinedHourly],
+    () => compareApplianceCost(appliance, combinedSlots, new Date()),
+    [appliance, combinedSlots],
   );
 
   const Icon = APPLIANCE_ICONS[appliance.id] ?? IconBolt;
@@ -75,7 +73,7 @@ function ApplianceRow({ appliance, uid }: { appliance: AppliancePreset; uid: str
           </Text>
           {showWaitOption && cheapestWindow && costAtWindow !== null ? (
             <Text style={styles.waitHint}>
-              {t('ticker.costAtTime', { time: `${cheapestWindow.start.hour.getHours()}:00` })}:{' '}
+              {t('ticker.costAtTime', { time: formatClock(cheapestWindow.start.hour) })}:{' '}
               {formatPrice(costAtWindow, language)} {config.currency} ·{' '}
               {t('ticker.savingsHint', { amount: formatPrice(costNow - costAtWindow, language), currency: config.currency })}
             </Text>
@@ -103,9 +101,14 @@ export function ApplianceRecommendationsScreen({ uid, onBack }: ApplianceRecomme
     fetchAppliances(uid);
   }, [fetchAppliances, uid]);
 
+  const hasEv = useUserStore((s) => s.hasEv);
+  const disabledDefaults = useUserStore((s) => s.disabledDefaultAppliances);
+
+  // This home's appliances: the standard household (minus ones switched off)
+  // plus registered ones, so users who added nothing still get advice.
   const allAppliances = useMemo(
-    () => [...APPLIANCE_PRESETS, ...registeredAppliances.map(toAppliancePreset)],
-    [registeredAppliances],
+    () => getHouseholdAppliances({ hasEv, disabledDefaults, registered: registeredAppliances }),
+    [hasEv, disabledDefaults, registeredAppliances],
   );
 
   return (
