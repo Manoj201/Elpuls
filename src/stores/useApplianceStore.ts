@@ -7,6 +7,8 @@ export interface RegisteredAppliance {
   label: string;
   watts: number;
   source: 'label' | 'estimate' | 'manual';
+  /** Typical run length in hours, if the user set one. Otherwise taken from the matching preset (e.g. dishwasher 2 h), else 1.5 h. */
+  durationHours?: number;
   /** Opt-in for the proactive appliance-start push notification (Pro). Only registered appliances can opt in — the static presets have no per-user Firestore doc to store this on. */
   notifyEnabled: boolean;
 }

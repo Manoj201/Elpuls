@@ -26,9 +26,11 @@ export const PRICE_RECAP_COPY: Record<ServerLanguage, (cheapestHour: string, pri
   sv: (cheapestHour, priciestHour) => `Billigast kl ${cheapestHour}, dyrast kl ${priciestHour}.`,
 };
 
-export const APPLIANCE_NOTE_COPY: Record<ServerLanguage, (applianceLabel: string) => string> = {
-  en: (applianceLabel) => `Good time to run ${applianceLabel} today.`,
-  sv: (applianceLabel) => `Bra läge att köra ${applianceLabel} idag.`,
+export const APPLIANCE_NOTE_COPY: Record<ServerLanguage, (applianceLabel: string, clock?: string) => string> = {
+  en: (applianceLabel, clock) =>
+    clock ? `Good time to run ${applianceLabel} at ${clock} today.` : `Good time to run ${applianceLabel} today.`,
+  sv: (applianceLabel, clock) =>
+    clock ? `Bra läge att köra ${applianceLabel} kl ${clock} idag.` : `Bra läge att köra ${applianceLabel} idag.`,
 };
 
 export type WeatherPrepCopyKey = 'coldSnapEv' | 'coldSnapGeneric' | 'dryingWindow';

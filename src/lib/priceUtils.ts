@@ -48,37 +48,61 @@ export function findCurrentPrice(prices: HourlyPrice[], now: Date): HourlyPrice 
 
 export interface CheapestWindow {
   start: HourlyPrice;
+  /** End of the window (exclusive): start + duration. */
+  end: Date;
   averagePrice: number;
 }
 
 /**
- * Slides a `durationHours`-long window over hourly buckets at/after `after`,
- * returning the window with the lowest average price. Used by the pre-use
- * cost check to answer "when's the next cheap window for this appliance?"
- * Pass in today's + tomorrow's hourly buckets combined so an evening check
- * can point at tomorrow morning, not just today's few remaining hours.
+ * Length of one price slot in minutes, read from the data itself: 15 since
+ * Nord Pool moved to quarter-hour prices (Oct 2025), 60 for hourly-averaged
+ * input. Falls back to 60 when there's only one entry.
+ */
+export function slotMinutes(prices: { hour: Date }[]): number {
+  for (let i = 1; i < prices.length; i++) {
+    const diff = (prices[i].hour.getTime() - prices[i - 1].hour.getTime()) / 60000;
+    if (diff > 0) return diff;
+  }
+  return 60;
+}
+
+/**
+ * Finds the cheapest contiguous window of `durationHours` that starts at or
+ * after `after`, working on whatever slot length the prices have. With the
+ * real 15-minute prices, 1.5 h = 6 slots and a window can start at any
+ * quarter-hour (e.g. 10:45). Windows that would span a gap in the data are
+ * skipped. Pass today's + tomorrow's prices together so an evening check
+ * can point at tomorrow morning.
  */
 export function findCheapestWindow(
-  hourlyPrices: HourlyPrice[],
+  prices: HourlyPrice[],
   durationHours: number,
   after: Date,
 ): CheapestWindow | null {
-  const sorted = hourlyPrices
-    .filter((p) => p.hour.getTime() >= after.getTime())
-    .sort((a, b) => a.hour.getTime() - b.hour.getTime());
+  const sorted = [...prices].sort((a, b) => a.hour.getTime() - b.hour.getTime());
+  const slot = slotMinutes(sorted);
+  // A slot that has already started still counts if it's the current one.
+  const upcoming = sorted.filter((p) => p.hour.getTime() + slot * 60000 > after.getTime());
 
-  const windowSize = Math.max(1, Math.round(durationHours));
-  if (sorted.length < windowSize) {
+  const windowSize = Math.max(1, Math.round((durationHours * 60) / slot));
+  if (upcoming.length < windowSize) {
     return null;
   }
 
   let best: CheapestWindow | null = null;
 
-  for (let i = 0; i + windowSize <= sorted.length; i++) {
-    const window = sorted.slice(i, i + windowSize);
-    const averagePrice = window.reduce((sum, p) => sum + p.price, 0) / window.length;
+  for (let i = 0; i + windowSize <= upcoming.length; i++) {
+    const first = upcoming[i];
+    const last = upcoming[i + windowSize - 1];
+    // Contiguous only: last slot starts exactly (size-1) slots after the first.
+    if (last.hour.getTime() - first.hour.getTime() !== (windowSize - 1) * slot * 60000) continue;
+
+    let total = 0;
+    for (let j = i; j < i + windowSize; j++) total += upcoming[j].price;
+    const averagePrice = total / windowSize;
+
     if (!best || averagePrice < best.averagePrice) {
-      best = { start: window[0], averagePrice };
+      best = { start: first, end: new Date(last.hour.getTime() + slot * 60000), averagePrice };
     }
   }
 

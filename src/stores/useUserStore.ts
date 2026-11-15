@@ -19,6 +19,8 @@ interface UserState {
   retailerMarkupSekPerKwh: number | null;
   /** Self-reported, optional (Settings only, not part of onboarding) — feeds the Contract health check, since no real consumption-metering data source exists yet. */
   estimatedMonthlyKwh: number | null;
+  /** Standard-household appliances the user said they don't have (preset ids, e.g. 'dryer'). */
+  disabledDefaultAppliances: string[];
   /** User-set "warn when price peaks exceed X öre/kWh" threshold (Settings only). Null means the high-price alert is off. */
   priceAlertHighThresholdOre: number | null;
   /** Opt-in "tip me about negative/very low prices" toggle (Settings only). */
@@ -57,6 +59,7 @@ interface UserState {
   setRetailerMarkup: (retailerMarkupSekPerKwh: number | null) => void;
   setEstimatedMonthlyKwh: (estimatedMonthlyKwh: number | null) => void;
   setPriceAlertPrefs: (priceAlertHighThresholdOre: number | null, priceAlertLowEnabled: boolean) => void;
+  setDisabledDefaultAppliances: (ids: string[]) => void;
   setGridFee: (gridFeeFixedSekPerMonth: number | null, gridFeeVariableSekPerKwh: number | null) => void;
   setProStatus: (status: { isProSubscriber: boolean; periodType: ProPeriodType; expirationMillis: number | null }) => void;
   setTrialDays: (days: number | null) => void;
@@ -81,6 +84,7 @@ export type UserProfile = Pick<
   | 'estimatedMonthlyKwh'
   | 'priceAlertHighThresholdOre'
   | 'priceAlertLowEnabled'
+  | 'disabledDefaultAppliances'
 >;
 
 const EMPTY_PROFILE: UserProfile & {
@@ -99,6 +103,7 @@ const EMPTY_PROFILE: UserProfile & {
   estimatedMonthlyKwh: null,
   priceAlertHighThresholdOre: null,
   priceAlertLowEnabled: false,
+  disabledDefaultAppliances: [],
   onboardedAt: null,
   entryChosenAt: null,
   proOfferSeenAt: null,
@@ -118,6 +123,7 @@ export function selectProfile(state: UserState): UserProfile {
     estimatedMonthlyKwh: state.estimatedMonthlyKwh,
     priceAlertHighThresholdOre: state.priceAlertHighThresholdOre,
     priceAlertLowEnabled: state.priceAlertLowEnabled,
+    disabledDefaultAppliances: state.disabledDefaultAppliances,
   };
 }
 
@@ -135,6 +141,7 @@ export const useUserStore = create<UserState>()(
   estimatedMonthlyKwh: null,
   priceAlertHighThresholdOre: null,
   priceAlertLowEnabled: false,
+  disabledDefaultAppliances: [],
   isProSubscriber: false,
   proPeriodType: null,
   proExpirationMillis: null,
@@ -151,6 +158,7 @@ export const useUserStore = create<UserState>()(
   setEstimatedMonthlyKwh: (estimatedMonthlyKwh) => set({ estimatedMonthlyKwh }),
   setPriceAlertPrefs: (priceAlertHighThresholdOre, priceAlertLowEnabled) =>
     set({ priceAlertHighThresholdOre, priceAlertLowEnabled }),
+  setDisabledDefaultAppliances: (disabledDefaultAppliances) => set({ disabledDefaultAppliances }),
   setGridFee: (gridFeeFixedSekPerMonth, gridFeeVariableSekPerKwh) => set({ gridFeeFixedSekPerMonth, gridFeeVariableSekPerKwh }),
   setProStatus: ({ isProSubscriber, periodType, expirationMillis }) =>
     set({ isProSubscriber, proPeriodType: periodType, proExpirationMillis: expirationMillis }),

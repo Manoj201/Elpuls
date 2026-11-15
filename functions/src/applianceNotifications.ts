@@ -2,19 +2,32 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { findCheapestWindow, type PriceHour } from './priceUtils';
+import { durationForRegistered } from './appliances';
 import { sendExpoPushToUid } from './sendPriceNotifications';
 import { APPLIANCE_WINDOW_COPY, resolveServerLanguage } from './pushCopy';
 
-// Matches the client's toAppliancePreset default (src/lib/applianceDisplay.ts)
-// — registered appliances don't collect a duration at registration time, so
-// both sides assume the same generic figure rather than inventing a new one.
-const REGISTERED_APPLIANCE_DURATION_HOURS = 1.5;
-
 const stockholmDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Stockholm' });
-const stockholmHourFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Stockholm', hour: 'numeric', hourCycle: 'h23' });
+const stockholmTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Stockholm',
+  hour: 'numeric',
+  minute: 'numeric',
+  hourCycle: 'h23',
+});
 
-function stockholmHourOf(date: Date): number {
-  return Number(stockholmHourFormatter.format(date));
+/** Quarter-hour of the Stockholm day (0–95): 10:45 → 43. Matches the 15-minute price slots. */
+function stockholmSlotOf(date: Date): number {
+  const parts = stockholmTimeFormatter.formatToParts(date);
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
+  return hour * 4 + Math.floor(minute / 15);
+}
+
+/** "10:45" in Stockholm time, for the push text. */
+function stockholmClockOf(date: Date): string {
+  const parts = stockholmTimeFormatter.formatToParts(date);
+  const hour = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
 }
 
 /**
@@ -45,19 +58,30 @@ export async function scheduleApplianceWindowNotifications(
     if (appliancesSnap.empty) continue;
 
     const userSnap = await db.collection('users').doc(uid).get();
+    // Appliance pushes are a Pro feature; check on the server, not only in the app.
+    if (userSnap.data()?.isProSubscriber !== true) continue;
     const language = resolveServerLanguage(userSnap.data()?.language);
 
     for (const applianceDoc of appliancesSnap.docs) {
-      const window = findCheapestWindow(hours, REGISTERED_APPLIANCE_DURATION_HOURS);
+      const data = applianceDoc.data();
+      const applianceLabel = data.label as string;
+      const durationHours = durationForRegistered(applianceLabel, data.durationHours as number | undefined);
+      const window = findCheapestWindow(hours, durationHours);
       if (!window) continue;
 
-      const applianceLabel = applianceDoc.data().label as string;
-      const windowStartHour = stockholmHourOf(new Date(window.start.hour));
+      const windowStart = new Date(window.start.hour);
 
       await db
         .collection('pendingApplianceNotifications')
         .doc(`${uid}_${applianceDoc.id}_${dateKey}`)
-        .set({ uid, applianceLabel, windowStartHour, dateKey, language });
+        .set({
+          uid,
+          applianceLabel,
+          windowStartSlot: stockholmSlotOf(windowStart),
+          windowStartClock: stockholmClockOf(windowStart),
+          dateKey,
+          language,
+        });
     }
   }
 }
@@ -65,7 +89,7 @@ export async function scheduleApplianceWindowNotifications(
 /**
  * Runs every 15 minutes all day (unlike fetchPrices's narrow 12:00-15:00
  * window) since a cheapest window computed by the function above can start
- * at any hour. Fires any pending notification whose hour has arrived, then
+ * at any quarter-hour. Fires any pending notification whose hour has arrived, then
  * deletes it — deletion is the idempotency guard here, simpler than
  * sendPriceNotifications.ts's `.create()` marker pattern since there's
  * nothing worth re-deriving once a reminder has gone out.
@@ -76,12 +100,13 @@ export const fireDueApplianceNotifications = onSchedule(
     const db = getFirestore();
     const now = new Date();
     const dateKey = stockholmDateFormatter.format(now);
-    const hour = stockholmHourOf(now);
+    // Runs every 15 minutes, so this is the quarter-hour that just started.
+    const slot = stockholmSlotOf(now);
 
     const due = await db
       .collection('pendingApplianceNotifications')
       .where('dateKey', '==', dateKey)
-      .where('windowStartHour', '==', hour)
+      .where('windowStartSlot', '==', slot)
       .get();
 
     for (const doc of due.docs) {
@@ -92,7 +117,7 @@ export const fireDueApplianceNotifications = onSchedule(
     }
 
     if (due.size > 0) {
-      logger.info(`Fired ${due.size} appliance notification(s) for ${dateKey} hour ${hour}.`);
+      logger.info(`Fired ${due.size} appliance notification(s) for ${dateKey} slot ${slot}.`);
     }
   },
 );

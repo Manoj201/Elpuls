@@ -86,8 +86,8 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
       const heatingApplies = heatingType === 'electric' || heatingType === 'heat_pump';
 
       if (!pendingSnap.empty) {
-        const label = pendingSnap.docs[0].data().applianceLabel as string;
-        clauses.push(APPLIANCE_NOTE_COPY[language](label));
+        const pending = pendingSnap.docs[0].data();
+        clauses.push(APPLIANCE_NOTE_COPY[language](pending.applianceLabel as string, pending.windowStartClock as string | undefined));
       } else if (heatingApplies && heatingPlan) {
         clauses.push(
           HEATING_PLAN_COPY[language](

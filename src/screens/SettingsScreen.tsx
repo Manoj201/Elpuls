@@ -7,6 +7,8 @@ import { db } from '../lib/firebase';
 import { openManageSubscriptions } from '../lib/purchases';
 import { authErrorKey, currentEmail, isGuest, linkGuestToEmail } from '../lib/auth';
 import { useApplianceStore, type RegisteredAppliance } from '../stores/useApplianceStore';
+import { APPLIANCE_PRESETS } from '../config/appliances';
+import { APPLIANCE_ICONS, householdDefaultIds, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
 import { useCountryStore } from '../stores/useCountryStore';
 import { useUiStore } from '../stores/useUiStore';
 import { useUserStore, type HeatingType } from '../stores/useUserStore';
@@ -58,6 +60,20 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
   useEffect(() => {
     fetchAppliances(uid);
   }, [fetchAppliances, uid]);
+
+  // Standard household: switch off what this home doesn't have. Saved right
+  // away (like the appliance list), not through the Save bar.
+  const setDisabledDefaultAppliances = useUserStore((s) => s.setDisabledDefaultAppliances);
+  const replacedDefaults = new Set(registeredAppliances.map((a) => matchPresetId(a.label)).filter(Boolean));
+
+  function toggleDefaultAppliance(presetId: string, has: boolean) {
+    const current = useUserStore.getState().disabledDefaultAppliances;
+    const next = has ? current.filter((id) => id !== presetId) : [...new Set([...current, presetId])];
+    setDisabledDefaultAppliances(next);
+    setDoc(doc(db, 'users', uid), { disabledDefaultAppliances: next, updatedAt: serverTimestamp() }, { merge: true }).catch((err) =>
+      console.log('Saving household appliances failed:', err),
+    );
+  }
 
   function handleDeleteAppliance(appliance: RegisteredAppliance) {
     Alert.alert(
@@ -369,6 +385,35 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
       </Section>
 
       <Section title={t('settings.appliancesTitle')}>
+        <Text style={styles.sectionSubtitle}>{t('settings.householdIntro')}</Text>
+        <Card style={styles.householdCard}>
+          {householdDefaultIds(user.hasEv).map((presetId, index) => {
+            const preset = APPLIANCE_PRESETS.find((p) => p.id === presetId)!;
+            const Icon = APPLIANCE_ICONS[presetId];
+            const label = resolveApplianceLabel(preset, t);
+            const replaced = replacedDefaults.has(presetId);
+            const has = !user.disabledDefaultAppliances.includes(presetId);
+            return (
+              <View key={presetId} style={[styles.householdRow, index > 0 && styles.householdRowDivider]}>
+                {Icon ? <Icon size={20} color={theme.colors.textSecondary} /> : null}
+                <View style={styles.householdText}>
+                  <Text style={styles.householdLabel}>{label}</Text>
+                  {replaced && <Text style={styles.householdNote}>{t('settings.householdReplaced')}</Text>}
+                </View>
+                {!replaced && (
+                  <Switch
+                    value={has}
+                    onValueChange={(value) => toggleDefaultAppliance(presetId, value)}
+                    trackColor={{ false: theme.colors.borderMuted, true: theme.colors.accentPurple }}
+                    accessibilityLabel={t('settings.householdHasA11y', { appliance: label })}
+                  />
+                )}
+              </View>
+            );
+          })}
+        </Card>
+
+        <Text style={styles.subSectionLabel}>{t('settings.registeredAppliancesTitle')}</Text>
         {registeredAppliances.map((appliance) => (
           <Card key={appliance.id} style={styles.applianceRow}>
             <View style={styles.applianceRowLeft}>
@@ -376,10 +421,20 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
               <Chip label={`${appliance.watts} W`} variant="neutral" />
             </View>
             <View style={styles.applianceRowActions}>
-              <Pressable onPress={() => onOpenApplianceScan(appliance)} hitSlop={8}>
+              <Pressable
+                onPress={() => onOpenApplianceScan(appliance)}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={t('settings.editApplianceA11y', { appliance: appliance.label })}
+              >
                 <IconPencil size={20} color={theme.colors.textSecondary} />
               </Pressable>
-              <Pressable onPress={() => handleDeleteAppliance(appliance)} hitSlop={8}>
+              <Pressable
+                onPress={() => handleDeleteAppliance(appliance)}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={t('settings.deleteApplianceA11y', { appliance: appliance.label })}
+              >
                 <IconTrash size={20} color={theme.colors.dangerEmber} />
               </Pressable>
             </View>
@@ -624,6 +679,13 @@ const styles = StyleSheet.create({
   },
   accountHint: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textFaint },
   entryCard: { marginTop: 4 },
+  householdCard: { paddingVertical: 4, marginBottom: 16 },
+  householdRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 },
+  householdRowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
+  householdText: { flex: 1 },
+  householdLabel: { fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  householdNote: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary, marginTop: 2 },
+  subSectionLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginBottom: 8 },
   toggleCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   toggleText: { flex: 1 },
   applianceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },

@@ -330,7 +330,13 @@
     "valueOre": "{{value}} öre/kWh",
     "notSet": "Not added",
     "scanBill": "Scan my bill",
-    "scanNewBill": "Scan a newer bill"
+    "scanNewBill": "Scan a newer bill",
+    "householdIntro": "Elpuls plans for a normal household. Switch off anything you don't have.",
+    "householdReplaced": "Uses your own appliance below",
+    "householdHasA11y": "I have a {{appliance}}",
+    "registeredAppliancesTitle": "Your own appliances",
+    "editApplianceA11y": "Edit {{appliance}}",
+    "deleteApplianceA11y": "Remove {{appliance}}"
   },
   "applianceRecommendations": {
     "title": "Appliance recommendations",
