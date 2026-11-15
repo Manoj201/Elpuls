@@ -87,3 +87,100 @@ export const APPLIANCE_WINDOW_COPY: Record<ServerLanguage, (applianceLabel: stri
     body: `Nu är det ett bra läge att köra ${applianceLabel}.`,
   }),
 };
+
+// ---- Smart "good time now" pushes (Pro), see smartPushes.ts ----
+
+const APPLIANCE_NAMES: Record<ServerLanguage, Record<string, string>> = {
+  sv: {
+    washing_machine: 'tvättmaskinen',
+    dishwasher: 'diskmaskinen',
+    dryer: 'torktumlaren',
+    ev: 'billaddningen',
+    sauna: 'bastun',
+    pool_heater: 'poolvärmen',
+  },
+  en: {
+    washing_machine: 'the washing machine',
+    dishwasher: 'the dishwasher',
+    dryer: 'the tumble dryer',
+    ev: 'the car charging',
+    sauna: 'the sauna',
+    pool_heater: 'the pool heater',
+  },
+};
+
+/** Name of a preset appliance as it reads inside a sentence ("diskmaskinen"). */
+export function applianceName(language: ServerLanguage, presetId: string): string {
+  return APPLIANCE_NAMES[language][presetId] ?? presetId;
+}
+
+/** "A", "A och B", "A, B och C" (sv) / "A and B" (en). */
+export function joinNames(language: ServerLanguage, names: string[]): string {
+  const and = language === 'sv' ? ' och ' : ' and ';
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')}${and}${names[names.length - 1]}`;
+}
+
+interface SmartPushCopy {
+  applianceNow: (names: string, saving: string) => { title: string; body: string };
+  applianceTonight: (names: string, clock: string, saving: string) => { title: string; body: string };
+  evTonight: (clock: string, saving: string) => { title: string; body: string };
+  evAndAppliancesTonight: (names: string, clock: string, saving: string) => { title: string; body: string };
+  heatAhead: (bankEnd: string, coastStart: string, coastEnd: string) => { title: string; body: string };
+  cheapNow: (ore: string) => { title: string; body: string };
+}
+
+export const SMART_PUSH_COPY: Record<ServerLanguage, SmartPushCopy> = {
+  sv: {
+    applianceNow: (names, saving) => ({
+      title: 'Bra läge nu',
+      body: `Hej! Starta ${names} nu. Du sparar ungefär ${saving} kr jämfört med i kväll.`,
+    }),
+    applianceTonight: (names, clock, saving) => ({
+      title: 'Billigt i natt',
+      body: `Ställ in ${names} på fördröjd start till kl ${clock}. Du sparar ungefär ${saving} kr.`,
+    }),
+    evTonight: (clock, saving) => ({
+      title: 'Ladda bilen i natt',
+      body: `Billigast att ladda från kl ${clock}. Koppla in bilen innan du går och lägger dig, så sparar du ungefär ${saving} kr.`,
+    }),
+    evAndAppliancesTonight: (names, clock, saving) => ({
+      title: 'Billigt i natt',
+      body: `Elen är billigast i natt från kl ${clock}. Koppla in bilen och ställ in ${names} på fördröjd start. Du sparar ungefär ${saving} kr.`,
+    }),
+    heatAhead: (bankEnd, coastStart, coastEnd) => ({
+      title: 'Värm upp huset nu',
+      body: `Elen är billig fram till kl ${bankEnd}. Värm upp nu och sänk lite kl ${coastStart} till ${coastEnd}, då blir det dyrt.`,
+    }),
+    cheapNow: (ore) => ({
+      title: 'Billig el just nu',
+      body: `Spotpriset är bara ${ore} öre/kWh just nu, långt under dagens snitt. Bra läge för tvätt, disk eller laddning.`,
+    }),
+  },
+  en: {
+    applianceNow: (names, saving) => ({
+      title: 'Good time now',
+      body: `Hi! Start ${names} now. You save about ${saving} kr compared with this evening.`,
+    }),
+    applianceTonight: (names, clock, saving) => ({
+      title: 'Cheap tonight',
+      body: `Set ${names} to delayed start at ${clock}. You save about ${saving} kr.`,
+    }),
+    evTonight: (clock, saving) => ({
+      title: 'Charge the car tonight',
+      body: `Cheapest to charge from ${clock}. Plug in before bed and you save about ${saving} kr.`,
+    }),
+    evAndAppliancesTonight: (names, clock, saving) => ({
+      title: 'Cheap tonight',
+      body: `Power is cheapest tonight from ${clock}. Plug in the car and set ${names} to delayed start. You save about ${saving} kr.`,
+    }),
+    heatAhead: (bankEnd, coastStart, coastEnd) => ({
+      title: 'Heat the house now',
+      body: `Power is cheap until ${bankEnd}. Heat up now and turn down a little from ${coastStart} to ${coastEnd}, when it gets expensive.`,
+    }),
+    cheapNow: (ore) => ({
+      title: 'Cheap power right now',
+      body: `The spot price is only ${ore} öre/kWh right now, well below today's average. Good time for laundry, dishes or charging.`,
+    }),
+  },
+};

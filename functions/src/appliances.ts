@@ -7,22 +7,30 @@
  */
 export interface ServerAppliancePreset {
   id: string;
+  watts: number;
   typicalDurationHours: number;
   shiftable: boolean;
   householdDefault: boolean;
 }
 
 export const APPLIANCE_PRESETS: ServerAppliancePreset[] = [
-  { id: 'ev', typicalDurationHours: 1, shiftable: true, householdDefault: false },
-  { id: 'washing_machine', typicalDurationHours: 1.5, shiftable: true, householdDefault: true },
-  { id: 'dishwasher', typicalDurationHours: 2, shiftable: true, householdDefault: true },
-  { id: 'dryer', typicalDurationHours: 1, shiftable: true, householdDefault: true },
-  { id: 'oven', typicalDurationHours: 1, shiftable: false, householdDefault: true },
-  { id: 'sauna', typicalDurationHours: 1, shiftable: true, householdDefault: false },
-  { id: 'pool_heater', typicalDurationHours: 3, shiftable: true, householdDefault: false },
+  { id: 'ev', watts: 3600, typicalDurationHours: 1, shiftable: true, householdDefault: false },
+  { id: 'washing_machine', watts: 2000, typicalDurationHours: 1.5, shiftable: true, householdDefault: true },
+  { id: 'dishwasher', watts: 1800, typicalDurationHours: 2, shiftable: true, householdDefault: true },
+  { id: 'dryer', watts: 3000, typicalDurationHours: 1, shiftable: true, householdDefault: true },
+  { id: 'oven', watts: 2200, typicalDurationHours: 1, shiftable: false, householdDefault: true },
+  { id: 'sauna', watts: 6000, typicalDurationHours: 1, shiftable: true, householdDefault: false },
+  { id: 'pool_heater', watts: 3000, typicalDurationHours: 3, shiftable: true, householdDefault: false },
 ];
 
 const FALLBACK_DURATION_HOURS = 1.5;
+
+/**
+ * Appliances people commonly run overnight with delayed start or a timer:
+ * the car, dishes, laundry washed in the evening and dried overnight, the pool.
+ * (A washer and dryer are still never suggested in the same push; see capAndGroup.)
+ */
+export const NIGHT_FRIENDLY_PRESETS = new Set(['ev', 'dishwasher', 'washing_machine', 'dryer', 'pool_heater']);
 
 const PRESET_KEYWORDS: { id: string; words: string[] }[] = [
   { id: 'dishwasher', words: ['disk', 'dishwasher'] },

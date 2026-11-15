@@ -18,6 +18,7 @@ import { PaywallScreen } from './src/screens/PaywallScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { IntroScreen } from './src/screens/IntroScreen';
+import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen';
 import { ScreenBackground } from './src/components/ScreenBackground';
 import { usePushRegistration } from './src/hooks/usePushRegistration';
 import { ensureAnonymousSignIn, signOutUser } from './src/lib/auth';
@@ -25,6 +26,7 @@ import { clearLocalAppStorage } from './src/lib/devTools';
 import { deleteMyAccount } from './src/lib/account';
 import { db } from './src/lib/firebase';
 import { configurePurchases } from './src/lib/purchases';
+import { resolveNotificationPrefs } from './src/lib/notificationPrefs';
 import { useCountryStore } from './src/stores/useCountryStore';
 import { useUiStore } from './src/stores/useUiStore';
 import { selectProfile, useUserStore } from './src/stores/useUserStore';
@@ -33,7 +35,7 @@ import { initI18n, syncCurrentLanguageToFirestore } from './src/i18n';
 import { theme } from './src/theme';
 
 type TabScreen = 'overview' | 'forecast' | 'stats' | 'settings';
-type StackScreen = 'kostnadskoll' | 'applianceRecommendations' | 'applianceScan' | 'billScan' | null;
+type StackScreen = 'kostnadskoll' | 'applianceRecommendations' | 'applianceScan' | 'billScan' | 'notifications' | null;
 type AppState = 'loading' | 'intro' | 'login' | 'onboarding' | 'main';
 
 const TABS: { id: TabScreen; labelKey: string; icon: ComponentType<{ size?: number; color?: string }> }[] = [
@@ -67,11 +69,17 @@ async function hydrateUserProfile(uid: string): Promise<boolean> {
     gridFeeVariableSekPerKwh: data.gridFeeVariableSekPerKwh ?? null,
   });
   useUserStore.getState().setRetailerMarkup(data.retailerMarkupSekPerKwh ?? null);
+  useUserStore.getState().setBillDetails({
+    retailerFixedSekPerMonth: data.retailerFixedSekPerMonth ?? null,
+    retailerName: data.retailerName ?? null,
+    gridCompanyName: data.gridCompanyName ?? null,
+  });
   useUserStore.getState().setEstimatedMonthlyKwh(data.estimatedMonthlyKwh ?? null);
   useUserStore.getState().setPriceAlertPrefs(data.priceAlertHighThresholdOre ?? null, Boolean(data.priceAlertLowEnabled));
   useUserStore
     .getState()
     .setDisabledDefaultAppliances(Array.isArray(data.disabledDefaultAppliances) ? data.disabledDefaultAppliances : []);
+  useUserStore.getState().setNotificationPrefs(resolveNotificationPrefs(data.notificationPrefs));
   useCountryStore.getState().setZone(data.zone);
 
   return true;
@@ -360,6 +368,9 @@ export default function App() {
                 }}
               />
             )}
+            {stackScreen === 'notifications' && (
+              <NotificationSettingsScreen uid={activeUid} onBack={() => setStackScreen(null)} />
+            )}
             {stackScreen === 'billScan' && (
               <BillScanScreen uid={activeUid} startManual={billScanManual} onBack={() => setStackScreen(null)} />
             )}
@@ -388,7 +399,8 @@ export default function App() {
                   setEditingAppliance(editAppliance ?? null);
                   setStackScreen('applianceScan');
                 }}
-                onOpenBillScan={() => openBillScan(false)}
+                onOpenBillScan={openBillScan}
+                onOpenNotifications={() => setStackScreen('notifications')}
                 onDevReset={handleDevReset}
                 onAccountDeleted={handleAccountDeleted}
                 onSignedIn={handleSignedIn}

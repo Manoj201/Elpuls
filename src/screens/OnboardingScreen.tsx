@@ -106,16 +106,17 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
     onDone();
   }
 
-  // The bill scan saves the grid fee and retailer markup itself. Copy the
-  // saved grid fee back into this step's field, so finishing onboarding
-  // doesn't overwrite it with an empty value.
+  // The bill scan saves the fees itself. Copy the saved grid fees back
+  // into this step's fields, so finishing onboarding doesn't overwrite
+  // them with empty values.
   if (billScanOpen) {
     return (
       <BillScanScreen
         uid={uid}
         onBack={() => {
-          const saved = useUserStore.getState().gridFeeVariableSekPerKwh;
+          const { gridFeeVariableSekPerKwh: saved, gridFeeFixedSekPerMonth: savedFixed } = useUserStore.getState();
           if (saved !== null) setGridFeeVariableInput(String(Number((saved * 100).toFixed(2))).replace('.', ','));
+          if (savedFixed !== null) setGridFeeFixedInput(String(Number(savedFixed.toFixed(2))).replace('.', ','));
           setBillScanOpen(false);
         }}
       />

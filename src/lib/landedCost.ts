@@ -2,8 +2,16 @@
 // electricity-tax exemption available in parts of northern Sweden.
 export const ENERGY_TAX_SEK_PER_KWH_EXCL_VAT = 0.36;
 
-// Representative figure (varies slightly by retailer), excl. VAT.
+// Representative figure (varies slightly by retailer), excl. VAT. Only
+// used while the retailer markup is unknown: retailers bill elcertifikat
+// inside their own markup (Vattenfall: "Rörliga kostnader"), so once a bill
+// is scanned it is already in retailerMarkupSekPerKwh. Adding it on top
+// double-counted ~1.4 öre (found against a real Vattenfall invoice, 2026-11-15).
 export const ELCERTIFICATE_SEK_PER_KWH_EXCL_VAT = 0.014;
+
+function elcertificateFor(retailerMarkupSekPerKwh: number | null): number {
+  return retailerMarkupSekPerKwh === null ? ELCERTIFICATE_SEK_PER_KWH_EXCL_VAT : 0;
+}
 
 export const VAT_RATE = 0.25;
 
@@ -33,7 +41,7 @@ export function calculateLandedPrice(
     spotPriceExclVat +
     gridFeeVariableSekPerKwh +
     ENERGY_TAX_SEK_PER_KWH_EXCL_VAT +
-    ELCERTIFICATE_SEK_PER_KWH_EXCL_VAT +
+    elcertificateFor(retailerMarkupSekPerKwh) +
     (retailerMarkupSekPerKwh ?? 0);
   return exclVat * (1 + VAT_RATE);
 }
@@ -55,16 +63,26 @@ export function landedPriceBreakdown(
   retailerMarkupSekPerKwh: number | null = null,
 ): LandedPriceBreakdown {
   const retailerMarkup = retailerMarkupSekPerKwh ?? 0;
-  const exclVat = spotPriceExclVat + gridFeeVariableSekPerKwh + ENERGY_TAX_SEK_PER_KWH_EXCL_VAT + ELCERTIFICATE_SEK_PER_KWH_EXCL_VAT + retailerMarkup;
+  const elcertifikat = elcertificateFor(retailerMarkupSekPerKwh);
+  const exclVat = spotPriceExclVat + gridFeeVariableSekPerKwh + ENERGY_TAX_SEK_PER_KWH_EXCL_VAT + elcertifikat + retailerMarkup;
   const vat = exclVat * VAT_RATE;
 
   return {
     spot: spotPriceExclVat,
     gridFee: gridFeeVariableSekPerKwh,
     energyTax: ENERGY_TAX_SEK_PER_KWH_EXCL_VAT,
-    elcertifikat: ELCERTIFICATE_SEK_PER_KWH_EXCL_VAT,
+    elcertifikat,
     retailerMarkup,
     vat,
     total: exclVat + vat,
   };
+}
+
+/**
+ * Fixed monthly fees (grid subscription + retailer's monthly/annual fee),
+ * kr per month incl. VAT. They don't depend on usage, so they belong in
+ * monthly views (Stats, what-if) and never in the per-kWh price.
+ */
+export function monthlyFixedFeesSek(gridFeeFixedSekPerMonth: number | null, retailerFixedSekPerMonth: number | null): number {
+  return (gridFeeFixedSekPerMonth ?? 0) + (retailerFixedSekPerMonth ?? 0);
 }

@@ -3,6 +3,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useTranslation } from 'react-i18next';
 import {
   IconAlertTriangle,
+  IconArrowDownRight,
+  IconArrowUpRight,
   IconCalculator,
   IconChevronDown,
   IconChevronUp,
@@ -23,11 +25,14 @@ import { usePriceStore } from '../stores/usePriceStore';
 import { useWeatherStore } from '../stores/useWeatherStore';
 import { useUserStore } from '../stores/useUserStore';
 import { useApplianceStore } from '../stores/useApplianceStore';
-import { findCurrentPrice, findExtremeHours, groupPricesByHour } from '../lib/priceUtils';
+import { findCheapestWindow, findCurrentPrice, findExtremeHours, groupPricesByHour } from '../lib/priceUtils';
+import { getHouseholdAppliances, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
+import { useUiStore } from '../stores/useUiStore';
 import { assessPriceRisk, type PriceRiskAssessment, type PriceRiskFactor } from '../lib/priceRisk';
 import { findWeatherPrepTip } from '../lib/weatherPrep';
 import { findHeatingPlan } from '../lib/heatingPlan';
 import { writeWidgetSnapshot } from '../lib/widgetBridge';
+import { getTimes } from 'suncalc';
 import { estimateSolarPotential } from '../lib/solarPotential';
 import { findSolarBonusHours } from '../lib/solarBonusHours';
 import { compareToOtherZones, type ZoneComparison } from '../lib/zoneComparison';
@@ -35,14 +40,16 @@ import { calculateLandedPrice } from '../lib/landedCost';
 import { zoneReferencePoints } from '../config/zoneReferencePoints';
 import { useExplainer } from '../hooks/useExplainer';
 import { theme } from '../theme';
-import { formatOre } from '../lib/formatNumber';
+import { formatClock, formatOre } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
 import { AiNote } from '../components/AiNote';
 import { Card } from '../components/Card';
 import { Chip, type ChipVariant } from '../components/Chip';
 import { InfoRow } from '../components/InfoRow';
 import { PriceDial } from '../components/PriceDial';
-import { PriceBar } from '../components/PriceBar';
+import { AnimatedNumber } from '../components/AnimatedNumber';
+import { whenOf } from '../lib/whenLabel';
+import { PriceChart, type BestTime } from '../components/PriceChart';
 import { ComparisonCard } from '../components/ComparisonCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ProLockedCard } from '../components/ProLockedCard';
@@ -50,6 +57,12 @@ import { SecondaryButton } from '../components/SecondaryButton';
 import { SetupChecklist, type SetupStep } from '../components/SetupChecklist';
 import { SolarBonusCard } from '../components/SolarBonusCard';
 import { TrialBanner } from '../components/TrialBanner';
+
+/** Big hero number: whole öre from 10 up ("109"), one decimal below ("8,4"), Swedish comma. */
+function formatHeroOre(ore: number, language: SupportedLanguage): string {
+  const decimals = Math.abs(ore) < 10 ? 1 : 0;
+  return ore.toLocaleString(language === 'sv' ? 'sv-SE' : 'en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
 
 const RISK_VARIANT: Record<PriceRiskAssessment['level'], ChipVariant> = {
   low: 'teal',
@@ -83,7 +96,8 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
-  const { todayPrices, isLoading, error, fetchPrices } = usePriceStore();
+  const { todayPrices, tomorrowPrices, isLoading, error, fetchPrices } = usePriceStore();
+  const showPaywall = useUiStore((s) => s.showPaywall);
   const { forecast, fetchForecast } = useWeatherStore();
   const zone = useCountryStore((s) => s.zone);
   const setZone = useCountryStore((s) => s.setZone);
@@ -103,7 +117,6 @@ export function HomeScreen({
 
   const [comparison, setComparison] = useState<ZoneComparison | null>(null);
   const [isSharing, setIsSharing] = useState(false);
-  const [showLanded, setShowLanded] = useState(false);
   const [zonePickerOpen, setZonePickerOpen] = useState(false);
   const comparisonCardRef = useRef<View>(null);
 
@@ -150,25 +163,89 @@ export function HomeScreen({
   }, [widgetCurrentPrice, widgetAveragePrice]);
 
   // Landed price is an affine transform of spot (same +C, ×1.25 on every
-  // hour), so cheapest/priciest never reshuffle between views — only the
+  // slot), so cheapest/priciest never reshuffle between views; only the
   // displayed numbers change. Solar bonus hours stay on spot (below).
+  // "What you pay" is the headline once the grid fee is known, unless the
+  // user picked spot themselves (remembered per phone).
+  const priceView = useUserStore((s) => s.priceView);
+  const setPriceView = useUserStore((s) => s.setPriceView);
+  const showLanded = priceView === null ? hasGridFee : priceView === 'landed';
+  const setShowLanded = (landed: boolean) => setPriceView(landed ? 'landed' : 'spot');
   const landedActive = showLanded && hasGridFee;
-  const displayPrices = useMemo(() => {
-    if (!landedActive || gridFeeVariableSekPerKwh === null) return hourlyPrices;
-    return hourlyPrices.map((p) => ({
-      ...p,
-      price: calculateLandedPrice(p.price, gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh),
-    }));
-  }, [hourlyPrices, landedActive, gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh]);
 
-  const { cheapest, priciest } = useMemo(() => findExtremeHours(displayPrices), [displayPrices]);
-  const currentPrice = useMemo(() => findCurrentPrice(displayPrices, new Date()), [displayPrices]);
-  const averagePrice = useMemo(
-    () => (displayPrices.length > 0 ? displayPrices.reduce((s, p) => s + p.price, 0) / displayPrices.length : 0),
-    [displayPrices],
-  );
-  // Kept separate from `averagePrice` (which follows the landed toggle):
-  // compareToOtherZones fetches other zones' raw spot prices, so the
+  // Chart data: the real 15-minute prices for today and tomorrow, shown as
+  // "what you pay" when that switch is on (same transform as the hero).
+  const chartSlots = useMemo(() => {
+    const all = [...todayPrices, ...tomorrowPrices];
+    if (!landedActive || gridFeeVariableSekPerKwh === null) return all;
+    return all.map((p) => ({ ...p, price: calculateLandedPrice(p.price, gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh) }));
+  }, [todayPrices, tomorrowPrices, landedActive, gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh]);
+
+  // Hero card: the real current quarter-hour price (not the hour's average),
+  // the gauge range from today's quarter-hours, and the next cheapest and
+  // dearest quarter-hour from now on (today + tomorrow when published).
+  const hero = useMemo(() => {
+    const now = new Date();
+    const sorted = [...chartSlots].sort((a, b) => a.hour.getTime() - b.hour.getTime());
+    const nowSlot = findCurrentPrice(sorted, now);
+    const today = sorted.filter((s) => s.hour.toDateString() === now.toDateString());
+    if (!nowSlot || today.length === 0) return null;
+    const { cheapest: dayMin, priciest: dayMax } = findExtremeHours(today);
+    const avg = today.reduce((sum, s) => sum + s.price, 0) / today.length;
+    const upcoming = sorted.filter((s) => s.hour.getTime() > nowSlot.hour.getTime());
+    const { cheapest: nextCheap, priciest: nextDear } = findExtremeHours(upcoming);
+    return {
+      now,
+      price: nowSlot.price,
+      validUntil: new Date(nowSlot.hour.getTime() + 15 * 60000),
+      dayMin: dayMin!.price,
+      dayMax: dayMax!.price,
+      avg,
+      nextCheap,
+      nextDear,
+    };
+  }, [chartSlots]);
+
+  // Pro: the best upcoming window for each appliance in this household,
+  // shaded on the chart and listed under it.
+  const disabledDefaults = useUserStore((s) => s.disabledDefaultAppliances);
+  const bestTimes: BestTime[] = useMemo(() => {
+    const now = new Date();
+    const slots = [...todayPrices, ...tomorrowPrices];
+    const nowSlot = findCurrentPrice(slots, now);
+    const household = getHouseholdAppliances({ hasEv, disabledDefaults, registered: appliances }).filter((a) => a.shiftable);
+    // Preset id for each appliance (registered ones by name), for icons and ordering.
+    const kindOf = (a: (typeof household)[number]) => (a.householdDefault || a.id === 'ev' ? a.id : matchPresetId(a.label) ?? a.id);
+
+    // The dryer needs the washed laundry, so plan the washing machine first
+    // and only look for dryer windows after it has finished.
+    const ordered = [...household].sort((a, b) => Number(kindOf(a) === 'dryer') - Number(kindOf(b) === 'dryer'));
+    let washerEnd: Date | null = null;
+
+    const result: BestTime[] = [];
+    for (const a of ordered) {
+      const kind = kindOf(a);
+      const notBefore = kind === 'dryer' && washerEnd ? washerEnd : now;
+      const window = findCheapestWindow(slots, a.typicalDurationHours, notBefore);
+      if (!window) continue;
+      if (kind === 'washing_machine') washerEnd = window.end;
+
+      const kwh = (a.watts / 1000) * a.typicalDurationHours;
+      // Spot difference × VAT: grid fee, tax and markup are the same per kWh whenever you run it.
+      const saving = nowSlot ? kwh * (nowSlot.price - window.averagePrice) * 1.25 : null;
+      result.push({
+        id: a.id,
+        kind,
+        label: resolveApplianceLabel(a, t),
+        start: window.start.hour,
+        end: window.end,
+        saving,
+        startsNow: window.start.hour.getTime() <= now.getTime(),
+      });
+    }
+    return result.sort((x, y) => x.start.getTime() - y.start.getTime());
+  }, [todayPrices, tomorrowPrices, hasEv, disabledDefaults, appliances, t]);
+  // Spot average for the share card: compareToOtherZones fetches other zones' raw spot prices, so the
   // comparison must stay spot-vs-spot regardless of what's displayed.
   const spotAveragePrice = useMemo(
     () => (hourlyPrices.length > 0 ? hourlyPrices.reduce((s, p) => s + p.price, 0) / hourlyPrices.length : 0),
@@ -179,6 +256,14 @@ export function HomeScreen({
     const point = zoneReferencePoints[zone];
     return point ? estimateSolarPotential(forecast, point.lat, point.lon) : [];
   }, [forecast, zone]);
+  const sunTimes = useMemo((): { sunrise: Date | null; sunset: Date | null } => {
+    const point = zoneReferencePoints[zone];
+    if (!point) return { sunrise: null, sunset: null };
+    const times = getTimes(new Date(), point.lat, point.lon);
+    // Polar day/night (far north) gives invalid dates.
+    const valid = (d: Date | null): Date | null => (d && !Number.isNaN(d.getTime()) ? d : null);
+    return { sunrise: valid(times.sunrise), sunset: valid(times.sunset) };
+  }, [zone]);
   const bonusHours = useMemo(
     () => findSolarBonusHours(hourlyPrices, solarPotential),
     [hourlyPrices, solarPotential],
@@ -365,7 +450,7 @@ export function HomeScreen({
         <>
           {/* Today: the price right now, today's cheapest and dearest hour,
               and the spot / "what you pay" switch. */}
-          {currentPrice && cheapest && priciest && (
+          {hero && (
             <Card style={styles.todayCard}>
               <View
                 style={styles.priceToggleRow}
@@ -398,45 +483,60 @@ export function HomeScreen({
                   )}
 
                   <View style={styles.dialSection}>
-                    <PriceDial value={currentPrice.price} min={cheapest.price} max={priciest.price} />
-                    <Text style={styles.heroPrice} accessibilityLabel={t('home.priceNowA11y', { price: formatOre(currentPrice.price, language) })}>
-                      {formatOre(currentPrice.price, language)}
+                    <PriceDial value={hero.price} min={hero.dayMin} max={hero.dayMax} />
+                    <AnimatedNumber
+                      value={hero.price * 100}
+                      format={(ore) => formatHeroOre(ore, language)}
+                      style={styles.heroPrice}
+                      accessibilityLabel={t('home.priceNowA11y', { price: formatOre(hero.price, language) })}
+                    />
+                    <Text style={styles.heroUnit}>
+                      {t(landedActive ? 'home.priceUnitLanded' : 'home.priceUnitNow')} · {t('home.validUntil', { time: formatClock(hero.validUntil) })}
                     </Text>
-                    <Text style={styles.heroUnit}>{t(landedActive ? 'home.priceUnitLanded' : 'home.priceUnitNow')}</Text>
                     <Chip
                       label={
-                        currentPrice.price < averagePrice
+                        hero.price < hero.avg * 0.95
                           ? t('home.belowAverage')
-                          : currentPrice.price > averagePrice
+                          : hero.price > hero.avg * 1.05
                             ? t('home.aboveAverage')
                             : t('home.aroundAverage')
                       }
-                      variant={currentPrice.price <= averagePrice ? 'teal' : 'amber'}
+                      variant={hero.price < hero.avg * 0.95 ? 'teal' : hero.price > hero.avg * 1.05 ? 'amber' : 'neutral'}
                       style={styles.averageChip}
                     />
                   </View>
 
-                  <View style={styles.statsRow}>
-                    <View style={styles.statBlock}>
-                      <Text style={[styles.statLabel, { color: theme.colors.positiveTealDeep }]}>{t('common.cheapest')}</Text>
-                      <Text style={styles.statPrice}>{formatOre(cheapest.price, language)} öre</Text>
-                      <Text style={styles.statHour}>{t('home.atHour', { hour: cheapest.hour.getHours() })}</Text>
+                  {hero.nextCheap && hero.nextDear && (
+                    <View style={styles.statsRow}>
+                      {[
+                        { slot: hero.nextCheap, label: t('home.nextCheapest'), color: theme.colors.positiveTealDeep, Icon: IconArrowDownRight, iconColor: theme.colors.positiveTeal },
+                        { slot: hero.nextDear, label: t('home.nextDearest'), color: theme.colors.dangerEmberDeep, Icon: IconArrowUpRight, iconColor: theme.colors.dangerEmber },
+                      ].map(({ slot, label, color, Icon, iconColor }, i) => {
+                        const when = t(`chart.when.${whenOf(slot.hour, hero.now)}`);
+                        return (
+                          <View key={label} style={[styles.statBlock, i === 1 && styles.statBlockDivider]}>
+                            <View style={styles.statLabelRow}>
+                              <Icon size={14} color={iconColor} />
+                              <Text style={[styles.statLabel, { color }]}>{label}</Text>
+                            </View>
+                            <Text style={[styles.statPrice, styles.tabular]}>{formatOre(slot.price, language)} öre</Text>
+                            <Text style={[styles.statHour, styles.tabular]}>
+                              {when} {formatClock(slot.hour)}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statBlock}>
-                      <Text style={[styles.statLabel, { color: theme.colors.dangerEmberDeep }]}>{t('common.priciest')}</Text>
-                      <Text style={styles.statPrice}>{formatOre(priciest.price, language)} öre</Text>
-                      <Text style={styles.statHour}>{t('home.atHour', { hour: priciest.hour.getHours() })}</Text>
-                    </View>
-                  </View>
+                  )}
 
-                  {risk && (
+                  {/* Weather-based outlook: only shown when there is something to warn about. */}
+                  {risk && risk.level !== 'low' && (
                     <View style={styles.tipRow}>
                       <InfoRow
                         icon={IconAlertTriangle}
                         variant={RISK_VARIANT[risk.level]}
                         title={
-                          risk.level === 'low' ? t('home.normalRisk') : risk.level === 'high' ? t('home.higherRisk') : t('home.elevatedRisk')
+                          risk.level === 'high' ? t('home.higherRisk') : t('home.elevatedRisk')
                         }
                         subtitle={risk.factors.length > 0 ? risk.factors.map(riskFactorText).join(' · ') : undefined}
                       />
@@ -478,9 +578,14 @@ export function HomeScreen({
           </View>
 
           <Text style={styles.sectionTitle} accessibilityRole="header">
-            {t('home.hourlyTitle')}
+            {t(tomorrowPrices.length > 0 ? 'home.chartTitleTwoDays' : 'home.hourlyTitle')}
           </Text>
-          <PriceBar prices={displayPrices} highlightHour={currentPrice?.hour ?? null} />
+          <PriceChart
+            slots={chartSlots}
+            now={new Date()}
+            bestTimes={isProSubscriber ? bestTimes : undefined}
+            onUpgrade={() => showPaywall('proTips')}
+          />
 
           <Text style={styles.sectionTitle} accessibilityRole="header">
             {t('home.explainerTitle')}
@@ -550,7 +655,14 @@ export function HomeScreen({
                 />
               </Card>
               <Text style={styles.subSectionTitle}>{t('home.solarBonusHours')}</Text>
-              <SolarBonusCard bonusHours={bonusHours} language={language} />
+              <SolarBonusCard
+                bonusHours={bonusHours}
+                solarPotential={solarPotential}
+                sunrise={sunTimes.sunrise}
+                sunset={sunTimes.sunset}
+                now={new Date()}
+                language={language}
+              />
             </>
           ) : (
             <View style={styles.proTipsLocked}>
@@ -619,9 +731,11 @@ const styles = StyleSheet.create({
   heroPrice: { fontFamily: theme.typography.display, fontSize: theme.type.display, color: theme.colors.textPrimary, marginTop: 8 },
   heroUnit: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 2, marginBottom: 12, textAlign: 'center' },
   averageChip: { alignSelf: 'center' },
-  statsRow: { flexDirection: 'row', alignItems: 'center' },
+  statsRow: { flexDirection: 'row', alignItems: 'stretch' },
+  statBlockDivider: { borderLeftWidth: 1, borderLeftColor: theme.colors.borderMuted },
+  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  tabular: { fontVariant: ['tabular-nums'] },
   statBlock: { flex: 1, alignItems: 'center' },
-  statDivider: { width: 1, height: 44, backgroundColor: theme.colors.borderMuted },
   statLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm },
   statPrice: { fontFamily: theme.typography.display, fontSize: theme.type.lg, color: theme.colors.textPrimary, marginTop: 4 },
   statHour: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 2 },

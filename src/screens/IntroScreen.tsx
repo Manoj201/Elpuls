@@ -13,6 +13,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { IconBolt, IconClock, IconFlame, IconSnowflake, IconSparkles } from '@tabler/icons-react-native';
 import { DEFAULT_TRIAL_DAYS } from '../lib/purchases';
+import { calculateLandedPrice } from '../lib/landedCost';
+import { RealPriceBars } from '../components/RealPriceBars';
 import { theme } from '../theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 
@@ -115,32 +117,27 @@ function Page({ width, title, text, children }: { width: number; title: string; 
   );
 }
 
-/** Page 1: a bill split into parts, showing spot price is only one of them. */
+// Page 1 example, computed with the app's own formula so it can't drift:
+// spot 100 öre + grid fee 25 öre + energy tax + elcertifikat, plus VAT.
+const EXAMPLE_SPOT_SEK = 1.0;
+const EXAMPLE_GRID_FEE_SEK = 0.25;
+
+/** Page 1: the spot price in the news vs. what you actually pay per kWh. */
 function BillBreakdown() {
   const { t } = useTranslation();
-  const parts = [
-    { key: 'spot', share: 25, color: theme.colors.accentPurple },
-    { key: 'grid', share: 25, color: theme.colors.positiveTeal },
-    { key: 'tax', share: 30, color: theme.colors.accentAmber },
-    { key: 'vat', share: 20, color: theme.colors.neutralBar },
-  ];
-
+  const paidOre = Math.round(calculateLandedPrice(EXAMPLE_SPOT_SEK, EXAMPLE_GRID_FEE_SEK) * 100);
+  const spotOre = Math.round(EXAMPLE_SPOT_SEK * 100);
   return (
-    <View style={styles.visualCard} accessible accessibilityLabel={t('intro.breakdownA11y')}>
-      <Text style={styles.visualCaption}>{t('intro.breakdownCaption')}</Text>
-      <View style={styles.stackedBar}>
-        {parts.map((p) => (
-          <View key={p.key} style={{ flex: p.share, backgroundColor: p.color }} />
-        ))}
-      </View>
-      <View style={styles.legend}>
-        {parts.map((p) => (
-          <View key={p.key} style={styles.legendRow}>
-            <View style={[styles.legendSwatch, { backgroundColor: p.color }]} />
-            <Text style={styles.legendText}>{t(`intro.breakdown.${p.key}`)}</Text>
-          </View>
-        ))}
-      </View>
+    <View style={styles.visualCard}>
+      <RealPriceBars
+        spotLabel={t('realPrice.spotLabel')}
+        spotValue={t('realPrice.ore', { value: spotOre })}
+        paidLabel={t('realPrice.paidLabel')}
+        paidValue={t('realPrice.ore', { value: paidOre })}
+        spotShare={spotOre / paidOre}
+        accessibilityLabel={t('realPrice.a11y', { spot: spotOre, paid: paidOre })}
+      />
+      <Text style={styles.exampleFootnote}>{t('intro.breakdownFootnote', { grid: Math.round(EXAMPLE_GRID_FEE_SEK * 100) })}</Text>
     </View>
   );
 }
@@ -216,12 +213,6 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 14,
   },
-  visualCaption: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
-  stackedBar: { flexDirection: 'row', height: 28, borderRadius: theme.radius.sm, overflow: 'hidden', gap: 2 },
-  legend: { gap: 8 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
-  legendText: { fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.textPrimary },
   compareRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   compareIcon: {
     width: 44,
