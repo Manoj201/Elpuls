@@ -7,7 +7,7 @@
   "hero": {
     "titlePre": "Vet när elen är",
     "titleHighlight": "billig",
-    "subtitle": "Elpuls visar Nord Pool-spotpriser i realtid, förklarar varför de ändras med hjälp av väderdata, och säger till när du ska köra diskmaskinen, ladda bilen eller lagra lite värme. Ingen hårdvara, inget byte av elbolag.",
+    "subtitle": "Elpuls visar vad elen faktiskt kostar dig, inte bara spotpriset. Appen förklarar varför priserna ändras med hjälp av väderdata och säger till när du ska köra diskmaskinen, ladda bilen eller värma huset. Ingen hårdvara, inget byte av elbolag.",
     "ctaPrimary": "Se hur det fungerar",
     "ctaSecondary": "Elpuls Pro"
   },
@@ -34,8 +34,8 @@
     "subtitle": "Alla andra prisappar visar en siffra. Elpuls gör den till pengar sparade.",
     "items": [
       {
-        "title": "Spara riktiga pengar",
-        "body": "Se den exakta kostnaden innan du kör något — inte bara ett vagt tips om att \"använda el utanför toppen\"."
+        "title": "Se vad du faktiskt betalar",
+        "body": "Spotpriset i nyheterna är bara en del av elräkningen. Skanna dina fakturor så lägger Elpuls till nätavgift, elbolagets påslag, energiskatt och moms, och du ser ditt riktiga pris per kWh."
       },
       {
         "title": "Ingen hårdvara, inget byte",
@@ -57,7 +57,7 @@
     "items": [
       {
         "title": "Livepriser",
-        "body": "Dagens och morgondagens priser för ditt elområde (SE1–SE4), direkt från Nord Pool, med den billigaste och dyraste timmen markerad."
+        "body": "Dagens och morgondagens priser för ditt elområde (SE1–SE4) från Nord Pool, per timme eller per kvart, med dygnets billiga och dyra delar markerade."
       },
       {
         "title": "AI-prisförklaring",
@@ -77,10 +77,11 @@
     "heading": "Elpuls Pro",
     "intro": "För hushåll som vill spara aktivt, inte bara kasta ett öga på en siffra.",
     "list": [
+      "En notis i rätt stund: när det är bra läge att starta tvätten, ladda bilen eller värma huset",
       "AI-prisförklaring, varje dag",
-      "Solbonus-timmar för dina egna paneler",
-      "Apparatrekommendationer för allt du äger",
-      "Värmeplan — när du ska lagra värme, när du kan låta den sjunka",
+      "Bästa soltimmarna för dina egna paneler",
+      "Apparattips för allt du äger",
+      "Värmeplan: när du ska värma upp och när huset kan svalna lite",
       "Månatlig kostnadsspecifikation och elområdesjämförelse"
     ],
     "priceUnit": "/ månad",
@@ -99,7 +100,7 @@
   },
   "privacy": {
     "title": "Elpuls integritetspolicy",
-    "updated": "Senast uppdaterad: 2026-11-12",
+    "updated": "Senast uppdaterad: 2026-11-15",
     "overview": {
       "heading": "Översikt",
       "p1": "Elpuls (\"Elpuls\", \"vi\", \"oss\") är en mobilapp för svenska hushåll som visar elpriser, förklarar varför de ändras med hjälp av väderdata, och föreslår när du ska använda el. Elpuls styr eller byter aldrig ditt elavtal, och ansluter eller styr aldrig någon smart hemenhet — alla råd är informativa och du agerar själv på dem manuellt.",
@@ -124,12 +125,12 @@
           "Nej"
         ],
         [
-          "Elområde, uppvärmningstyp, elbil/solceller-flaggor, nätavgiftssiffror",
-          "Onboarding eller Inställningar",
+          "Elområde, uppvärmningstyp, elbil/solceller, nätavgift, elbolagets påslag, fasta månadsavgifter samt namnen på ditt elbolag och nätbolag",
+          "Onboarding, Inställningar eller när du skannar en faktura",
           "Nej, men behövs för personliga råd"
         ],
         [
-          "Uppskattad månadsförbrukning, prisvarningsgränser, språk",
+          "Uppskattad månadsförbrukning, prisvarningsgränser, notisinställningar (vilka tips, tysta timmar, hur många per dag, avstängda apparater), vilka vanliga apparater du har, språk",
           "Inställningar, valfritt",
           "Nej"
         ],
@@ -155,7 +156,7 @@
       "heading": "Hur vi använder dina uppgifter",
       "items": [
         "Anpassar prisförklaringen, solbonus-timmar, värmeplanen, vädertips och apparatrekommendationer till ditt elområde och din hemprofil",
-        "Skickar de pushnotiser du har valt (morgondagens priser publicerade, dina prisvarningsgränser, daglig briefing, påminnelser om apparatfönster)",
+        "Skickar de pushnotiser du har valt: morgondagens priser publicerade, dina prisvarningar, den dagliga briefingen och, för Pro, tips när det är bra läge att köra en apparat, när elen är billig just nu eller när du ska värma i förväg. Pro-tips skickas bara medan prenumerationen är aktiv och följer dina notisinställningar",
         "Läser en apparat- eller elräkningsbild du laddar upp en gång, för att fylla i ett värde du bekräftar eller redigerar — sparas aldrig automatiskt",
         "Hanterar din Pro-prenumeration och gratis provperiod",
         "Felsöker buggar och håller appen igång tillförlitligt"
@@ -195,8 +196,7 @@
           "Inget personligt — Elpuls läser bara deras publika pris- och väderdata",
           "Driver pris- och väderfunktionerna för alla"
         ]
-      ],
-      "note": "Bekräfta varje leverantörs faktiska personuppgiftsbiträdesavtal innan den här policyn publiceras."
+      ]
     },
     "retention": {
       "heading": "Lagring av uppgifter",

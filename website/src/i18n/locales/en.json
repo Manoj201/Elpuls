@@ -7,7 +7,7 @@
   "hero": {
     "titlePre": "Know when your electricity is",
     "titleHighlight": "cheap",
-    "subtitle": "Elpuls shows live Swedish spot prices, explains why they move using weather data, and tells you when to run the dishwasher, charge the car, or bank some heat. No hardware, no provider switching.",
+    "subtitle": "Elpuls shows what your electricity actually costs, not just the spot price. It explains why prices move using weather data and tells you when to run the dishwasher, charge the car or heat the house. No hardware, no switching provider.",
     "ctaPrimary": "See how it works",
     "ctaSecondary": "Elpuls Pro"
   },
@@ -34,8 +34,8 @@
     "subtitle": "Every other price app shows a number. Elpuls turns it into money saved.",
     "items": [
       {
-        "title": "Save real money",
-        "body": "See the exact cost before you run anything — not just a vague tip to \"use power off-peak.\""
+        "title": "See what you actually pay",
+        "body": "The spot price in the news is only part of your bill. Scan your bills and Elpuls adds your grid fee, your electricity company's markup, energy tax and VAT, so you see your real price per kWh."
       },
       {
         "title": "No hardware, no switching",
@@ -57,7 +57,7 @@
     "items": [
       {
         "title": "Live spot prices",
-        "body": "Today and tomorrow's prices for your zone (SE1–SE4), straight from Nord Pool, with the cheapest and priciest hour highlighted."
+        "body": "Today's and tomorrow's prices for your zone (SE1–SE4) from Nord Pool, per hour or per 15 minutes, with the cheap and expensive parts of the day marked."
       },
       {
         "title": "AI price explainer",
@@ -77,10 +77,11 @@
     "heading": "Elpuls Pro",
     "intro": "For households that want to actively save, not just glance at a number.",
     "list": [
+      "A push at the right moment: when it's a good time to start the washer, charge the car or heat the house",
       "AI price explainer, every day",
-      "Solar bonus hours for your own panels",
-      "Appliance recommendations for everything you own",
-      "Heating plan — when to bank heat, when to let it drift",
+      "Best solar hours for your own panels",
+      "Appliance tips for everything you own",
+      "Heating plan: when to heat up and when to let the house drift",
       "Monthly cost breakdown and zone comparison"
     ],
     "priceUnit": "/ month",
@@ -99,7 +100,7 @@
   },
   "privacy": {
     "title": "Elpuls Privacy Policy",
-    "updated": "Last updated: 2026-11-12",
+    "updated": "Last updated: 2026-11-15",
     "overview": {
       "heading": "Overview",
       "p1": "Elpuls (\"Elpuls\", \"we\", \"us\") is a mobile app for Swedish households that shows electricity spot prices, explains why they move using weather data, and suggests when to use electricity. Elpuls never controls or switches your electricity contract, and it never connects to or controls any smart-home device — all advice is informational, acted on manually by you.",
@@ -124,12 +125,12 @@
           "No"
         ],
         [
-          "Price zone, heating type, EV/solar flags, grid fee figures",
-          "Onboarding or Settings",
+          "Price zone, heating type, EV/solar flags, grid fee, your electricity company's markup, fixed monthly fees, and the names of your electricity and grid companies",
+          "Onboarding, Settings, or when you scan a bill",
           "No, but needed for personalized advice"
         ],
         [
-          "Estimated monthly usage, price-alert thresholds, language",
+          "Estimated monthly usage, price-alert thresholds, notification settings (which tips, quiet hours, how many per day, muted appliances), which standard appliances you have, language",
           "Settings, optional",
           "No"
         ],
@@ -155,7 +156,7 @@
       "heading": "How We Use Your Data",
       "items": [
         "Personalize the price explainer, solar bonus hours, heating plan, weather-prep tips, and appliance cost recommendations to your zone and home profile",
-        "Send the push notifications you've opted into (tomorrow's prices published, your price-alert thresholds, daily briefing, appliance-window reminders)",
+        "Send the push notifications you've opted into: tomorrow's prices published, your price alerts, the daily briefing and, for Pro, tips when it's a good time to run an appliance, when power is cheap right now, or when to heat ahead. Pro tips are only sent while your subscription is active, and follow your notification settings",
         "Read an appliance or bill photo you upload once, to fill in a value for you to confirm or edit — never saved automatically",
         "Manage your Pro subscription and free trial status",
         "Diagnose bugs and keep the app running reliably"
@@ -195,8 +196,7 @@
           "Nothing personal — Elpuls only reads their public price and weather data",
           "Powers the price and weather features for everyone"
         ]
-      ],
-      "note": "Confirm each vendor's actual Data Processing Agreement before publishing this policy."
+      ]
     },
     "retention": {
       "heading": "Data Retention",

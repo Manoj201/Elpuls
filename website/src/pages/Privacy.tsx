@@ -80,7 +80,6 @@ export function Privacy() {
             </tbody>
           </table>
         </div>
-        <p className={styles.placeholder}>{t("privacy.thirdParties.note")}</p>
 
         <h2>{t("privacy.retention.heading")}</h2>
         <ul>
