@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
+  IconBellRinging,
   IconChartBar,
   IconFlame,
   IconListCheck,
@@ -30,6 +31,7 @@ const TERMS_URL = 'https://elpuls.ravenbees.com/terms';
 const PRIVACY_URL = 'https://elpuls.ravenbees.com/privacy';
 
 const FEATURES = [
+  { key: 'smartPushes', icon: IconBellRinging, ai: false },
   { key: 'explainer', icon: IconSparkles, ai: true },
   { key: 'heatingPlan', icon: IconFlame, ai: false },
   { key: 'recommendations', icon: IconListCheck, ai: false },

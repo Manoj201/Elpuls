@@ -7,6 +7,12 @@ import { File } from 'expo-file-system';
 import { IconArrowLeft, IconCamera, IconChevronRight, IconFileText } from '@tabler/icons-react-native';
 import { db } from '../lib/firebase';
 import { pickImage, scanElectricityBill, type BillScanResult } from '../lib/scan';
+import type { BillDetails } from '../stores/useUserStore';
+import { usePriceStore } from '../stores/usePriceStore';
+import { useCountryStore } from '../stores/useCountryStore';
+import { findCurrentPrice } from '../lib/priceUtils';
+import { calculateLandedPrice } from '../lib/landedCost';
+import { RealPriceBars } from '../components/RealPriceBars';
 import { useUserStore } from '../stores/useUserStore';
 import { theme } from '../theme';
 import { AiNote } from '../components/AiNote';
@@ -16,7 +22,7 @@ import { LabeledInput } from '../components/LabeledInput';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
 
-type Step = 'capture' | 'scanning' | 'confirm' | 'failed';
+type Step = 'capture' | 'scanning' | 'confirm' | 'failed' | 'result';
 
 interface BillScanScreenProps {
   uid: string;
@@ -32,31 +38,45 @@ function parseOre(value: string): number | null {
 }
 
 function formatOre(sekPerKwh: number | null): string {
-  return sekPerKwh === null ? '' : String(Number((sekPerKwh * 100).toFixed(2))).replace('.', ',');
+  return sekPerKwh === null ? '' : formatInput(sekPerKwh * 100);
+}
+
+function formatInput(value: number | null): string {
+  return value === null ? '' : String(Number(value.toFixed(2))).replace('.', ',');
 }
 
 export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScreenProps) {
   const { t } = useTranslation();
-  const gridFeeFixedSekPerMonth = useUserStore((s) => s.gridFeeFixedSekPerMonth);
-  const currentGridFee = useUserStore((s) => s.gridFeeVariableSekPerKwh);
-  const currentMarkup = useUserStore((s) => s.retailerMarkupSekPerKwh);
-  const setGridFee = useUserStore((s) => s.setGridFee);
-  const setRetailerMarkup = useUserStore((s) => s.setRetailerMarkup);
+  const user = useUserStore();
+  const setBillDetails = useUserStore((s) => s.setBillDetails);
 
   const [step, setStep] = useState<Step>(startManual ? 'confirm' : 'capture');
   const [result, setResult] = useState<BillScanResult | null>(null);
-  const [gridFeeInput, setGridFeeInput] = useState(startManual ? formatOre(currentGridFee) : '');
-  const [retailerMarkupInput, setRetailerMarkupInput] = useState(startManual ? formatOre(currentMarkup) : '');
+  const [gridFeeInput, setGridFeeInput] = useState(startManual ? formatOre(user.gridFeeVariableSekPerKwh) : '');
+  const [gridFixedInput, setGridFixedInput] = useState(startManual ? formatInput(user.gridFeeFixedSekPerMonth) : '');
+  const [retailerMarkupInput, setRetailerMarkupInput] = useState(startManual ? formatOre(user.retailerMarkupSekPerKwh) : '');
+  const [retailerFixedInput, setRetailerFixedInput] = useState(startManual ? formatInput(user.retailerFixedSekPerMonth) : '');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [realPrice, setRealPrice] = useState<{ spotOre: number; paidOre: number; hasMarkup: boolean } | null>(null);
+
+  // Which side(s) of the bill the confirm step shows and saves. Typing it
+  // in yourself shows both; a scan shows only what that bill covers, so a
+  // grid bill never wipes the markup from an earlier supplier bill.
+  const showGrid = result === null || result.billType !== 'retailer';
+  const showRetailer = result === null || result.billType !== 'grid';
 
   async function runScan(fileBase64: string, mimeType: string) {
     setStep('scanning');
     try {
       const scanResult = await scanElectricityBill(fileBase64, mimeType);
-      setResult(scanResult);
-      setGridFeeInput(scanResult.gridFeeVariableOrePerKwh !== null ? String(scanResult.gridFeeVariableOrePerKwh).replace('.', ',') : '');
-      setRetailerMarkupInput(scanResult.retailerMarkupOrePerKwh !== null ? String(scanResult.retailerMarkupOrePerKwh).replace('.', ',') : '');
+      // Older servers don't send billType; treat that as a combined bill.
+      const normalized: BillScanResult = { ...scanResult, billType: scanResult.billType ?? 'combined' };
+      setResult(normalized);
+      setGridFeeInput(formatInput(normalized.gridFeeVariableOrePerKwh));
+      setGridFixedInput(formatInput(normalized.gridFeeFixedSekPerMonth ?? null));
+      setRetailerMarkupInput(formatInput(normalized.retailerMarkupOrePerKwh));
+      setRetailerFixedInput(formatInput(normalized.retailerFixedSekPerMonth ?? null));
       setStep('confirm');
     } catch (err) {
       console.log('Bill scan failed:', err);
@@ -80,34 +100,71 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
 
   function handleEnterManually() {
     setResult(null);
-    setGridFeeInput(formatOre(currentGridFee));
-    setRetailerMarkupInput(formatOre(currentMarkup));
+    setGridFeeInput(formatOre(user.gridFeeVariableSekPerKwh));
+    setGridFixedInput(formatInput(user.gridFeeFixedSekPerMonth));
+    setRetailerMarkupInput(formatOre(user.retailerMarkupSekPerKwh));
+    setRetailerFixedInput(formatInput(user.retailerFixedSekPerMonth));
     setStep('confirm');
   }
 
   async function handleSave() {
-    const gridFeeOre = parseOre(gridFeeInput);
-    const retailerMarkupOre = parseOre(retailerMarkupInput);
-    const gridFeeVariableSekPerKwh = gridFeeOre === null ? null : gridFeeOre / 100;
-    const retailerMarkupSekPerKwh = retailerMarkupOre === null ? null : retailerMarkupOre / 100;
+    const changes: Partial<BillDetails> = {};
+    if (showGrid) {
+      const ore = parseOre(gridFeeInput);
+      changes.gridFeeVariableSekPerKwh = ore === null ? null : ore / 100;
+      changes.gridFeeFixedSekPerMonth = parseOre(gridFixedInput);
+      if (result?.gridCompanyName) changes.gridCompanyName = result.gridCompanyName;
+    }
+    if (showRetailer) {
+      const ore = parseOre(retailerMarkupInput);
+      changes.retailerMarkupSekPerKwh = ore === null ? null : ore / 100;
+      changes.retailerFixedSekPerMonth = parseOre(retailerFixedInput);
+      if (result?.retailerName) changes.retailerName = result.retailerName;
+    }
 
     setSaving(true);
     setSaveError(null);
     try {
-      await setDoc(
-        doc(db, 'users', uid),
-        { gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh, updatedAt: serverTimestamp() },
-        { merge: true },
-      );
-      setGridFee(gridFeeFixedSekPerMonth, gridFeeVariableSekPerKwh);
-      setRetailerMarkup(retailerMarkupSekPerKwh);
-      onBack();
+      await setDoc(doc(db, 'users', uid), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
+      setBillDetails(changes);
+      const shown = await currentRealPrice();
+      if (shown) {
+        setRealPrice(shown);
+        setStep('result');
+      } else {
+        onBack();
+      }
     } catch (err) {
       console.log('Saving bill values failed:', err);
       setSaveError(t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
+  }
+
+  /**
+   * The user's own price right now vs. the spot price, for the result step
+   * after saving. Null when the grid fee is still missing or no price is
+   * loaded (then the screen just closes).
+   */
+  async function currentRealPrice() {
+    const { gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh } = useUserStore.getState();
+    if (gridFeeVariableSekPerKwh === null) return null;
+    try {
+      if (usePriceStore.getState().todayPrices.length === 0) {
+        const zone = useUserStore.getState().zone ?? useCountryStore.getState().zone;
+        await usePriceStore.getState().fetchPrices(zone);
+      }
+    } catch {
+      return null;
+    }
+    const spot = findCurrentPrice(usePriceStore.getState().todayPrices, new Date());
+    if (!spot) return null;
+    return {
+      spotOre: spot.price * 100,
+      paidOre: calculateLandedPrice(spot.price, gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh) * 100,
+      hasMarkup: retailerMarkupSekPerKwh !== null,
+    };
   }
 
   function BackButton({ onPress }: { onPress: () => void }) {
@@ -125,6 +182,41 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
         <ActivityIndicator size="large" color={theme.colors.accentAmber} />
         <Text style={styles.scanningLabel}>{t('billScan.scanning')}</Text>
       </View>
+    );
+  }
+
+  if (step === 'result' && realPrice) {
+    const spot = Math.round(realPrice.spotOre);
+    const paid = Math.round(realPrice.paidOre);
+    return (
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title} accessibilityRole="header">
+          {t('billScan.resultTitle')}
+        </Text>
+        <Text style={styles.subtitle}>{t('billScan.resultSubtitle')}</Text>
+        <Card style={styles.resultCard}>
+          <RealPriceBars
+            spotLabel={t('realPrice.spotLabel')}
+            spotValue={t('realPrice.ore', { value: spot })}
+            paidLabel={t('realPrice.paidLabelYou')}
+            paidValue={t('realPrice.ore', { value: paid })}
+            spotShare={paid > 0 ? spot / paid : 1}
+            accessibilityLabel={t('realPrice.a11y', { spot, paid })}
+          />
+        </Card>
+        <Text style={styles.resultNote}>
+          {t(realPrice.hasMarkup ? 'billScan.resultDifference' : 'billScan.resultDifferenceNoMarkup')}
+        </Text>
+        <View style={styles.saveButtonWrapper}>
+          <PrimaryButton
+            label={t('billScan.resultDone')}
+            onPress={() => {
+              useUserStore.getState().setPriceView('landed');
+              onBack();
+            }}
+          />
+        </View>
+      </ScrollView>
     );
   }
 
@@ -148,24 +240,67 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
           </View>
         )}
 
-        <LabeledInput
-          label={t('fields.gridFeeVariableLabel')}
-          unit={t('fields.unitOrePerKwh')}
-          helper={t('billScan.gridFeeHelper')}
-          placeholder={t('fields.exampleGridFeeVariable')}
-          keyboardType="decimal-pad"
-          value={gridFeeInput}
-          onChangeText={setGridFeeInput}
-        />
-        <LabeledInput
-          label={t('billScan.retailerMarkupField')}
-          unit={t('fields.unitOrePerKwh')}
-          helper={t('billScan.retailerMarkupHelper')}
-          placeholder={t('billScan.retailerMarkupPlaceholder')}
-          keyboardType="decimal-pad"
-          value={retailerMarkupInput}
-          onChangeText={setRetailerMarkupInput}
-        />
+        {!isManual && (
+          <Text style={styles.billTypeNote}>{t(`billScan.billType.${result.billType}`)}</Text>
+        )}
+
+        {showRetailer && (
+          <View style={styles.group}>
+            <Text style={styles.groupTitle} accessibilityRole="header">
+              {t('billScan.retailerGroup')}
+              {result?.retailerName ? <Text style={styles.groupCompany}>{` · ${result.retailerName}`}</Text> : null}
+            </Text>
+            <LabeledInput
+              label={t('billScan.retailerMarkupField')}
+              unit={t('fields.unitOrePerKwh')}
+              helper={t('billScan.retailerMarkupHelper')}
+              placeholder={t('billScan.retailerMarkupPlaceholder')}
+              keyboardType="decimal-pad"
+              value={retailerMarkupInput}
+              onChangeText={setRetailerMarkupInput}
+            />
+            <LabeledInput
+              label={t('billScan.retailerFixedField')}
+              unit={t('fields.unitKrPerMonth')}
+              helper={t('billScan.retailerFixedHelper')}
+              placeholder={t('billScan.retailerFixedPlaceholder')}
+              keyboardType="decimal-pad"
+              value={retailerFixedInput}
+              onChangeText={setRetailerFixedInput}
+            />
+          </View>
+        )}
+
+        {showGrid && (
+          <View style={styles.group}>
+            <Text style={styles.groupTitle} accessibilityRole="header">
+              {t('billScan.gridGroup')}
+              {result?.gridCompanyName ? <Text style={styles.groupCompany}>{` · ${result.gridCompanyName}`}</Text> : null}
+            </Text>
+            <LabeledInput
+              label={t('fields.gridFeeVariableLabel')}
+              unit={t('fields.unitOrePerKwh')}
+              helper={t('billScan.gridFeeHelper')}
+              placeholder={t('fields.exampleGridFeeVariable')}
+              keyboardType="decimal-pad"
+              value={gridFeeInput}
+              onChangeText={setGridFeeInput}
+            />
+            <LabeledInput
+              label={t('fields.gridFeeFixedLabel')}
+              unit={t('fields.unitKrPerMonth')}
+              helper={t('billScan.gridFixedHelper')}
+              placeholder={t('fields.exampleGridFeeFixed')}
+              keyboardType="decimal-pad"
+              value={gridFixedInput}
+              onChangeText={setGridFixedInput}
+            />
+          </View>
+        )}
+
+        {!isManual && result.billType !== 'combined' && (
+          <Text style={styles.otherBillNote}>{t(`billScan.otherBill.${result.billType}`)}</Text>
+        )}
 
         {saveError && <Text style={styles.error}>{saveError}</Text>}
         <View style={styles.saveButtonWrapper}>
@@ -227,7 +362,14 @@ const styles = StyleSheet.create({
   backText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textSecondary },
   title: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
   subtitle: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.textSecondary, marginTop: 6, marginBottom: 24 },
-  scanMeta: { marginBottom: 20 },
+  scanMeta: { marginBottom: 16 },
+  resultCard: { marginBottom: 16 },
+  resultNote: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.textSecondary },
+  billTypeNote: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginBottom: 16 },
+  group: { marginBottom: 8 },
+  groupTitle: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.lg, color: theme.colors.textPrimary, marginBottom: 12 },
+  groupCompany: { fontFamily: theme.typography.body, color: theme.colors.textSecondary },
+  otherBillNote: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginBottom: 8 },
   captureCard: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12, minHeight: 56 },
   captureLabel: { flex: 1, fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   privacyNote: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 4 },

@@ -4,104 +4,112 @@ import { useTranslation } from 'react-i18next';
 import { useCountryStore } from '../stores/useCountryStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { groupPricesByHour } from '../lib/priceUtils';
-import { summarizeTimeBlocks, type TimeBlockSummary } from '../lib/timeBlocks';
-import { formatOre } from '../lib/formatNumber';
+import { summarizePricePeriods } from '../lib/pricePeriods';
+import { BAND_COLOR, type PriceBand } from '../lib/priceBands';
+import { formatClock, formatOre } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
 import { theme } from '../theme';
 import { Card } from '../components/Card';
+import { PriceChart } from '../components/PriceChart';
 import { Chip, type ChipVariant } from '../components/Chip';
 
-const BLOCK_VARIANT: Record<TimeBlockSummary['label'], ChipVariant> = {
+const BAND_VARIANT: Record<PriceBand, ChipVariant> = {
   cheap: 'teal',
   normal: 'neutral',
-  expensive: 'amber',
-  avoid: 'danger',
+  dear: 'amber',
+  peak: 'danger',
 };
 
-const BLOCK_INDICATOR_COLOR: Record<TimeBlockSummary['label'], string> = {
-  cheap: theme.colors.positiveTeal,
-  normal: theme.colors.textFaint,
-  expensive: theme.colors.accentAmber,
-  avoid: theme.colors.dangerEmber,
-};
+// Wide enough that the tags line up. A minimum, not a fixed width, so larger
+// text (the phone's text-size setting) grows the tag instead of breaking it.
+const BAND_TAG_WIDTH = 92;
 
-// Wide enough to fit the longest tag label ("Expensive") without wrapping.
-const BLOCK_TAG_WIDTH = 92;
+/** "HH:MM", but midnight at the end of a period reads 24:00. */
+function clockLabel(d: Date, isEnd: boolean): string {
+  if (isEnd && d.getHours() === 0 && d.getMinutes() === 0) return '24:00';
+  return formatClock(d);
+}
 
-// "Normal" doesn't get its own strong semantic color (unlike cheap/expensive/
-// avoid) — reusing the shared Chip's generic "neutral" variant here read as
-// washed-out/almost invisible against the card, so it gets its own
-// slightly-raised pill instead, just for this screen.
-//
-// Same minimum width on all four variants (incl. the non-Chip "normal" pill)
-// so the tags line up. It's a minimum, not a fixed width: with larger text
-// (bigger type scale or the phone's text-size setting) a fixed width made
-// "Expensive" break mid-word onto two lines.
-function BlockTag({ label }: { label: TimeBlockSummary['label'] }) {
+// "Normal" has no strong colour of its own, and the shared Chip's neutral
+// variant looked almost invisible on the card, so it gets a raised pill.
+function BandTag({ band }: { band: PriceBand }) {
   const { t } = useTranslation();
-  if (label === 'normal') {
+  if (band === 'normal') {
     return (
       <View style={styles.normalTag}>
         <Text style={styles.normalTagText} numberOfLines={1}>
-          {t('forecast.tag.normal')}
+          {t('chart.legend.normal')}
         </Text>
       </View>
     );
   }
-  return <Chip label={t(`forecast.tag.${label}`)} variant={BLOCK_VARIANT[label]} style={styles.blockTagChip} />;
+  return <Chip label={t(`chart.legend.${band}`)} variant={BAND_VARIANT[band]} style={styles.bandTagChip} />;
 }
 
 function DaySummary({
   title,
   hourlyPrices,
   language,
+  emptyText,
+  now,
 }: {
   title: string;
   hourlyPrices: ReturnType<typeof groupPricesByHour>;
   language: SupportedLanguage;
+  emptyText: string;
+  now: Date;
 }) {
   const { t } = useTranslation();
   const avgPrice = hourlyPrices.length > 0 ? hourlyPrices.reduce((s, p) => s + p.price, 0) / hourlyPrices.length : null;
-  const blocks = useMemo(() => summarizeTimeBlocks(hourlyPrices), [hourlyPrices]);
+  const periods = useMemo(() => summarizePricePeriods(hourlyPrices), [hourlyPrices]);
 
   return (
     <Card style={styles.dayCard}>
       <Text style={styles.dayTitle}>{title}</Text>
 
       {avgPrice === null ? (
-        <Text style={styles.empty}>{t('forecast.noPrices')}</Text>
+        <Text style={styles.empty}>{emptyText}</Text>
       ) : (
         <>
-          <Text style={styles.dayAverage}>{formatOre(avgPrice, language)}</Text>
-          <Text style={styles.dayAverageUnit}>
-            öre/kWh · {t('forecast.average')}
+          <Text style={styles.dayAverage}>
+            {formatOre(avgPrice, language)} <Text style={styles.dayAverageUnit}>{t('forecast.averageUnit')}</Text>
           </Text>
+          <Text style={styles.explain}>{t('forecast.periodsExplain')}</Text>
+
+          <View style={styles.periodList}>
+            {periods.map((period) => {
+              const from = clockLabel(period.start, false);
+              const to = clockLabel(period.end, true);
+              const isNow = now >= period.start && now < period.end;
+              const bandWord = t(`chart.legend.${period.band}`);
+              const price = formatOre(period.averagePrice, language);
+              return (
+                <View
+                  key={period.start.toISOString()}
+                  style={styles.periodRow}
+                  accessible
+                  accessibilityLabel={t('forecast.periodA11y', { from, to, band: bandWord, price })}
+                >
+                  <View style={[styles.periodIndicator, { backgroundColor: BAND_COLOR[period.band] }]} />
+                  <View style={styles.periodText}>
+                    <Text style={styles.periodTime}>
+                      {from}–{to}
+                      {isNow ? <Text style={styles.nowText}>{`  ${t('forecast.now')}`}</Text> : null}
+                    </Text>
+                    <Text style={styles.periodHint}>{t(`forecast.hint.${period.band}`)}</Text>
+                  </View>
+                  <View style={styles.periodValue}>
+                    <Text style={styles.periodPrice}>
+                      {price} <Text style={styles.periodPriceUnit}>öre</Text>
+                    </Text>
+                    <BandTag band={period.band} />
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </>
       )}
-
-      <View style={[styles.blockList, avgPrice === null && styles.blockListPending]}>
-        {blocks.map((block) => (
-          <View key={block.id} style={styles.blockRow}>
-            <View style={[styles.blockIndicator, { backgroundColor: BLOCK_INDICATOR_COLOR[block.label] }]} />
-            <View style={styles.blockTimeLabel}>
-              <Text style={styles.blockTime}>
-                {String(block.startHour).padStart(2, '0')}:00–{String(block.endHour).padStart(2, '0')}:00
-              </Text>
-              <Text style={styles.blockLabel}>{t(`forecast.blocks.${block.id}`)}</Text>
-            </View>
-            {block.averagePrice !== null ? (
-              <View style={styles.blockValue}>
-                <Text style={styles.blockPrice}>
-                  {formatOre(block.averagePrice, language)} <Text style={styles.blockPriceUnit}>öre</Text>
-                </Text>
-                <BlockTag label={block.label} />
-              </View>
-            ) : (
-              <Text style={styles.blockPriceEmpty}>—</Text>
-            )}
-          </View>
-        ))}
-      </View>
     </Card>
   );
 }
@@ -116,6 +124,7 @@ export function ForecastScreen() {
     fetchPrices(zone);
   }, [fetchPrices, zone]);
 
+  const now = new Date();
   const todayHourly = useMemo(() => groupPricesByHour(todayPrices), [todayPrices]);
   const tomorrowHourly = useMemo(() => groupPricesByHour(tomorrowPrices), [tomorrowPrices]);
 
@@ -141,8 +150,26 @@ export function ForecastScreen() {
         </Card>
       )}
 
-      <DaySummary title={t('forecast.today')} hourlyPrices={todayHourly} language={language} />
-      <DaySummary title={t('forecast.tomorrow')} hourlyPrices={tomorrowHourly} language={language} />
+      {todayPrices.length > 0 && (
+        <Card style={styles.chartCard}>
+          <PriceChart slots={[...todayPrices, ...tomorrowPrices]} now={now} />
+        </Card>
+      )}
+
+      <DaySummary
+        title={t('forecast.today')}
+        hourlyPrices={todayHourly}
+        language={language}
+        emptyText={t('forecast.noPrices')}
+        now={now}
+      />
+      <DaySummary
+        title={t('forecast.tomorrow')}
+        hourlyPrices={tomorrowHourly}
+        language={language}
+        emptyText={t('forecast.tomorrowPending')}
+        now={now}
+      />
     </ScrollView>
   );
 }
@@ -155,32 +182,42 @@ const styles = StyleSheet.create({
   diffLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, flex: 1 },
   diffValue: { fontFamily: theme.typography.display, fontSize: theme.type.lg },
   dayCard: { marginBottom: 16 },
+  chartCard: { marginBottom: 16, overflow: 'hidden' },
   dayTitle: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginBottom: 6 },
   dayAverage: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
-  dayAverageUnit: {
-    fontFamily: theme.typography.bodyMedium,
-    fontSize: theme.type.xs,
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 2,
+  dayAverageUnit: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  explain: {
+    fontFamily: theme.typography.body,
+    fontSize: theme.type.sm,
+    lineHeight: 20,
+    color: theme.colors.textSecondary,
+    marginTop: 6,
     marginBottom: 18,
   },
-  empty: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted, marginBottom: 14 },
-  blockList: { gap: 14 },
-  blockListPending: { opacity: 0.45 },
-  blockRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  blockIndicator: { width: 4, alignSelf: 'stretch', borderRadius: 2, minHeight: 32 },
-  blockTimeLabel: { flex: 1, gap: 2 },
-  blockTime: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
-  blockLabel: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textMuted },
-  // Never squeezed: the time/label column on the left wraps instead.
-  blockValue: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
-  blockPrice: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
-  blockPriceUnit: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textMuted },
-  blockPriceEmpty: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textFaint },
+  empty: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  periodList: { gap: 14 },
+  periodRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  periodIndicator: { width: 4, alignSelf: 'stretch', borderRadius: 2, minHeight: 32 },
+  periodText: { flex: 1, gap: 2 },
+  periodTime: {
+    fontFamily: theme.typography.bodyMedium,
+    fontSize: theme.type.md,
+    color: theme.colors.textPrimary,
+    fontVariant: ['tabular-nums'],
+  },
+  nowText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm, color: theme.colors.accentPurple },
+  periodHint: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  // Never squeezed: the text column on the left wraps instead.
+  periodValue: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+  periodPrice: {
+    fontFamily: theme.typography.displayMedium,
+    fontSize: theme.type.sm,
+    color: theme.colors.textPrimary,
+    fontVariant: ['tabular-nums'],
+  },
+  periodPriceUnit: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary },
   normalTag: {
-    minWidth: BLOCK_TAG_WIDTH,
+    minWidth: BAND_TAG_WIDTH,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -190,5 +227,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   normalTagText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
-  blockTagChip: { minWidth: BLOCK_TAG_WIDTH, justifyContent: 'center', alignSelf: 'flex-end' },
+  bandTagChip: { minWidth: BAND_TAG_WIDTH, justifyContent: 'center', alignSelf: 'flex-end' },
 });

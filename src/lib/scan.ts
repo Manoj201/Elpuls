@@ -9,9 +9,17 @@ export interface ApplianceScanResult {
   source: 'label' | 'estimate';
 }
 
+export type BillType = 'retailer' | 'grid' | 'combined';
+
+/** Mirrors functions/src/scanElectricityBill.ts. Per-kWh fees excl. VAT; fixed fees kr/month incl. VAT. */
 export interface BillScanResult {
+  billType: BillType;
+  retailerName: string | null;
+  gridCompanyName: string | null;
   gridFeeVariableOrePerKwh: number | null;
+  gridFeeFixedSekPerMonth: number | null;
   retailerMarkupOrePerKwh: number | null;
+  retailerFixedSekPerMonth: number | null;
   confidence: 'high' | 'low';
 }
 

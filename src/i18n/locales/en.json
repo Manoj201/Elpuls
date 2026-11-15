@@ -25,19 +25,17 @@
     "todayLabel": "Today",
     "country": "Sweden",
     "noPricesYet": "Today's prices aren't out yet.",
-    "belowAverage": "Cheaper than usual today",
-    "aboveAverage": "More expensive than usual today",
-    "aroundAverage": "About normal for today",
+    "belowAverage": "Cheaper than today's average right now",
+    "aboveAverage": "More expensive than today's average right now",
+    "aroundAverage": "About today's average right now",
     "normalRisk": "Prices look normal today",
     "higherRisk": "Prices may run high today",
     "elevatedRisk": "Prices may run a bit high today",
     "explainerTitle": "Why prices look like this today",
     "hourlyTitle": "Price per hour today",
-    "priceUnitNow": "öre per kWh right now",
+    "priceUnitNow": "öre/kWh",
     "solarBonusHours": "Best hours for your solar panels",
     "noBonusHours": "No especially good solar hours today.",
-    "solarBonusSleepingCaption": "No especially good solar hours today.",
-    "solarBonusActiveCaption": "{{count}} good solar hours today.",
     "priceToggleSpot": "Spot price",
     "priceToggleLanded": "What you pay",
     "landedEstimateCaption": "Includes grid fee, tax and VAT. Add your company's markup from the bill for the exact price.",
@@ -64,7 +62,7 @@
     "landedPromptScan": "Scan my bill",
     "landedPromptManual": "Type it in myself",
     "landedExactCaption": "Includes grid fee, your company's markup, tax and VAT.",
-    "priceUnitLanded": "öre per kWh, what you pay now",
+    "priceUnitLanded": "öre/kWh, what you pay",
     "priceNowA11y": "{{price}} öre per kilowatt hour right now",
     "atHour": "at {{hour}}:00",
     "riskFactors": {
@@ -81,7 +79,11 @@
     "proTipsLockedText": "When to heat, when to wash, and what tomorrow brings.",
     "proTipsSampleHeating": "Heat the house 06:00 to 09:00 and let it cool a little 17:00 to 20:00.",
     "proTipsSampleWeather": "Cold tomorrow morning. Preheat the car while it is plugged in.",
-    "proTipsSampleSolar": "3 hours today when your panels pay the most."
+    "proTipsSampleSolar": "3 hours today when your panels pay the most.",
+    "chartTitleTwoDays": "Price today and tomorrow",
+    "validUntil": "until {{time}}",
+    "nextCheapest": "Cheapest next",
+    "nextDearest": "Most expensive next"
   },
   "weatherPrep": {
     "title": "Weather tip",
@@ -205,24 +207,22 @@
   },
   "forecast": {
     "title": "Forecast",
-    "subtitle": "Today vs. tomorrow, zone {{zone}}",
-    "noPrices": "No prices published yet.",
-    "average": "avg",
+    "subtitle": "Today and tomorrow in zone {{zone}}",
+    "noPrices": "Today's prices aren't in yet.",
     "today": "Today",
     "tomorrow": "Tomorrow",
-    "tomorrowCheaper": "Tomorrow is cheaper than today",
-    "tomorrowPricier": "Tomorrow is pricier than today",
-    "blocks": {
-      "night": "Night",
-      "morningPeak": "Morning peak",
-      "daytime": "Daytime",
-      "eveningPeak": "Evening peak"
-    },
-    "tag": {
-      "cheap": "Cheap",
-      "normal": "Normal",
-      "expensive": "Expensive",
-      "avoid": "Avoid"
+    "tomorrowCheaper": "Power will be cheaper tomorrow than today",
+    "tomorrowPricier": "Power will cost more tomorrow than today",
+    "averageUnit": "öre/kWh on average",
+    "periodsExplain": "Each row is a part of the day when the price stays at about the same level. The colour shows whether it's cheap or expensive compared with today's average.",
+    "tomorrowPending": "Tomorrow's prices usually come in shortly after 13:00.",
+    "now": "Now",
+    "periodA11y": "{{from}} to {{to}}, {{band}}, {{price}} öre on average",
+    "hint": {
+      "cheap": "Good time for laundry and dishes",
+      "normal": "Fine if it can't wait",
+      "dear": "Hold off on what can wait",
+      "peak": "Skip laundry and dishes if you can"
     }
   },
   "stats": {
@@ -242,13 +242,9 @@
     "contractHealthBasis": "Based on your reported {{kwh}} kWh/month and your {{markup}} öre/kWh markup.",
     "contractHealthNeedsBillScan": "Scan your electricity bill in Settings to see your contract health check.",
     "contractHealthNeedsUsage": "Add your estimated monthly usage in Settings to see your contract health check.",
-    "whatIfTitle": "What-if simulator",
-    "whatIfUsageLabel": "Usage level",
-    "whatIfShiftLabel": "Shift to cheap hours",
-    "whatIfSavingsResult": "≈ {{amount}} {{currency}} less than today's baseline.",
-    "whatIfExtraResult": "≈ {{amount}} {{currency}} more than today's baseline.",
-    "whatIfBasis": "Based on {{kwh}} kWh/month.",
-    "whatIfGenericEstimateHint": "Generic estimate — add your usage in Settings for a personalized number.",
+    "whatIfTitle": "Work out your bill",
+    "whatIfUsageLabel": "How much electricity you use",
+    "whatIfShiftLabel": "How much of it you move to today's cheapest hour",
     "zoneComparison": "Swedish price zones",
     "consumptionTrend": "Consumption history",
     "comingSoonTitle": "Coming soon",
@@ -259,7 +255,20 @@
       "energyTax": "36,0 öre",
       "vat": "41,5 öre",
       "total": "207,6 öre/kWh"
-    }
+    },
+    "whatIfFixedFees": "Includes fixed fees of {{amount}} kr a month.",
+    "whatIfIntro": "See what your electricity bill could be if you change your habits.",
+    "whatIfResultLabel": "Your electricity bill, roughly",
+    "kr": "{{amount}} kr",
+    "perMonth": "a month",
+    "whatIfPickHint": "Pick an option below to see what it means for your bill.",
+    "whatIfSave": "About {{amount}} kr less a month",
+    "whatIfMore": "About {{amount}} kr more a month",
+    "whatIfAsNow": "As now",
+    "whatIfNone": "None",
+    "pct": "{{value}}%",
+    "whatIfBasisOwn": "Based on your usage, {{kwh}} kWh a month, and today's prices.",
+    "whatIfBasisGeneric": "Based on {{kwh}} kWh a month, a typical figure for homes with your heating, and today's prices. Add your own usage in Settings for a more reliable number."
   },
   "settings": {
     "title": "Settings",
@@ -283,7 +292,7 @@
     "priceAlertLowTitle": "Tip me about negative or very low prices",
     "priceAlertLowSubtitle": "Get a push when any hour tomorrow is at or below 0 öre/kWh.",
     "billScanTitle": "Scan electricity bill",
-    "billScanSubtitle": "Automatically read your retailer's markup from a photo or PDF.",
+    "billScanSubtitle": "Read the fees from a photo or PDF of your bill.",
     "appliancesTitle": "My appliances",
     "deleteApplianceConfirmTitle": "Remove appliance?",
     "deleteApplianceConfirmMessage": "This removes \"{{label}}\" from your appliances. This can't be undone.",
@@ -322,21 +331,31 @@
     "proCardTitle": "Elpuls Pro",
     "proCardText": "Daily price explanation, heating plan and tips for every appliance.",
     "realPriceTitle": "Your real price",
-    "realPriceText": "These come from your electricity bill. Elpuls uses them to show what you actually pay.",
+    "realPriceText": "Elpuls uses the fees from your electricity bills.",
     "realPrice": {
-      "gridFee": "Grid fee",
-      "markup": "Company's markup"
+      "retailer": "Electricity company",
+      "grid": "Grid company",
+      "retailerMissing": "Missing. The markup is on the bill from your electricity company.",
+      "gridMissing": "Missing. The grid fee is on the bill from your grid company."
     },
     "valueOre": "{{value}} öre/kWh",
-    "notSet": "Not added",
-    "scanBill": "Scan my bill",
+    "scanBill": "Scan a bill",
     "scanNewBill": "Scan a newer bill",
     "householdIntro": "Elpuls plans for a normal household. Switch off anything you don't have.",
     "householdReplaced": "Uses your own appliance below",
     "householdHasA11y": "I have a {{appliance}}",
     "registeredAppliancesTitle": "Your own appliances",
     "editApplianceA11y": "Edit {{appliance}}",
-    "deleteApplianceA11y": "Remove {{appliance}}"
+    "deleteApplianceA11y": "Remove {{appliance}}",
+    "notificationsEntryTitle": "Notifications",
+    "notificationsEntryText": "Tomorrow's prices, good times for your appliances and quiet hours.",
+    "valueKrMonth": "{{value}} kr/month",
+    "realPriceNowCaption": "right now, with all fees and VAT. The spot price is {{spot}} öre.",
+    "realPriceNowA11y": "Your price right now is {{paid}} öre per kWh. The spot price is {{spot}} öre.",
+    "markupLabel": "Markup",
+    "gridFeeLabel": "Grid fee",
+    "enterFeesManually": "Type the fees in yourself",
+    "taxIncluded": "Energy tax ({{tax}} öre/kWh) and VAT ({{vat}}%) are added automatically."
   },
   "applianceRecommendations": {
     "title": "Appliance recommendations",
@@ -370,7 +389,7 @@
   },
   "billScan": {
     "title": "Scan your electricity bill",
-    "subtitle": "Take a photo of your latest bill or pick the PDF. We read your grid fee and markup for you to check.",
+    "subtitle": "Take a photo of your latest bill or pick the PDF. We read the fees so you can check them.",
     "takePhoto": "Take a photo of the bill",
     "choosePdf": "Choose a PDF",
     "scanning": "Reading your bill…",
@@ -384,10 +403,30 @@
     "tryAgain": "Try again",
     "confirmSubtitle": "Compare them with your bill and correct anything that looks wrong.",
     "manualTitle": "Type in your fees",
-    "manualSubtitle": "You find both on your electricity bill. Leave a field empty if you don't know it.",
+    "manualSubtitle": "Everything is on your bills. Leave a field empty if you don't know.",
     "gridFeeHelper": "Often called \"elöverföring\" or \"överföringsavgift\". From your grid company.",
     "retailerMarkupHelper": "Often called \"påslag\" or \"rörliga kostnader\". From your electricity company.",
-    "save": "Save"
+    "save": "Save",
+    "billType": {
+      "retailer": "This is a bill from your electricity company.",
+      "grid": "This is a bill from your grid company.",
+      "combined": "This bill covers both electricity and the grid."
+    },
+    "retailerGroup": "Electricity company",
+    "gridGroup": "Grid company",
+    "retailerFixedField": "Electricity company's fixed fee",
+    "retailerFixedHelper": "Often called \"månadsavgift\" or \"årsavgift\". Enter what it comes to per month, with VAT.",
+    "retailerFixedPlaceholder": "e.g. 39",
+    "gridFixedHelper": "Often called \"abonnemang\" or \"nätabonnemang\". Per month, with VAT.",
+    "otherBill": {
+      "retailer": "The grid fee is on the bill from your grid company. Scan that one too to get your price right.",
+      "grid": "The markup is on the bill from your electricity company. Scan that one too to get your price right."
+    },
+    "resultTitle": "Your price right now",
+    "resultSubtitle": "With your own fees, this is what power costs per kWh right now.",
+    "resultDifference": "The difference from the spot price is the grid fee, energy tax, your electricity company's markup and VAT. The home screen shows your price from now on.",
+    "resultDifferenceNoMarkup": "The difference is the grid fee, energy tax and VAT. Your electricity company's markup is still missing, so your price may be a few öre higher.",
+    "resultDone": "Done"
   },
   "paywall": {
     "headline": "Get more out of Elpuls with Pro",
@@ -408,7 +447,8 @@
       "stats": "Cost breakdown and statistics",
       "recommendations": "Appliance tips",
       "heatingPlan": "Heating plan",
-      "weatherPrep": "Weather tips"
+      "weatherPrep": "Weather tips",
+      "smartPushes": "Smart tips"
     },
     "ownedByOtherAccount": "This Apple ID’s subscription is linked to another Elpuls account. Sign in to that account to use Pro.",
     "nothingToRestore": "No active subscription found for this Apple ID.",
@@ -425,7 +465,8 @@
       "recommendations": "For each appliance: run now, or wait for a cheaper hour.",
       "weatherPrep": "Cold mornings, good drying weather and similar heads-ups.",
       "solarBonus": "The hours when your own solar power is worth the most.",
-      "stats": "Your bill split into parts, plus a comparison of all four zones."
+      "stats": "Your bill split into parts, plus a comparison of all four zones.",
+      "smartPushes": "A message when it is a good time to start the washing machine, dishwasher or charging."
     },
     "aiFootnote": "The daily explanation is written by AI. It is a guide and can be wrong.",
     "trialBig": "{{days}} days free",
@@ -464,8 +505,7 @@
     "exampleGridFeeFixed": "e.g. 350",
     "exampleGridFeeVariable": "e.g. 24,5",
     "exampleMonthlyKwh": "e.g. 1200",
-    "examplePriceAlert": "e.g. 150",
-    "retailerMarkupScanned": "Retailer markup: {{value}} öre/kWh, from your bill. Tap to scan a new one."
+    "examplePriceAlert": "e.g. 150"
   },
   "ai": {
     "badge": "AI",
@@ -484,9 +524,9 @@
     "dismiss": "Hide this list",
     "progress": "{{done}} of {{total}} done",
     "gridFeeTitle": "Add your grid fee",
-    "gridFeeSubtitle": "Scan your bill, or type it in yourself.",
+    "gridFeeSubtitle": "It's on the bill from your grid company. Scan it or type the fee in yourself.",
     "markupTitle": "Add your electricity company's markup",
-    "markupSubtitle": "Also on your bill. Needed for an exact price.",
+    "markupSubtitle": "It's on the bill from your electricity company. If you get one bill, both are on it.",
     "applianceTitle": "Add an appliance",
     "applianceSubtitle": "See what a wash or a car charge costs right now.",
     "alertsTitle": "Turn on price alerts",
@@ -498,15 +538,7 @@
     "start": "Get started",
     "pageOf": "Page {{page}} of {{total}}",
     "page1Title": "See what electricity really costs you",
-    "page1Text": "The spot price on the news is only part of your bill. Elpuls adds your grid fee, energy tax and VAT, so you see the price you actually pay.",
-    "breakdownCaption": "A typical Swedish electricity bill, roughly",
-    "breakdownA11y": "A typical bill: about a quarter is the spot price, a quarter the grid fee, and half is energy tax and VAT.",
-    "breakdown": {
-      "spot": "Spot price",
-      "grid": "Grid fee",
-      "tax": "Energy tax",
-      "vat": "VAT"
-    },
+    "page1Text": "The spot price in the news is only part of it. With the grid fee, energy tax and VAT it's often about double. Elpuls shows what you actually pay.",
     "page2Title": "Use electricity when it is cheap",
     "page2Text": "Prices change every hour. Elpuls shows the cheapest hours and what the dishwasher, the washing machine or the car costs to run now or later.",
     "exampleNow": "Dishwasher now",
@@ -518,6 +550,94 @@
       "explainer": "Why today's prices look the way they do",
       "heating": "When to heat the house before the evening peak",
       "weather": "Tips for cold mornings and good drying weather"
-    }
+    },
+    "breakdownFootnote": "Example with a grid fee of {{grid}} öre/kWh."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Choose what Elpuls tells you, and when.",
+    "freeTitle": "Free",
+    "pricesPublishedTitle": "Tomorrow's prices are out",
+    "pricesPublishedText": "Every afternoon when tomorrow's prices are published.",
+    "priceAlertsNote": "Price alerts for very high or very low prices are set under Settings.",
+    "proTitle": "Smart tips",
+    "applianceWindowsTitle": "Good time for your appliances",
+    "applianceWindowsText": "When laundry, dishes or charging cost the least. On cheap nights you get a reminder in the evening instead.",
+    "cheapNowTitle": "Cheap power right now",
+    "cheapNowText": "At most once a day, when power is far below the day's average.",
+    "heatAheadTitle": "Heat the house ahead",
+    "heatAheadText": "In the morning, before the expensive evening hours.",
+    "tryPro": "Try Pro to get smart tips",
+    "appliancesTitle": "Appliances",
+    "applianceA11y": "Tips for {{appliance}}",
+    "quietTitle": "Quiet hours",
+    "quietText": "No notifications at night. Cheap night hours are suggested in the evening instead.",
+    "quietFrom": "From",
+    "quietTo": "To",
+    "maxPerDayTitle": "Notifications per day",
+    "maxPerDayText": "Elpuls sends the most useful ones first and skips days with nothing worth saving."
+  },
+  "chart": {
+    "band": {
+      "cheap": "cheap for today",
+      "normal": "normal for today",
+      "dear": "expensive for today",
+      "peak": "among the most expensive today"
+    },
+    "tapHint": "Tap the chart to see the price for a quarter-hour.",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "barA11y": "{{hour}}:00, {{price}} öre, {{band}}",
+    "summary": "{{day}}: cheapest {{cheapTime}} ({{cheapPrice}} öre), most expensive {{dearTime}} ({{dearPrice}} öre)",
+    "viewLabel": "Chart view",
+    "viewHourly": "Per hour",
+    "viewQuarter": "Per 15 min",
+    "bestTimesTitle": "Best times for your appliances",
+    "bestTimesLegend": "Shaded in the chart",
+    "bestNow": "Best time is now",
+    "saveKr": "Save {{kr}} kr",
+    "when": {
+      "now": "Now",
+      "tonight": "Tonight",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "nowUntil": "Now, until {{end}}"
+    },
+    "legend": {
+      "cheap": "Cheap",
+      "normal": "Normal",
+      "dear": "Expensive",
+      "peak": "Most expensive",
+      "best": "Best times"
+    },
+    "teaserTitle": "Best times for your appliances",
+    "teaserText": "Pro shows when the dishwasher, laundry and car charging cost the least, right in the chart.",
+    "colCheapest": "Cheapest",
+    "colDearest": "Priciest"
+  },
+  "realPrice": {
+    "spotLabel": "Spot price",
+    "paidLabel": "What you pay",
+    "paidLabelYou": "Your price",
+    "ore": "{{value}} öre",
+    "a11y": "The spot price is {{spot}} öre per kWh. What you pay is {{paid}} öre per kWh."
+  },
+  "solar": {
+    "nowUntil": "Good time for solar power now, until {{end}}",
+    "next": "Best solar hours today: {{start}}–{{end}}",
+    "allPast": "Today's best solar hours have already passed.",
+    "tooLittleSun": "Too little sun today to make a difference.",
+    "noBonus": "No extra good solar hours today.",
+    "noBonusDetail": "Power is expensive when the sun is highest, so what you sell is worth more than usual.",
+    "advice": "Run the laundry, dishwasher or car charging then. Your panels produce a lot and power is cheap, so your solar power does the most good at home.",
+    "sceneA11y": "The sun rises at {{rise}} and sets at {{set}}. Good solar hours:",
+    "statusNow": "Now",
+    "statusPast": "Passed",
+    "statusSoon": "Soon",
+    "statusIn_one": "In {{count}} hr",
+    "statusIn_other": "In {{count}} hrs",
+    "strongSun": "Strong sun",
+    "goodSun": "Good sun",
+    "avgPrice": "{{price}} öre/kWh"
   }
 }

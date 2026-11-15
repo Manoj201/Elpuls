@@ -10,6 +10,9 @@ import { useApplianceStore, type RegisteredAppliance } from '../stores/useApplia
 import { APPLIANCE_PRESETS } from '../config/appliances';
 import { APPLIANCE_ICONS, householdDefaultIds, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
 import { useCountryStore } from '../stores/useCountryStore';
+import { usePriceStore } from '../stores/usePriceStore';
+import { findCurrentPrice } from '../lib/priceUtils';
+import { calculateLandedPrice, ENERGY_TAX_SEK_PER_KWH_EXCL_VAT, VAT_RATE } from '../lib/landedCost';
 import { useUiStore } from '../stores/useUiStore';
 import { useUserStore, type HeatingType } from '../stores/useUserStore';
 import { theme } from '../theme';
@@ -29,7 +32,8 @@ const HEATING_VALUES: NonNullable<HeatingType>[] = ['district', 'electric', 'hea
 interface SettingsScreenProps {
   uid: string;
   onOpenApplianceScan: (editAppliance?: RegisteredAppliance) => void;
-  onOpenBillScan: () => void;
+  onOpenBillScan: (manual?: boolean) => void;
+  onOpenNotifications: () => void;
   onDevReset: () => Promise<void>;
   onAccountDeleted: () => Promise<void>;
   onSignedIn: (uid: string) => Promise<void>;
@@ -42,7 +46,21 @@ function parsePositiveFloat(value: string): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDevReset, onAccountDeleted, onSignedIn, onSignedOut }: SettingsScreenProps) {
+/** 24.5 → "24,5" (Swedish decimal comma), at most 2 decimals. */
+function formatDecimal(value: number): string {
+  return String(Number(value.toFixed(2))).replace('.', ',');
+}
+
+export function SettingsScreen({
+  uid,
+  onOpenApplianceScan,
+  onOpenBillScan,
+  onOpenNotifications,
+  onDevReset,
+  onAccountDeleted,
+  onSignedIn,
+  onSignedOut,
+}: SettingsScreenProps) {
   const { t } = useTranslation();
   const config = useCountryStore((s) => s.config);
   const setActiveZone = useCountryStore((s) => s.setZone);
@@ -269,6 +287,16 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
   const hasGridFee = user.gridFeeVariableSekPerKwh !== null;
   const hasMarkup = user.retailerMarkupSekPerKwh !== null;
 
+  const todayPrices = usePriceStore((s) => s.todayPrices);
+  const spotNow = findCurrentPrice(todayPrices, new Date());
+  const realPriceNow =
+    spotNow && user.gridFeeVariableSekPerKwh !== null
+      ? {
+          spot: Math.round(spotNow.price * 100),
+          paid: Math.round(calculateLandedPrice(spotNow.price, user.gridFeeVariableSekPerKwh, user.retailerMarkupSekPerKwh) * 100),
+        }
+      : null;
+
   return (
     <View style={styles.root}>
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
@@ -286,24 +314,84 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
       )}
 
       <Card style={styles.realPriceCard}>
-        <InfoRow icon={IconReceipt} variant={hasGridFee && hasMarkup ? 'teal' : 'neutral'} title={t('settings.realPriceTitle')} subtitle={t('settings.realPriceText')} />
-        <View style={styles.statusList}>
+        <InfoRow
+          icon={IconReceipt}
+          variant={hasGridFee && hasMarkup ? 'teal' : 'neutral'}
+          title={t('settings.realPriceTitle')}
+          subtitle={t('settings.realPriceText')}
+        />
+
+        {/* The point of the card: the user's own price right now. */}
+        {realPriceNow && (
+          <View style={styles.realPriceNow} accessible accessibilityLabel={t('settings.realPriceNowA11y', realPriceNow)}>
+            <Text style={styles.realPriceValue}>
+              {realPriceNow.paid} <Text style={styles.realPriceUnit}>{t('fields.unitOrePerKwh')}</Text>
+            </Text>
+            <Text style={styles.realPriceCaption}>{t('settings.realPriceNowCaption', { spot: realPriceNow.spot })}</Text>
+          </View>
+        )}
+
+        <View>
           {[
-            { key: 'gridFee', done: hasGridFee, value: hasGridFee ? t('settings.valueOre', { value: Number((user.gridFeeVariableSekPerKwh! * 100).toFixed(2)) }) : null },
-            { key: 'markup', done: hasMarkup, value: hasMarkup ? t('settings.valueOre', { value: Number((user.retailerMarkupSekPerKwh! * 100).toFixed(2)) }) : null },
-          ].map((row) => (
-            <View key={row.key} style={styles.statusRow}>
-              {row.done ? (
-                <IconCircleCheck size={22} color={theme.colors.positiveTeal} />
-              ) : (
-                <IconCircle size={22} color={theme.colors.textMuted} />
-              )}
-              <Text style={styles.statusLabel}>{t(`settings.realPrice.${row.key}`)}</Text>
-              <Text style={styles.statusValue}>{row.value ?? t('settings.notSet')}</Text>
-            </View>
-          ))}
+            {
+              key: 'retailer',
+              done: hasMarkup,
+              company: user.retailerName,
+              perKwhLabel: t('settings.markupLabel'),
+              perKwh: user.retailerMarkupSekPerKwh,
+              perMonth: user.retailerFixedSekPerMonth,
+            },
+            {
+              key: 'grid',
+              done: hasGridFee,
+              company: user.gridCompanyName,
+              perKwhLabel: t('settings.gridFeeLabel'),
+              perKwh: user.gridFeeVariableSekPerKwh,
+              perMonth: user.gridFeeFixedSekPerMonth,
+            },
+          ].map((row, index) => {
+            const parts = [
+              row.perKwh !== null ? `${row.perKwhLabel} ${t('settings.valueOre', { value: formatDecimal(row.perKwh * 100) })}` : null,
+              row.perMonth !== null ? t('settings.valueKrMonth', { value: formatDecimal(row.perMonth) }) : null,
+            ].filter(Boolean);
+            return (
+              <View key={row.key} style={[styles.statusRow, index > 0 && styles.statusRowDivider]}>
+                {row.done ? (
+                  <IconCircleCheck size={22} color={theme.colors.positiveTeal} />
+                ) : (
+                  <IconCircle size={22} color={theme.colors.textMuted} />
+                )}
+                <View style={styles.statusText}>
+                  <Text style={styles.statusLabel}>
+                    {t(`settings.realPrice.${row.key}`)}
+                    {row.company ? <Text style={styles.statusCompany}>{` · ${row.company}`}</Text> : null}
+                  </Text>
+                  <Text style={styles.statusValue}>
+                    {row.done && parts.length > 0 ? parts.join(' + ') : t(`settings.realPrice.${row.key}Missing`)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
-        <SecondaryButton size="compact" label={t(hasGridFee && hasMarkup ? 'settings.scanNewBill' : 'settings.scanBill')} onPress={onOpenBillScan} />
+
+        <Text style={styles.taxNote}>
+          {t('settings.taxIncluded', {
+            tax: formatDecimal(ENERGY_TAX_SEK_PER_KWH_EXCL_VAT * 100),
+            vat: Math.round(VAT_RATE * 100),
+          })}
+        </Text>
+
+        <View style={styles.realPriceActions}>
+          <SecondaryButton
+            size="compact"
+            label={t(hasGridFee && hasMarkup ? 'settings.scanNewBill' : 'settings.scanBill')}
+            onPress={() => onOpenBillScan()}
+          />
+          <Pressable onPress={() => onOpenBillScan(true)} hitSlop={8} style={styles.textLink} accessibilityRole="button">
+            <Text style={styles.textLinkLabel}>{t('settings.enterFeesManually')}</Text>
+          </Pressable>
+        </View>
       </Card>
 
       <GroupHeader first title={t('settings.groupHome')} subtitle={t('settings.groupHomeSubtitle')} />
@@ -368,17 +456,13 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
           value={estimatedMonthlyKwhInput}
           onChangeText={setEstimatedMonthlyKwhInput}
         />
-        <Pressable onPress={onOpenBillScan}>
+        <Pressable onPress={() => onOpenBillScan()}>
           <Card style={styles.entryCard}>
             <InfoRow
               icon={IconReceipt}
-              variant={user.retailerMarkupSekPerKwh !== null ? 'teal' : 'neutral'}
+              variant={hasMarkup && hasGridFee ? 'teal' : 'neutral'}
               title={t('settings.billScanTitle')}
-              subtitle={
-                user.retailerMarkupSekPerKwh !== null
-                  ? t('fields.retailerMarkupScanned', { value: Number((user.retailerMarkupSekPerKwh * 100).toFixed(2)) })
-                  : t('settings.billScanSubtitle')
-              }
+              subtitle={t('settings.billScanSubtitle')}
             />
           </Card>
         </Pressable>
@@ -448,6 +532,11 @@ export function SettingsScreen({ uid, onOpenApplianceScan, onOpenBillScan, onDev
       </Section>
 
       <GroupHeader title={t('settings.groupNotifications')} />
+      <Pressable onPress={onOpenNotifications} accessibilityRole="button" style={styles.notificationsEntry}>
+        <Card style={styles.entryCard}>
+          <InfoRow icon={IconBellRinging} title={t('settings.notificationsEntryTitle')} subtitle={t('settings.notificationsEntryText')} />
+        </Card>
+      </Pressable>
       <Section title={t('settings.priceAlertsTitle')}>
         <Text style={styles.sectionSubtitle}>{t('settings.priceAlertsSubtitle')}</Text>
         <LabeledInput
@@ -636,10 +725,20 @@ const styles = StyleSheet.create({
   topCard: { marginBottom: 16 },
   proCard: { gap: 14, borderColor: `${theme.colors.accentAmber}55` },
   realPriceCard: { gap: 14, marginBottom: 24 },
-  statusList: { gap: 10 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 32 },
-  statusLabel: { flex: 1, fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.textPrimary },
-  statusValue: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  realPriceNow: { backgroundColor: theme.colors.surfaceElevated, borderRadius: theme.radius.lg, padding: 14, gap: 2 },
+  realPriceValue: { fontFamily: theme.typography.display, fontSize: theme.type.xxl, color: theme.colors.textPrimary, fontVariant: ['tabular-nums'] },
+  realPriceUnit: { fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.textSecondary },
+  realPriceCaption: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
+  statusRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 12 },
+  statusRowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
+  statusText: { flex: 1, gap: 2 },
+  statusLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  statusCompany: { fontFamily: theme.typography.body, color: theme.colors.textSecondary },
+  statusValue: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, fontVariant: ['tabular-nums'] },
+  taxNote: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
+  realPriceActions: { gap: 4 },
+  textLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center' },
+  textLinkLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textSecondary, textDecorationLine: 'underline' },
   saveBar: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -679,6 +778,7 @@ const styles = StyleSheet.create({
   },
   accountHint: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textFaint },
   entryCard: { marginTop: 4 },
+  notificationsEntry: { marginBottom: 20 },
   householdCard: { paddingVertical: 4, marginBottom: 16 },
   householdRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 },
   householdRowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },

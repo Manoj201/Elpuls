@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconChartBar, IconClockHour4 } from '@tabler/icons-react-native';
+import { IconArrowDownRight, IconArrowUpRight, IconChartBar, IconClockHour4 } from '@tabler/icons-react-native';
 import { useCountryStore } from '../stores/useCountryStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { useUserStore } from '../stores/useUserStore';
 import { groupPricesByHour, findCurrentPrice, findExtremeHours } from '../lib/priceUtils';
-import { landedPriceBreakdown } from '../lib/landedCost';
+import { landedPriceBreakdown, monthlyFixedFeesSek } from '../lib/landedCost';
 import { compareAllZones, type ZoneAverage } from '../lib/zoneComparison';
 import { formatOre, formatPrice } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
@@ -26,6 +26,11 @@ const SHIFT_STEPS = [0, 25, 50, 75, 100];
 const DEFAULT_MONTHLY_KWH_HIGH_HEATING = 1200;
 const DEFAULT_MONTHLY_KWH_OTHER = 500;
 
+/** Whole kronor with a thousands separator ("2 262"): the what-if result is an estimate, so öre would be false precision. */
+function formatWholeKr(value: number, language: SupportedLanguage): string {
+  return Math.round(value).toLocaleString(language === 'sv' ? 'sv-SE' : 'en-GB');
+}
+
 export function StatsScreen() {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
@@ -36,6 +41,7 @@ export function StatsScreen() {
   const gridFeeVariableSekPerKwh = useUserStore((s) => s.gridFeeVariableSekPerKwh);
   const retailerMarkupSekPerKwh = useUserStore((s) => s.retailerMarkupSekPerKwh);
   const estimatedMonthlyKwh = useUserStore((s) => s.estimatedMonthlyKwh);
+  const fixedFeesKr = useUserStore((s) => monthlyFixedFeesSek(s.gridFeeFixedSekPerMonth, s.retailerFixedSekPerMonth));
   const heatingType = useUserStore((s) => s.heatingType);
   const isProSubscriber = useUserStore((s) => s.isProSubscriber);
 
@@ -95,8 +101,9 @@ export function StatsScreen() {
           const blendedSpot = avgSpotPrice * (1 - shiftPct / 100) + cheapestSpotPrice * (shiftPct / 100);
           const landedPerKwh = landedPriceBreakdown(blendedSpot, gridFeeVariableSekPerKwh ?? 0, retailerMarkupSekPerKwh).total;
           const baselineLandedPerKwh = landedPriceBreakdown(avgSpotPrice, gridFeeVariableSekPerKwh ?? 0, retailerMarkupSekPerKwh).total;
-          const projectedMonthlyKr = adjustedKwh * landedPerKwh;
-          const baselineMonthlyKr = baseMonthlyKwh * baselineLandedPerKwh;
+          // Fixed fees are the same in both, so they change the total but not the difference.
+          const projectedMonthlyKr = adjustedKwh * landedPerKwh + fixedFeesKr;
+          const baselineMonthlyKr = baseMonthlyKwh * baselineLandedPerKwh + fixedFeesKr;
           return { projectedMonthlyKr, deltaKr: baselineMonthlyKr - projectedMonthlyKr };
         })()
       : null;
@@ -132,7 +139,10 @@ export function StatsScreen() {
               <BreakdownRow label={t('stats.spot')} value={breakdown.spot} language={language} />
               <BreakdownRow label={t('stats.gridFee')} value={breakdown.gridFee} language={language} />
               <BreakdownRow label={t('stats.energyTax')} value={breakdown.energyTax} language={language} />
-              <BreakdownRow label={t('stats.elcertifikat')} value={breakdown.elcertifikat} language={language} />
+              {/* Included in the scanned markup once a bill is scanned, so only shown as its own line before that. */}
+              {breakdown.elcertifikat > 0 && (
+                <BreakdownRow label={t('stats.elcertifikat')} value={breakdown.elcertifikat} language={language} />
+              )}
               <BreakdownRow label={t('stats.retailerMarkup')} value={breakdown.retailerMarkup} language={language} isEstimate={retailerMarkupSekPerKwh === null} />
               <BreakdownRow label={t('stats.vat')} value={breakdown.vat} language={language} />
               <View style={styles.breakdownDivider} />
@@ -168,44 +178,68 @@ export function StatsScreen() {
 
           <Text style={styles.sectionTitle}>{t('stats.whatIfTitle')}</Text>
           <Card style={styles.sectionCard}>
+            <Text style={styles.whatIfIntro}>{t('stats.whatIfIntro')}</Text>
+
+            {/* Result first: it's what people look at, and it stays in view while they tap below. */}
+            {whatIf ? (
+              <View style={styles.whatIfResult} accessibilityLiveRegion="polite">
+                <Text style={styles.whatIfResultLabel}>{t('stats.whatIfResultLabel')}</Text>
+                <Text style={styles.whatIfAmount}>
+                  {t('stats.kr', { amount: formatWholeKr(whatIf.projectedMonthlyKr, language) })}
+                  <Text style={styles.whatIfPerMonth}> {t('stats.perMonth')}</Text>
+                </Text>
+                {Math.abs(whatIf.deltaKr) < 1 ? (
+                  <Text style={styles.whatIfHint}>{t('stats.whatIfPickHint')}</Text>
+                ) : (
+                  <View style={[styles.whatIfDelta, whatIf.deltaKr > 0 ? styles.whatIfDeltaSave : styles.whatIfDeltaMore]}>
+                    {whatIf.deltaKr > 0 ? (
+                      <IconArrowDownRight size={16} color={theme.colors.positiveTeal} />
+                    ) : (
+                      <IconArrowUpRight size={16} color={theme.colors.accentAmber} />
+                    )}
+                    <Text style={styles.whatIfDeltaText}>
+                      {t(whatIf.deltaKr > 0 ? 'stats.whatIfSave' : 'stats.whatIfMore', {
+                        amount: formatWholeKr(Math.abs(whatIf.deltaKr), language),
+                      })}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.empty}>{t('forecast.noPrices')}</Text>
+            )}
+
             <Text style={styles.whatIfStepperLabel}>{t('stats.whatIfUsageLabel')}</Text>
-            <View style={styles.whatIfStepperRow}>
+            <View style={styles.whatIfStepperRow} accessibilityRole="radiogroup" accessibilityLabel={t('stats.whatIfUsageLabel')}>
               {USAGE_STEPS.map((step, i) => (
                 <Chip
                   key={step}
-                  label={step > 0 ? `+${step}%` : `${step}%`}
+                  label={step === 0 ? t('stats.whatIfAsNow') : t('stats.pct', { value: step > 0 ? `+${step}` : `−${Math.abs(step)}` })}
                   selected={i === usageIndex}
                   onPress={() => setUsageIndex(i)}
                 />
               ))}
             </View>
 
-            <Text style={[styles.whatIfStepperLabel, styles.whatIfStepperLabelSpaced]}>{t('stats.whatIfShiftLabel')}</Text>
-            <View style={styles.whatIfStepperRow}>
+            <Text style={styles.whatIfStepperLabel}>{t('stats.whatIfShiftLabel')}</Text>
+            <View style={styles.whatIfStepperRow} accessibilityRole="radiogroup" accessibilityLabel={t('stats.whatIfShiftLabel')}>
               {SHIFT_STEPS.map((step, i) => (
-                <Chip key={step} label={`${step}%`} selected={i === shiftIndex} onPress={() => setShiftIndex(i)} />
+                <Chip
+                  key={step}
+                  label={step === 0 ? t('stats.whatIfNone') : t('stats.pct', { value: step })}
+                  selected={i === shiftIndex}
+                  onPress={() => setShiftIndex(i)}
+                />
               ))}
             </View>
 
-            {whatIf ? (
-              <>
-                <Text style={styles.contractHealthHero}>
-                  {formatPrice(whatIf.projectedMonthlyKr, language)} {config.currency}
-                  <Text style={styles.whatIfPerMonth}> /{t('common.month')}</Text>
-                </Text>
-                <Text style={styles.contractHealthResult}>
-                  {t(whatIf.deltaKr >= 0 ? 'stats.whatIfSavingsResult' : 'stats.whatIfExtraResult', {
-                    amount: formatPrice(Math.abs(whatIf.deltaKr), language),
-                    currency: config.currency,
-                  })}
-                </Text>
-                <Text style={styles.breakdownEstimateHint}>
-                  {t('stats.whatIfBasis', { kwh: baseMonthlyKwh })}
-                  {estimatedMonthlyKwh === null ? ` ${t('stats.whatIfGenericEstimateHint')}` : ''}
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.empty}>{t('forecast.noPrices')}</Text>
+            {whatIf && (
+              <Text style={styles.whatIfBasis}>
+                {t(estimatedMonthlyKwh === null ? 'stats.whatIfBasisGeneric' : 'stats.whatIfBasisOwn', {
+                  kwh: baseMonthlyKwh.toLocaleString(language === 'sv' ? 'sv-SE' : 'en-GB'),
+                })}
+                {fixedFeesKr > 0 ? ` ${t('stats.whatIfFixedFees', { amount: formatWholeKr(fixedFeesKr, language) })}` : ''}
+              </Text>
             )}
           </Card>
 
@@ -283,10 +317,34 @@ const styles = StyleSheet.create({
   breakdownDivider: { height: 1, backgroundColor: theme.colors.borderMuted, marginVertical: 8 },
   contractHealthHero: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
   contractHealthResult: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 4 },
-  whatIfStepperLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginBottom: 8 },
-  whatIfStepperLabelSpaced: { marginTop: 16 },
-  whatIfStepperRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 16 },
-  whatIfPerMonth: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted },
+  whatIfIntro: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 22, color: theme.colors.textSecondary, marginBottom: 14 },
+  whatIfResult: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.radius.lg,
+    padding: 16,
+    marginBottom: 20,
+    gap: 6,
+  },
+  whatIfResultLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  whatIfAmount: { fontFamily: theme.typography.display, fontSize: theme.type.xxl, color: theme.colors.textPrimary, fontVariant: ['tabular-nums'] },
+  whatIfPerMonth: { fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.textSecondary },
+  whatIfHint: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
+  whatIfDelta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+  },
+  whatIfDeltaSave: { borderColor: theme.colors.positiveTeal },
+  whatIfDeltaMore: { borderColor: theme.colors.accentAmber },
+  whatIfDeltaText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
+  whatIfStepperLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginBottom: 10 },
+  whatIfStepperRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 20 },
+  whatIfBasis: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
   zoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
   zoneRowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
   zonePrice: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },

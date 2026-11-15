@@ -8,6 +8,7 @@ import { compareApplianceCost } from '../lib/priceUtils';
 import { formatClock, formatPrice } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
 import { useApplianceStore } from '../stores/useApplianceStore';
+import { setAppliancePushes } from '../lib/notificationPrefs';
 import { useCountryStore } from '../stores/useCountryStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { useUserStore } from '../stores/useUserStore';
@@ -26,8 +27,8 @@ function ApplianceRow({ appliance, uid }: { appliance: AppliancePreset; uid: str
   const language = i18n.language as SupportedLanguage;
   const config = useCountryStore((s) => s.config);
   const { todayPrices, tomorrowPrices } = usePriceStore();
-  const registered = useApplianceStore((s) => s.appliances.find((a) => a.id === appliance.id));
-  const setNotifyEnabled = useApplianceStore((s) => s.setNotifyEnabled);
+  const pushesOn = useUserStore((s) => !s.notificationPrefs.mutedAppliances.includes(appliance.id));
+  const smartPushesOn = useUserStore((s) => s.notificationPrefs.applianceWindows);
 
   // Real 15-minute prices, so the best window can start on any quarter-hour.
   const combinedSlots = useMemo(() => [...todayPrices, ...tomorrowPrices], [todayPrices, tomorrowPrices]);
@@ -52,12 +53,12 @@ function ApplianceRow({ appliance, uid }: { appliance: AppliancePreset; uid: str
         <Chip label={`${appliance.watts} W`} variant="neutral" />
       </View>
 
-      {registered && (
+      {appliance.shiftable && smartPushesOn && (
         <View style={styles.notifyRow}>
           <Chip
             label={t('applianceRecommendations.notifyMe')}
-            selected={registered.notifyEnabled}
-            onPress={() => setNotifyEnabled(uid, appliance.id, !registered.notifyEnabled)}
+            selected={pushesOn}
+            onPress={() => setAppliancePushes(uid, appliance.id, !pushesOn)}
           />
         </View>
       )}

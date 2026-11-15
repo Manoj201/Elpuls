@@ -32,7 +32,13 @@ export function usePushRegistration() {
 
         await setDoc(
           doc(db, 'pushSubscriptions', uid!),
-          { zone, countryCode, expoPushToken, updatedAt: serverTimestamp() },
+          {
+            zone,
+            countryCode,
+            expoPushToken,
+            pricesPublished: useUserStore.getState().notificationPrefs.pricesPublished,
+            updatedAt: serverTimestamp(),
+          },
           { merge: true },
         );
       } catch (err) {

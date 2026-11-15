@@ -8,6 +8,8 @@ const EXPO_PUSH_CHUNK_SIZE = 100;
 interface PushSubscription {
   expoPushToken?: string;
   language?: string;
+  /** Mirrored from the user's Notiser settings; false = no "prices published" push. */
+  pricesPublished?: boolean;
 }
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -62,6 +64,7 @@ export async function sendExpoPushToZone(
   for (const sub of subscriptions.docs) {
     const subscription = sub.data() as PushSubscription;
     if (!subscription.expoPushToken || seenTokens.has(subscription.expoPushToken)) continue;
+    if (subscription.pricesPublished === false) continue;
     seenTokens.add(subscription.expoPushToken);
     const language = resolveServerLanguage(subscription.language);
     const tokens = tokensByLanguage.get(language) ?? [];

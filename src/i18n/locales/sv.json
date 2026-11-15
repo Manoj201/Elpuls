@@ -25,19 +25,17 @@
     "todayLabel": "Idag",
     "country": "Sverige",
     "noPricesYet": "Dagens priser är inte publicerade än.",
-    "belowAverage": "Billigare än vanligt idag",
-    "aboveAverage": "Dyrare än vanligt idag",
-    "aroundAverage": "Ungefär som vanligt idag",
+    "belowAverage": "Billigare än dagens snitt just nu",
+    "aboveAverage": "Dyrare än dagens snitt just nu",
+    "aroundAverage": "Nära dagens snitt just nu",
     "normalRisk": "Priserna ser normala ut idag",
     "higherRisk": "Priset kan bli högt idag",
     "elevatedRisk": "Priset kan bli lite högt idag",
     "explainerTitle": "Därför ser priserna ut så här idag",
     "hourlyTitle": "Pris per timme idag",
-    "priceUnitNow": "öre per kWh just nu",
+    "priceUnitNow": "öre/kWh",
     "solarBonusHours": "Bästa timmarna för dina solpaneler",
     "noBonusHours": "Inga särskilt bra soltimmar idag.",
-    "solarBonusSleepingCaption": "Inga särskilt bra soltimmar idag.",
-    "solarBonusActiveCaption": "{{count}} bra soltimmar idag.",
     "priceToggleSpot": "Spotpris",
     "priceToggleLanded": "Vad du betalar",
     "landedEstimateCaption": "Med nätavgift, skatt och moms. Lägg till elbolagets påslag från fakturan för exakt pris.",
@@ -64,7 +62,7 @@
     "landedPromptScan": "Skanna min faktura",
     "landedPromptManual": "Skriv in själv",
     "landedExactCaption": "Med nätavgift, elbolagets påslag, skatt och moms.",
-    "priceUnitLanded": "öre per kWh, vad du betalar nu",
+    "priceUnitLanded": "öre/kWh, det du betalar",
     "priceNowA11y": "{{price}} öre per kilowattimme just nu",
     "atHour": "kl {{hour}}:00",
     "riskFactors": {
@@ -81,7 +79,11 @@
     "proTipsLockedText": "När du ska värma, när du ska tvätta och vad morgondagen har att bjuda på.",
     "proTipsSampleHeating": "Värm huset 06:00 till 09:00 och låt det svalna lite 17:00 till 20:00.",
     "proTipsSampleWeather": "Kallt imorgon bitti. Förvärm bilen medan den står på laddning.",
-    "proTipsSampleSolar": "3 timmar idag då dina solpaneler ger mest."
+    "proTipsSampleSolar": "3 timmar idag då dina solpaneler ger mest.",
+    "chartTitleTwoDays": "Pris idag och imorgon",
+    "validUntil": "till {{time}}",
+    "nextCheapest": "Billigast härnäst",
+    "nextDearest": "Dyrast härnäst"
   },
   "weatherPrep": {
     "title": "Vädertips",
@@ -205,24 +207,22 @@
   },
   "forecast": {
     "title": "Prisprognos",
-    "subtitle": "Idag jämfört med imorgon, elområde {{zone}}",
-    "noPrices": "Inga priser publicerade än.",
-    "average": "snitt",
+    "subtitle": "Idag och imorgon i elområde {{zone}}",
+    "noPrices": "Dagens priser har inte kommit än.",
     "today": "Idag",
     "tomorrow": "Imorgon",
-    "tomorrowCheaper": "Imorgon är billigare än idag",
-    "tomorrowPricier": "Imorgon är dyrare än idag",
-    "blocks": {
-      "night": "Natt",
-      "morningPeak": "Morgontopp",
-      "daytime": "Dagtid",
-      "eveningPeak": "Kvällstopp"
-    },
-    "tag": {
-      "cheap": "Billigt",
-      "normal": "Normalt",
-      "expensive": "Dyrt",
-      "avoid": "Undvik"
+    "tomorrowCheaper": "Imorgon blir elen billigare än idag",
+    "tomorrowPricier": "Imorgon blir elen dyrare än idag",
+    "averageUnit": "öre/kWh i snitt",
+    "periodsExplain": "Varje rad är en tid på dygnet då priset ligger på ungefär samma nivå. Färgen visar om det är billigt eller dyrt jämfört med dagens snitt.",
+    "tomorrowPending": "Morgondagens priser brukar komma strax efter 13.",
+    "now": "Nu",
+    "periodA11y": "{{from}} till {{to}}, {{band}}, {{price}} öre i snitt",
+    "hint": {
+      "cheap": "Bra tid att tvätta och diska",
+      "normal": "Går bra om det inte kan vänta",
+      "dear": "Vänta med det som kan vänta",
+      "peak": "Undvik tvätt och disk om du kan"
     }
   },
   "stats": {
@@ -242,13 +242,9 @@
     "contractHealthBasis": "Baserat på din rapporterade förbrukning på {{kwh}} kWh/månad och ditt påslag på {{markup}} öre/kWh.",
     "contractHealthNeedsBillScan": "Skanna din elräkning i Inställningar för att se din avtalskoll.",
     "contractHealthNeedsUsage": "Lägg till din uppskattade månadsförbrukning i Inställningar för att se din avtalskoll.",
-    "whatIfTitle": "Vad-händer-om-simulator",
-    "whatIfUsageLabel": "Förbrukningsnivå",
-    "whatIfShiftLabel": "Flytta till billiga timmar",
-    "whatIfSavingsResult": "≈ {{amount}} {{currency}} mindre än dagens baslinje.",
-    "whatIfExtraResult": "≈ {{amount}} {{currency}} mer än dagens baslinje.",
-    "whatIfBasis": "Baserat på {{kwh}} kWh/månad.",
-    "whatIfGenericEstimateHint": "Generell uppskattning — lägg till din förbrukning i Inställningar för ett personligt värde.",
+    "whatIfTitle": "Räkna på din elräkning",
+    "whatIfUsageLabel": "Hur mycket el du använder",
+    "whatIfShiftLabel": "Hur mycket av elen du flyttar till dagens billigaste timme",
     "zoneComparison": "Elområden i Sverige",
     "consumptionTrend": "Förbrukningshistorik",
     "comingSoonTitle": "Kommer snart",
@@ -259,7 +255,20 @@
       "energyTax": "36,0 öre",
       "vat": "41,5 öre",
       "total": "207,6 öre/kWh"
-    }
+    },
+    "whatIfFixedFees": "Fasta avgifter på {{amount}} kr i månaden ingår.",
+    "whatIfIntro": "Se vad elräkningen kan bli om du ändrar dina vanor.",
+    "whatIfResultLabel": "Din elräkning, ungefär",
+    "kr": "{{amount}} kr",
+    "perMonth": "i månaden",
+    "whatIfPickHint": "Välj ett alternativ nedan för att se vad det betyder för räkningen.",
+    "whatIfSave": "Ca {{amount}} kr mindre i månaden",
+    "whatIfMore": "Ca {{amount}} kr mer i månaden",
+    "whatIfAsNow": "Som nu",
+    "whatIfNone": "Inget",
+    "pct": "{{value}} %",
+    "whatIfBasisOwn": "Räknat på din förbrukning, {{kwh}} kWh i månaden, och dagens priser.",
+    "whatIfBasisGeneric": "Räknat på {{kwh}} kWh i månaden, ett vanligt värde för hus med din uppvärmning, och dagens priser. Skriv in din egen förbrukning under Inställningar för en säkrare siffra."
   },
   "settings": {
     "title": "Inställningar",
@@ -283,7 +292,7 @@
     "priceAlertLowTitle": "Tipsa mig om negativa eller mycket låga priser",
     "priceAlertLowSubtitle": "Få en notis när någon timme imorgon är på eller under 0 öre/kWh.",
     "billScanTitle": "Skanna elräkning",
-    "billScanSubtitle": "Läs av elhandlarens påslag automatiskt från en bild eller PDF.",
+    "billScanSubtitle": "Läs av avgifterna från en bild eller PDF av fakturan.",
     "appliancesTitle": "Mina apparater",
     "deleteApplianceConfirmTitle": "Ta bort apparat?",
     "deleteApplianceConfirmMessage": "Det här tar bort \"{{label}}\" från dina apparater. Det går inte att ångra.",
@@ -322,21 +331,31 @@
     "proCardTitle": "Elpuls Pro",
     "proCardText": "Daglig prisförklaring, värmeplan och tips för varje apparat.",
     "realPriceTitle": "Ditt riktiga pris",
-    "realPriceText": "De här kommer från din elräkning. Elpuls använder dem för att visa vad du faktiskt betalar.",
+    "realPriceText": "Elpuls räknar med avgifterna från dina elfakturor.",
     "realPrice": {
-      "gridFee": "Nätavgift",
-      "markup": "Elbolagets påslag"
+      "retailer": "Elbolaget",
+      "grid": "Nätbolaget",
+      "retailerMissing": "Saknas. Påslaget står på fakturan från elbolaget.",
+      "gridMissing": "Saknas. Nätavgiften står på fakturan från nätbolaget."
     },
     "valueOre": "{{value}} öre/kWh",
-    "notSet": "Inte tillagt",
-    "scanBill": "Skanna min faktura",
+    "scanBill": "Skanna en faktura",
     "scanNewBill": "Skanna en nyare faktura",
     "householdIntro": "Elpuls utgår från ett vanligt hushåll. Stäng av det du inte har.",
     "householdReplaced": "Använder din egen apparat nedan",
     "householdHasA11y": "Jag har {{appliance}}",
     "registeredAppliancesTitle": "Dina egna apparater",
     "editApplianceA11y": "Ändra {{appliance}}",
-    "deleteApplianceA11y": "Ta bort {{appliance}}"
+    "deleteApplianceA11y": "Ta bort {{appliance}}",
+    "notificationsEntryTitle": "Notiser",
+    "notificationsEntryText": "Morgondagens priser, bra lägen för dina apparater och tysta timmar.",
+    "valueKrMonth": "{{value}} kr/mån",
+    "realPriceNowCaption": "just nu, med alla avgifter och moms. Spotpriset är {{spot}} öre.",
+    "realPriceNowA11y": "Ditt pris just nu är {{paid}} öre per kWh. Spotpriset är {{spot}} öre.",
+    "markupLabel": "Påslag",
+    "gridFeeLabel": "Nätavgift",
+    "enterFeesManually": "Skriv in avgifterna själv",
+    "taxIncluded": "Energiskatt ({{tax}} öre/kWh) och moms ({{vat}} %) räknas in automatiskt."
   },
   "applianceRecommendations": {
     "title": "Apparatrekommendationer",
@@ -370,7 +389,7 @@
   },
   "billScan": {
     "title": "Skanna din elräkning",
-    "subtitle": "Fotografera din senaste faktura eller välj PDF:en. Vi läser av nätavgift och påslag så att du kan kontrollera dem.",
+    "subtitle": "Fotografera din senaste faktura eller välj PDF:en. Vi läser av avgifterna så att du kan kontrollera dem.",
     "takePhoto": "Fotografera fakturan",
     "choosePdf": "Välj en PDF",
     "scanning": "Läser din faktura…",
@@ -384,10 +403,30 @@
     "tryAgain": "Försök igen",
     "confirmSubtitle": "Jämför med din faktura och rätta det som ser fel ut.",
     "manualTitle": "Skriv in dina avgifter",
-    "manualSubtitle": "Båda står på din elräkning. Lämna fältet tomt om du inte vet.",
+    "manualSubtitle": "Allt står på dina fakturor. Lämna ett fält tomt om du inte vet.",
     "gridFeeHelper": "Heter ofta \"elöverföring\" eller \"överföringsavgift\". Från ditt nätbolag.",
     "retailerMarkupHelper": "Heter ofta \"påslag\" eller \"rörliga kostnader\". Från ditt elbolag.",
-    "save": "Spara"
+    "save": "Spara",
+    "billType": {
+      "retailer": "Det här är en faktura från ditt elbolag.",
+      "grid": "Det här är en faktura från ditt nätbolag.",
+      "combined": "Fakturan har både elhandel och elnät."
+    },
+    "retailerGroup": "Elbolaget",
+    "gridGroup": "Nätbolaget",
+    "retailerFixedField": "Elbolagets fasta avgift",
+    "retailerFixedHelper": "Heter ofta \"månadsavgift\" eller \"årsavgift\". Skriv vad den blir per månad, med moms.",
+    "retailerFixedPlaceholder": "t.ex. 39",
+    "gridFixedHelper": "Heter ofta \"abonnemang\" eller \"nätabonnemang\". Per månad, med moms.",
+    "otherBill": {
+      "retailer": "Nätavgiften står på fakturan från ditt nätbolag. Skanna den också, så blir ditt pris rätt.",
+      "grid": "Elbolagets påslag står på fakturan från ditt elbolag. Skanna den också, så blir ditt pris rätt."
+    },
+    "resultTitle": "Ditt pris just nu",
+    "resultSubtitle": "Med dina egna avgifter kostar elen så här mycket per kWh just nu.",
+    "resultDifference": "Skillnaden mot spotpriset är nätavgift, energiskatt, elbolagets påslag och moms. Startsidan visar ditt pris från och med nu.",
+    "resultDifferenceNoMarkup": "Skillnaden är nätavgift, energiskatt och moms. Elbolagets påslag saknas än, så ditt pris kan bli några öre högre.",
+    "resultDone": "Klart"
   },
   "paywall": {
     "headline": "Få ut mer av Elpuls med Pro",
@@ -408,7 +447,8 @@
       "stats": "Kostnadsuppdelning och statistik",
       "recommendations": "Apparattips",
       "heatingPlan": "Värmeplan",
-      "weatherPrep": "Vädertips"
+      "weatherPrep": "Vädertips",
+      "smartPushes": "Smarta tips"
     },
     "ownedByOtherAccount": "Prenumerationen på det här Apple-ID:t är kopplad till ett annat Elpuls-konto. Logga in på det kontot för att använda Pro.",
     "nothingToRestore": "Ingen aktiv prenumeration hittades för det här Apple-ID:t.",
@@ -425,7 +465,8 @@
       "recommendations": "För varje apparat: kör nu eller vänta på en billigare timme.",
       "weatherPrep": "Kalla morgnar, bra torkväder och liknande påminnelser.",
       "solarBonus": "Timmarna då din egen solel är värd mest.",
-      "stats": "Din elräkning uppdelad, plus en jämförelse av alla fyra elområden."
+      "stats": "Din elräkning uppdelad, plus en jämförelse av alla fyra elområden.",
+      "smartPushes": "Ett meddelande när det är bra läge att starta tvättmaskinen, diskmaskinen eller laddningen."
     },
     "aiFootnote": "Den dagliga förklaringen skrivs av AI. Den är en vägledning och kan ha fel.",
     "trialBig": "{{days}} dagar gratis",
@@ -464,8 +505,7 @@
     "exampleGridFeeFixed": "t.ex. 350",
     "exampleGridFeeVariable": "t.ex. 24,5",
     "exampleMonthlyKwh": "t.ex. 1200",
-    "examplePriceAlert": "t.ex. 150",
-    "retailerMarkupScanned": "Elhandlarens påslag: {{value}} öre/kWh, från din faktura. Tryck för att skanna en ny."
+    "examplePriceAlert": "t.ex. 150"
   },
   "ai": {
     "badge": "AI",
@@ -484,9 +524,9 @@
     "dismiss": "Dölj listan",
     "progress": "{{done}} av {{total}} klara",
     "gridFeeTitle": "Lägg till din nätavgift",
-    "gridFeeSubtitle": "Skanna fakturan eller skriv in den själv.",
+    "gridFeeSubtitle": "Står på fakturan från nätbolaget. Skanna den eller skriv in avgiften själv.",
     "markupTitle": "Lägg till elbolagets påslag",
-    "markupSubtitle": "Står också på fakturan. Behövs för exakt pris.",
+    "markupSubtitle": "Står på fakturan från elbolaget. Har du bara en faktura står båda där.",
     "applianceTitle": "Lägg till en apparat",
     "applianceSubtitle": "Se vad en tvätt eller en billaddning kostar just nu.",
     "alertsTitle": "Slå på prisvarningar",
@@ -498,15 +538,7 @@
     "start": "Kom igång",
     "pageOf": "Sida {{page}} av {{total}}",
     "page1Title": "Se vad elen verkligen kostar dig",
-    "page1Text": "Spotpriset i nyheterna är bara en del av elräkningen. Elpuls lägger till nätavgift, energiskatt och moms så att du ser priset du faktiskt betalar.",
-    "breakdownCaption": "En vanlig svensk elräkning, ungefär",
-    "breakdownA11y": "En vanlig elräkning: ungefär en fjärdedel är spotpris, en fjärdedel nätavgift och hälften energiskatt och moms.",
-    "breakdown": {
-      "spot": "Spotpris",
-      "grid": "Nätavgift",
-      "tax": "Energiskatt",
-      "vat": "Moms"
-    },
+    "page1Text": "Spotpriset i nyheterna är bara en del. Med nätavgift, energiskatt och moms blir det ofta dubbelt så mycket. Elpuls visar vad du faktiskt betalar.",
     "page2Title": "Använd elen när den är billig",
     "page2Text": "Priset ändras varje timme. Elpuls visar de billigaste timmarna och vad diskmaskinen, tvättmaskinen eller bilen kostar att köra nu eller senare.",
     "exampleNow": "Diskmaskin nu",
@@ -518,6 +550,94 @@
       "explainer": "Varför dagens priser ser ut som de gör",
       "heating": "När du ska värma huset före kvällstoppen",
       "weather": "Tips inför kalla morgnar och bra torkväder"
-    }
+    },
+    "breakdownFootnote": "Exempel med en nätavgift på {{grid}} öre/kWh."
+  },
+  "notifications": {
+    "title": "Notiser",
+    "subtitle": "Välj vad Elpuls berättar för dig, och när.",
+    "freeTitle": "Gratis",
+    "pricesPublishedTitle": "Morgondagens priser är klara",
+    "pricesPublishedText": "Varje eftermiddag när morgondagens priser publiceras.",
+    "priceAlertsNote": "Varningar för mycket höga eller låga priser ställer du in under Inställningar.",
+    "proTitle": "Smarta tips",
+    "applianceWindowsTitle": "Bra läge för dina apparater",
+    "applianceWindowsText": "När tvätt, disk eller laddning kostar minst. Billiga nätter får du en påminnelse på kvällen i stället.",
+    "cheapNowTitle": "Billig el just nu",
+    "cheapNowText": "Högst en gång om dagen, när elen är långt under dagens snitt.",
+    "heatAheadTitle": "Värm huset i förväg",
+    "heatAheadText": "På morgonen, före de dyra kvällstimmarna.",
+    "tryPro": "Prova Pro för smarta tips",
+    "appliancesTitle": "Apparater",
+    "applianceA11y": "Tips för {{appliance}}",
+    "quietTitle": "Tysta timmar",
+    "quietText": "Inga notiser på natten. Billiga nattimmar föreslås på kvällen i stället.",
+    "quietFrom": "Från",
+    "quietTo": "Till",
+    "maxPerDayTitle": "Notiser per dag",
+    "maxPerDayText": "Elpuls skickar de mest användbara först och hoppar över dagar när det inte finns något att spara."
+  },
+  "chart": {
+    "band": {
+      "cheap": "billigt för dagen",
+      "normal": "normalt för dagen",
+      "dear": "dyrt för dagen",
+      "peak": "bland dagens dyraste"
+    },
+    "tapHint": "Tryck i grafen för att se priset för en kvart.",
+    "today": "Idag",
+    "tomorrow": "Imorgon",
+    "barA11y": "kl {{hour}}, {{price}} öre, {{band}}",
+    "summary": "{{day}}: billigast {{cheapTime}} ({{cheapPrice}} öre), dyrast {{dearTime}} ({{dearPrice}} öre)",
+    "viewLabel": "Grafvy",
+    "viewHourly": "Per timme",
+    "viewQuarter": "Per 15 min",
+    "bestTimesTitle": "Bästa tider för dina apparater",
+    "bestTimesLegend": "Skuggat i grafen",
+    "bestNow": "Bästa tiden är nu",
+    "saveKr": "Spara {{kr}} kr",
+    "when": {
+      "now": "Nu",
+      "tonight": "I natt",
+      "today": "Idag",
+      "tomorrow": "Imorgon",
+      "nowUntil": "Nu, till {{end}}"
+    },
+    "legend": {
+      "cheap": "Billigt",
+      "normal": "Normalt",
+      "dear": "Dyrt",
+      "peak": "Dyrast",
+      "best": "Bästa tider"
+    },
+    "teaserTitle": "Bästa tider för dina apparater",
+    "teaserText": "Pro visar när disk, tvätt och laddning kostar minst, direkt i grafen.",
+    "colCheapest": "Billigast",
+    "colDearest": "Dyrast"
+  },
+  "realPrice": {
+    "spotLabel": "Spotpriset",
+    "paidLabel": "Det du betalar",
+    "paidLabelYou": "Ditt pris",
+    "ore": "{{value}} öre",
+    "a11y": "Spotpriset är {{spot}} öre per kWh. Det du betalar är {{paid}} öre per kWh."
+  },
+  "solar": {
+    "nowUntil": "Bra läge för solel nu, till {{end}}",
+    "next": "Bästa soltimmarna idag: {{start}}–{{end}}",
+    "allPast": "Dagens bästa soltimmar har redan varit.",
+    "tooLittleSun": "För lite sol idag för att det ska märkas.",
+    "noBonus": "Inga extra bra soltimmar idag.",
+    "noBonusDetail": "Elen är dyr när solen står högst, så det du säljer är värt mer än vanligt.",
+    "advice": "Kör tvätt, disk eller billaddning då. Panelerna ger mycket och elen är billig, så din solel gör mest nytta hemma.",
+    "sceneA11y": "Solen går upp {{rise}} och ner {{set}}. Bra soltimmar:",
+    "statusNow": "Pågår nu",
+    "statusPast": "Har varit",
+    "statusSoon": "Snart",
+    "statusIn_one": "Om {{count}} tim",
+    "statusIn_other": "Om {{count}} tim",
+    "strongSun": "Mycket sol",
+    "goodSun": "Bra sol",
+    "avgPrice": "{{price}} öre/kWh"
   }
 }

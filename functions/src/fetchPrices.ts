@@ -2,7 +2,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { notifyZonePricesPublished } from './sendPriceNotifications';
-import { scheduleApplianceWindowNotifications } from './applianceNotifications';
+import { scheduleSmartPushes } from './smartPushes';
 import { notifyZonePriceAlerts } from './priceAlerts';
 
 const SWEDISH_ZONES = ['SE1', 'SE2', 'SE3', 'SE4'];
@@ -67,7 +67,7 @@ export const fetchPrices = onSchedule(
       logger.info(`Stored ${entries.length} price entries for ${zone} on ${dateKey}`);
 
       await notifyZonePricesPublished(db, zone, dateKey);
-      await scheduleApplianceWindowNotifications(db, zone, dateKey, hours);
+      await scheduleSmartPushes(db, zone, dateKey, hours);
       await notifyZonePriceAlerts(db, zone, dateKey, hours);
     }
   },
