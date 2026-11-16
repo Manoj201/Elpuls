@@ -765,5 +765,37 @@
     },
     "replayIntro": "Visa introduktionen igen",
     "replayHint": "Tre korta sidor om vad Elpuls gör."
+  },
+  "plan": {
+    "title": "Din plan",
+    "today": "Idag",
+    "tomorrow": "Imorgon",
+    "notReady": "Planen tas fram när elpriserna publiceras, oftast strax efter 13. Titta in igen i eftermiddag.",
+    "flatDay": "Priset är jämnt hela dagen, så det spelar liten roll när du kör tvätt och disk.",
+    "statusNow": "Nu",
+    "statusSoon": "Snart",
+    "statusPast": "Har varit",
+    "statusIn_one": "Om {{count}} tim",
+    "statusIn_other": "Om {{count}} tim",
+    "nightHint": "Sätt fördröjd start på kvällen.",
+    "coastHint": "Sänk värmen lite, huset håller värmen ett tag.",
+    "avoidPrice": "ca {{price}} öre/kWh",
+    "timesNote": "Tiderna räknas ut från elpriserna.",
+    "activity": {
+      "washing_machine": "Tvätt",
+      "dishwasher": "Disk",
+      "dryer": "Torktumlare",
+      "ev": "Ladda bilen",
+      "pool_heater": "Poolvärme",
+      "heatBank": "Värm huset",
+      "heatCoast": "Låt huset svalna lite",
+      "avoid": "Undvik att använda mycket el"
+    },
+    "lockedTitle": "Din plan för dagen",
+    "lockedText": "Elpuls räknar ut när det är billigast för just dina apparater, varje dag.",
+    "sampleWasher": "10:15–11:45",
+    "sampleDishes": "I natt 01:00–03:00",
+    "sampleAvoid": "17:00–20:00",
+    "todayMissing": "Det finns ingen plan för idag. Morgondagens plan är klar, tryck på Imorgon."
   }
 }

@@ -4,8 +4,14 @@ import * as logger from 'firebase-functions/logger';
 import { notifyZonePricesPublished } from './sendPriceNotifications';
 import { scheduleSmartPushes } from './smartPushes';
 import { notifyZonePriceAlerts } from './priceAlerts';
+import { generateDailyPlan } from './dailyPlan';
 
 const SWEDISH_ZONES = ['SE1', 'SE2', 'SE3', 'SE4'];
+
+const stockholmDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Stockholm' });
+function stockholmDateKey(d: Date): string {
+  return stockholmDateFormatter.format(d);
+}
 
 interface ElprisetJustNuEntry {
   SEK_per_kWh: number;
@@ -30,11 +36,23 @@ function buildUrl(zone: string, date: Date): string {
  * upstream API directly.
  */
 export const fetchPrices = onSchedule(
-  { schedule: '5,20,35,50 12-14 * * *', timeZone: 'Europe/Stockholm' },
+  // The AI key is for the "Din plan" summary (dailyPlan.ts).
+  { schedule: '5,20,35,50 12-14 * * *', timeZone: 'Europe/Stockholm', secrets: ['ANTHROPIC_API_KEY'] },
   async () => {
     const db = getFirestore();
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Today's "Din plan" if it's missing (e.g. the feature was deployed after
+    // yesterday's publish, or yesterday's run failed). Idempotent, cheap when it exists.
+    const todayKey = stockholmDateKey(new Date());
+    for (const zone of SWEDISH_ZONES) {
+      const todaySnap = await db.collection('prices').doc(`SE-${zone}-${todayKey}`).get();
+      const todayHours = todaySnap.data()?.hours as { hour: string; price: number }[] | undefined;
+      if (todayHours?.length) {
+        await generateDailyPlan(db, zone, todayKey, todayHours).catch((err) => logger.error(`Today's plan failed for ${zone}: ${err}`));
+      }
+    }
 
     for (const zone of SWEDISH_ZONES) {
       const response = await fetch(buildUrl(zone, tomorrow));
@@ -69,6 +87,8 @@ export const fetchPrices = onSchedule(
       await notifyZonePricesPublished(db, zone, dateKey);
       await scheduleSmartPushes(db, zone, dateKey, hours);
       await notifyZonePriceAlerts(db, zone, dateKey, hours);
+      // Once per zone and day (idempotent); never blocks the price fetch.
+      await generateDailyPlan(db, zone, dateKey, hours).catch((err) => logger.error(`Daily plan failed for ${zone}: ${err}`));
     }
   },
 );
