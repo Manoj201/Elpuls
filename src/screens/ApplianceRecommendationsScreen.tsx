@@ -7,6 +7,7 @@ import { APPLIANCE_ICONS, getHouseholdAppliances, resolveApplianceLabel } from '
 import { compareApplianceCost } from '../lib/priceUtils';
 import { formatClock, formatPrice } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
+import { useNow } from '../hooks/useNow';
 import { useApplianceStore } from '../stores/useApplianceStore';
 import { setAppliancePushes } from '../lib/notificationPrefs';
 import { useCountryStore } from '../stores/useCountryStore';
@@ -33,9 +34,10 @@ function ApplianceRow({ appliance, uid }: { appliance: AppliancePreset; uid: str
   // Real 15-minute prices, so the best window can start on any quarter-hour.
   const combinedSlots = useMemo(() => [...todayPrices, ...tomorrowPrices], [todayPrices, tomorrowPrices]);
 
+  const now = useNow();
   const { costNow, cheapestWindow, costAtWindow, showWaitOption } = useMemo(
-    () => compareApplianceCost(appliance, combinedSlots, new Date()),
-    [appliance, combinedSlots],
+    () => compareApplianceCost(appliance, combinedSlots, now),
+    [appliance, combinedSlots, now],
   );
 
   const Icon = APPLIANCE_ICONS[appliance.id] ?? IconBolt;

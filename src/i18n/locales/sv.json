@@ -580,7 +580,9 @@
   "ai": {
     "badge": "AI",
     "explainerNote": "Skriven av AI utifrån dagens priser och väder. Den kan ha fel, så se den som en vägledning.",
-    "scanNote": "Avläst av AI från din bild eller PDF. Jämför siffrorna med fakturan innan du sparar."
+    "scanNote": "Avläst av AI från din bild eller PDF. Jämför siffrorna med fakturan innan du sparar.",
+    "forecastNote": "Prognosen räknas fram av en AI-modell som har lärt sig av tidigare elpriser och väder. Den kan ha fel.",
+    "forecastShortNote": "AI-prognos, den kan ha fel."
   },
   "pro": {
     "tag": "Pro",
@@ -797,5 +799,61 @@
     "sampleDishes": "I natt 01:00–03:00",
     "sampleAvoid": "17:00–20:00",
     "todayMissing": "Det finns ingen plan för idag. Morgondagens plan är klar, tryck på Imorgon."
+  },
+  "outlook": {
+    "daysTitle": "Kommande dagar",
+    "forecastTag": "Prognos",
+    "range": "ca {{low}}–{{high}} öre",
+    "uncertain": "Mer osäkert",
+    "dir": {
+      "cheaper": "Billigare",
+      "same": "Som idag",
+      "dearer": "Dyrare"
+    },
+    "hitRate_one": "Det senaste året har prognosen pekat åt rätt håll ungefär {{count}} dag av 10, sett 2–5 dagar framåt.",
+    "hitRate_other": "Det senaste året har prognosen pekat åt rätt håll ungefär {{count}} dagar av 10, sett 2–5 dagar framåt.",
+    "disclaimer": "Prognosen bygger på SMHI:s väder och hur priset har följt vädret tidigare år. Ändras vädret kan den slå fel.",
+    "hidden": "Prognosen visas inte för {{zone}} just nu. Den har inte haft rätt tillräckligt ofta det senaste året.",
+    "notReady": "Prognosen tas fram varje eftermiddag. Titta in igen senare.",
+    "monthsTitle": "Kommande månader",
+    "month": {
+      "cheaper": "Brukar vara ca {{pct}} % billigare",
+      "dearer": "Brukar vara ca {{pct}} % dyrare"
+    },
+    "monthSame": "Brukar vara ungefär som nu",
+    "monthsBasis_one": "Jämfört med {{month}}, enligt elpriserna från {{count}} år.",
+    "monthsBasis_other": "Jämfört med {{month}}, enligt elpriserna från {{count}} år.",
+    "lockedTitle": "Billigaste dagen i veckan",
+    "lockedText": "Se vilken dag som troligen blir billigast, upp till en vecka fram.",
+    "todayShort": "Idag",
+    "todayWord": "idag",
+    "actualWord": "faktiskt pris",
+    "legendActual": "Faktiskt pris",
+    "legendForecast": "Prognos och troligt spann",
+    "averageOre": "snitt {{ore}} öre",
+    "legendToday": "Idag {{ore}} öre",
+    "tileCheapest": "Billigast troligen",
+    "tileNoCheaper": "Ingen billigare dag",
+    "tileUseToday": "Idag ser bäst ut",
+    "tileFlat": "Jämnt hela veckan",
+    "tileFlatValue": "Ungefär som idag",
+    "aboutToggle": "Om prognosen",
+    "aboutHint_one": "rätt {{count}} av 10 gånger",
+    "aboutHint_other": "rätt {{count}} av 10 gånger",
+    "monthTileSame": "Som nu",
+    "monthTileWord": {
+      "cheaper": "billigare",
+      "dearer": "dyrare",
+      "same": "ingen skillnad"
+    },
+    "chartTitle": "Snittpris per dag",
+    "chartSubtitle": "Spotpris i öre/kWh, utan nätavgift, skatt och moms. Tryck på en dag för att se den.",
+    "bestTag": "Bästa dagen",
+    "rowsCaption": "Troligt pris, öre/kWh",
+    "todayTick": "Idag {{ore}}",
+    "lockedChartTitle": "Snittpris per dag",
+    "lockedChartText": "Hur priset har rört sig och vart det troligen är på väg.",
+    "lockedMonthsTitle": "Kommande månader",
+    "lockedMonthsText": "Hur de närmaste månaderna brukar bli jämfört med nu."
   }
 }

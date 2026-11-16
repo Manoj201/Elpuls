@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useRetryWhileMissing, useStockholmDay } from './useNow';
+import { usePriceStore } from '../stores/usePriceStore';
 import { useTranslation } from 'react-i18next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -40,6 +42,12 @@ export function useDailyPlan(zone: string, enabled: boolean): DailyPlanState {
   const language = i18n.language as SupportedLanguage;
   const [state, setState] = useState<DailyPlanState>({ today: null, tomorrow: null, isLoading: enabled });
 
+  // Reload when the Swedish date changes (the app may stay open past midnight).
+  const day = useStockholmDay();
+  // Tomorrow's plan is written when tomorrow's prices arrive (~13:30), so reload then too.
+  const tomorrowReady = usePriceStore((s) => s.tomorrowPrices.length > 0);
+  // The plan is written a little after the prices (AI summary), so if it's still missing, look again on each clock tick.
+  const retry = useRetryWhileMissing(enabled && !state.isLoading && (state.today === null || (tomorrowReady && state.tomorrow === null)));
   useEffect(() => {
     if (!enabled) {
       setState({ today: null, tomorrow: null, isLoading: false });
@@ -76,14 +84,14 @@ export function useDailyPlan(zone: string, enabled: boolean): DailyPlanState {
         if (!cancelled) setState({ today, tomorrow: next, isLoading: false });
       } catch (err) {
         console.log('Failed to load daily plan:', err);
-        if (!cancelled) setState({ today: null, tomorrow: null, isLoading: false });
+        if (!cancelled) setState((s) => ({ ...s, isLoading: false }));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [zone, language, enabled]);
+  }, [zone, language, enabled, day, tomorrowReady, retry]);
 
   return state;
 }

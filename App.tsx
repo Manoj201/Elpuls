@@ -22,6 +22,7 @@ import { GuideScreen } from './src/screens/GuideScreen';
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen';
 import { ScreenBackground } from './src/components/ScreenBackground';
 import { usePushRegistration } from './src/hooks/usePushRegistration';
+import { DataAutoRefresh } from './src/components/DataAutoRefresh';
 import { ensureAnonymousSignIn, signOutUser } from './src/lib/auth';
 import { clearLocalAppStorage } from './src/lib/devTools';
 import { deleteMyAccount } from './src/lib/account';
@@ -185,6 +186,7 @@ export default function App() {
   const [initError, setInitError] = useState<string | null>(null);
   const [initAttempt, setInitAttempt] = useState(0);
   const [i18nReady, setI18nReady] = useState(false);
+  const priceZone = useCountryStore((s) => s.zone);
 
   const [spaceGroteskLoaded] = useSpaceGrotesk({ SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold });
   const [interLoaded] = useInter({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold });
@@ -360,6 +362,8 @@ export default function App() {
 
   return (
     <ScreenBackground>
+      {/* Prices + weather stay current on every screen and after the app was in the background. */}
+      <DataAutoRefresh zone={priceZone} />
       <View style={styles.screen}>
         {stackScreen && activeUid ? (
           <>

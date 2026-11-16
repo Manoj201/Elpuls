@@ -16,7 +16,7 @@ export interface HourlyForecast {
 
 export interface PriceProvider {
   /**
-   * Fetches hourly spot prices for a given zone and date.
+   * Spot prices for a zone and date, from our own backend (never a third-party API directly).
    * Returns an empty array if prices for that date aren't published yet
    * (e.g. tomorrow's prices before ~13:00 CET) rather than throwing.
    */
@@ -24,6 +24,6 @@ export interface PriceProvider {
 }
 
 export interface WeatherProvider {
-  /** Fetches hourly weather forecast for a given coordinate. */
-  getForecast(lat: number, lon: number): Promise<HourlyForecast[]>;
+  /** Hourly weather forecast for a price zone (at the zone's reference point). */
+  getForecast(zone: string): Promise<HourlyForecast[]>;
 }

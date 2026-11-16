@@ -48,6 +48,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 7-day + seasonal outlook (zone-level), written by Cloud Functions only.
+    // history/{zone} (the model's training data) has no rule: default deny.
+    match /outlooks/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // "Din plan": zone-level daily plan, written by Cloud Functions only.
     match /plans/{docId} {
       allow read: if request.auth != null;

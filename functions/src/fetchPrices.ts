@@ -18,17 +18,6 @@ interface ElprisetJustNuEntry {
   time_start: string;
 }
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-function buildUrl(zone: string, date: Date): string {
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  return `https://www.elprisetjustnu.se/api/v1/prices/${year}/${month}-${day}_${zone}.json`;
-}
-
 /**
  * Scheduled daily to pick up tomorrow's Swedish spot prices once
  * elprisetjustnu.se publishes them (typically ~13:00 CET). Stored in
@@ -36,8 +25,12 @@ function buildUrl(zone: string, date: Date): string {
  * upstream API directly.
  */
 export const fetchPrices = onSchedule(
+  // Every 15 min from 12:05 until tomorrow's prices are stored, up to 23:50:
+  // if the price site is down at 13:00 we keep trying all evening instead of
+  // giving up at 14:50 (the app reads prices only from Firestore). Zones
+  // already stored are skipped, so later runs on a normal day do nothing.
   // The AI key is for the "Din plan" summary (dailyPlan.ts).
-  { schedule: '5,20,35,50 12-14 * * *', timeZone: 'Europe/Stockholm', secrets: ['ANTHROPIC_API_KEY'] },
+  { schedule: '5,20,35,50 12-23 * * *', timeZone: 'Europe/Stockholm', secrets: ['ANTHROPIC_API_KEY'] },
   async () => {
     const db = getFirestore();
     const tomorrow = new Date();
@@ -54,8 +47,11 @@ export const fetchPrices = onSchedule(
       }
     }
 
+    const tomorrowKey = stockholmDateKey(tomorrow);
     for (const zone of SWEDISH_ZONES) {
-      const response = await fetch(buildUrl(zone, tomorrow));
+      if ((await db.collection('prices').doc(`SE-${zone}-${tomorrowKey}`).get()).exists) continue;
+      const [ty, tm, td] = tomorrowKey.split('-');
+      const response = await fetch(`https://www.elprisetjustnu.se/api/v1/prices/${ty}/${tm}-${td}_${zone}.json`);
 
       if (response.status === 404) {
         logger.info(`Prices for ${zone} not published yet`);
@@ -68,7 +64,7 @@ export const fetchPrices = onSchedule(
       }
 
       const entries = (await response.json()) as ElprisetJustNuEntry[];
-      const dateKey = tomorrow.toISOString().slice(0, 10);
+      const dateKey = tomorrowKey;
       const hours = entries.map((entry) => ({ hour: entry.time_start, price: entry.SEK_per_kWh }));
 
       await db
@@ -89,6 +85,40 @@ export const fetchPrices = onSchedule(
       await notifyZonePriceAlerts(db, zone, dateKey, hours);
       // Once per zone and day (idempotent); never blocks the price fetch.
       await generateDailyPlan(db, zone, dateKey, hours).catch((err) => logger.error(`Daily plan failed for ${zone}: ${err}`));
+    }
+  },
+);
+
+/**
+ * Safety net (the app reads prices only from Firestore): shortly after
+ * midnight and at 06:00, store today's prices if they're missing, e.g. when
+ * every fetchPrices run failed the day before. Does nothing on a normal day.
+ */
+export const ensureTodayPrices = onSchedule(
+  { schedule: '7 0,6 * * *', timeZone: 'Europe/Stockholm' },
+  async () => {
+    const db = getFirestore();
+    const now = new Date();
+    const dateKey = stockholmDateKey(now);
+    for (const zone of SWEDISH_ZONES) {
+      const ref = db.collection('prices').doc(`SE-${zone}-${dateKey}`);
+      if ((await ref.get()).exists) continue;
+      // Built from the Swedish date: at 00:07 in Sweden the server's UTC clock is still on yesterday.
+      const [y, m, d] = dateKey.split('-');
+      const response = await fetch(`https://www.elprisetjustnu.se/api/v1/prices/${y}/${m}-${d}_${zone}.json`);
+      if (!response.ok) {
+        logger.error(`ensureTodayPrices: ${zone} ${dateKey} failed: ${response.status}`);
+        continue;
+      }
+      const entries = (await response.json()) as ElprisetJustNuEntry[];
+      await ref.set({
+        zone,
+        date: dateKey,
+        currency: 'SEK',
+        hours: entries.map((entry) => ({ hour: entry.time_start, price: entry.SEK_per_kWh })),
+        fetchedAt: new Date().toISOString(),
+      });
+      logger.warn(`ensureTodayPrices: stored missing prices for ${zone} ${dateKey}.`);
     }
   },
 );

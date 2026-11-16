@@ -31,6 +31,7 @@ import {
 import { db } from '../lib/firebase';
 import { openManageSubscriptions } from '../lib/purchases';
 import { authErrorKey, currentEmail, isGuest, linkGuestToEmail } from '../lib/auth';
+import { useNow } from '../hooks/useNow';
 import { useApplianceStore, type RegisteredAppliance } from '../stores/useApplianceStore';
 import { APPLIANCE_PRESETS } from '../config/appliances';
 import { APPLIANCE_ICONS, householdDefaultIds, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
@@ -270,7 +271,8 @@ export function SettingsScreen({
   ].join(' · ');
 
   const todayPrices = usePriceStore((s) => s.todayPrices);
-  const spotNow = findCurrentPrice(todayPrices, new Date());
+  const now = useNow();
+  const spotNow = findCurrentPrice(todayPrices, now);
   const realPriceNow =
     spotNow && user.gridFeeVariableSekPerKwh !== null
       ? {

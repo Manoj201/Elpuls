@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRetryWhileMissing, useStockholmDay } from './useNow';
 import { useTranslation } from 'react-i18next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -24,9 +25,17 @@ export function useExplainer(zone: string): ExplainerState {
   const language = i18n.language as SupportedLanguage;
   const [state, setState] = useState<ExplainerState>({ text: null, factors: [], isLoading: true });
 
+  // Reload when the Swedish date changes (the app may stay open past midnight).
+  const day = useStockholmDay();
+  // Today's explainer is written ~07:00: if it isn't there yet, look again on each clock tick.
+  const retry = useRetryWhileMissing(!state.isLoading && state.text === null);
+  const lastRetry = useRef(retry);
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, isLoading: true }));
+    // A retry happens quietly; only a new zone, language or day shows the loading state.
+    const isRetry = retry !== lastRetry.current;
+    lastRetry.current = retry;
+    if (!isRetry) setState((s) => ({ ...s, isLoading: true }));
 
     async function load() {
       try {
@@ -60,7 +69,7 @@ export function useExplainer(zone: string): ExplainerState {
     return () => {
       cancelled = true;
     };
-  }, [zone, language]);
+  }, [zone, language, day, retry]);
 
   return state;
 }

@@ -34,7 +34,8 @@ function buildUrl(lat: number, lon: number): string {
  * Firestore so clients don't hit SMHI directly.
  */
 export const fetchWeather = onSchedule(
-  { schedule: '0 6,12,18 * * *', timeZone: 'Europe/Stockholm' },
+  // Hourly: SMHI updates its forecast about once an hour, and the app reads weather only from Firestore.
+  { schedule: '0 * * * *', timeZone: 'Europe/Stockholm' },
   async () => {
     const db = getFirestore();
 

@@ -580,7 +580,9 @@
   "ai": {
     "badge": "AI",
     "explainerNote": "Written by AI from today's prices and weather. It can be wrong, so treat it as a guide.",
-    "scanNote": "Read by AI from your photo or PDF. Check the numbers against your bill before you save."
+    "scanNote": "Read by AI from your photo or PDF. Check the numbers against your bill before you save.",
+    "forecastNote": "An AI model trained on past electricity prices and weather makes this forecast. It can be wrong.",
+    "forecastShortNote": "AI forecast, it can be wrong."
   },
   "pro": {
     "tag": "Pro",
@@ -797,5 +799,61 @@
     "sampleDishes": "Tonight 01:00–03:00",
     "sampleAvoid": "17:00–20:00",
     "todayMissing": "There's no plan for today. Tomorrow's plan is ready, tap Tomorrow."
+  },
+  "outlook": {
+    "daysTitle": "Coming days",
+    "forecastTag": "Forecast",
+    "range": "about {{low}}–{{high}} öre",
+    "uncertain": "Less certain",
+    "dir": {
+      "cheaper": "Cheaper",
+      "same": "Like today",
+      "dearer": "Dearer"
+    },
+    "hitRate_one": "Over the past year the forecast pointed the right way about {{count}} day in 10, looking 2–5 days ahead.",
+    "hitRate_other": "Over the past year the forecast pointed the right way about {{count}} days in 10, looking 2–5 days ahead.",
+    "disclaimer": "It uses SMHI's weather forecast and how prices followed the weather in past years. If the weather changes, it can be wrong.",
+    "hidden": "The forecast isn't shown for {{zone}} right now. It hasn't been right often enough over the past year.",
+    "notReady": "The forecast is made every afternoon. Check back later.",
+    "monthsTitle": "Coming months",
+    "month": {
+      "cheaper": "Usually about {{pct}}% cheaper",
+      "dearer": "Usually about {{pct}}% dearer"
+    },
+    "monthSame": "Usually about the same",
+    "monthsBasis_one": "Compared with {{month}}, from {{count}} year of prices.",
+    "monthsBasis_other": "Compared with {{month}}, from {{count}} years of prices.",
+    "lockedTitle": "Cheapest day of the week",
+    "lockedText": "See which day will likely be cheapest, up to a week ahead.",
+    "todayShort": "Today",
+    "todayWord": "today",
+    "actualWord": "actual price",
+    "legendActual": "Actual price",
+    "legendForecast": "Forecast and likely range",
+    "averageOre": "average {{ore}} öre",
+    "legendToday": "Today {{ore}} öre",
+    "tileCheapest": "Likely cheapest",
+    "tileNoCheaper": "No cheaper day",
+    "tileUseToday": "Today looks best",
+    "tileFlat": "Steady all week",
+    "tileFlatValue": "About like today",
+    "aboutToggle": "About the forecast",
+    "aboutHint_one": "right {{count}} time in 10",
+    "aboutHint_other": "right {{count}} times in 10",
+    "monthTileSame": "Same",
+    "monthTileWord": {
+      "cheaper": "cheaper",
+      "dearer": "dearer",
+      "same": "no change"
+    },
+    "chartTitle": "Average price per day",
+    "chartSubtitle": "Spot price in öre/kWh, without grid fee, tax and VAT. Tap a day to see it.",
+    "bestTag": "Best day",
+    "rowsCaption": "Likely price, öre/kWh",
+    "todayTick": "Today {{ore}}",
+    "lockedChartTitle": "Average price per day",
+    "lockedChartText": "How the price has moved and where it's likely heading.",
+    "lockedMonthsTitle": "Coming months",
+    "lockedMonthsText": "How the next few months usually compare with now."
   }
 }

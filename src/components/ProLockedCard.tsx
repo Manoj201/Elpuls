@@ -59,7 +59,7 @@ export function ProLockedCard({
       </View>
 
       {preview ? (
-        <View style={styles.preview} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+        <View style={styles.preview} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden pointerEvents="none">
           <Text style={styles.exampleLabel}>{t('pro.example')}</Text>
           <View style={styles.previewContent}>{preview}</View>
         </View>
