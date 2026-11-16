@@ -42,6 +42,7 @@ import { compareToOtherZones, type ZoneComparison } from '../lib/zoneComparison'
 import { calculateLandedPrice } from '../lib/landedCost';
 import { zoneReferencePoints } from '../config/zoneReferencePoints';
 import { useExplainer } from '../hooks/useExplainer';
+import { useNow } from '../hooks/useNow';
 import { useDailyPlan } from '../hooks/useDailyPlan';
 import { DailyPlanCard } from '../components/DailyPlanCard';
 import { theme } from '../theme';
@@ -130,18 +131,20 @@ export function HomeScreen({
   useEffect(() => {
     fetchPrices(zone);
   }, [fetchPrices, zone]);
+  // Shared clock: ticks every quarter-hour and on return to the app, so the gauge,
+  // chart now-line and best times always match the phone's time.
+  const now = useNow();
 
   useEffect(() => {
-    const point = zoneReferencePoints[zone];
-    if (point) fetchForecast(point.lat, point.lon);
+    fetchForecast(zone);
   }, [fetchForecast, zone]);
 
   useEffect(() => {
     fetchAppliances(uid);
   }, [fetchAppliances, uid]);
 
-  const risk = useMemo(() => assessPriceRisk(forecast, new Date()), [forecast]);
-  const weatherPrepTip = useMemo(() => findWeatherPrepTip(forecast, new Date(), hasEv), [forecast, hasEv]);
+  const risk = useMemo(() => assessPriceRisk(forecast, now), [forecast, now]);
+  const weatherPrepTip = useMemo(() => findWeatherPrepTip(forecast, now, hasEv), [forecast, now, hasEv]);
   const explainer = useExplainer(zone);
   const dailyPlan = useDailyPlan(zone, isProSubscriber);
 
@@ -151,7 +154,7 @@ export function HomeScreen({
   // The free home-screen widget always shows raw spot öre/kWh, independent
   // of the in-app landed-cost toggle below — it's a background sync, not
   // tied to whatever view state this screen happens to be in.
-  const widgetCurrentPrice = useMemo(() => findCurrentPrice(hourlyPrices, new Date()), [hourlyPrices]);
+  const widgetCurrentPrice = useMemo(() => findCurrentPrice(hourlyPrices, now), [hourlyPrices, now]);
   const widgetAveragePrice = useMemo(
     () => (hourlyPrices.length > 0 ? hourlyPrices.reduce((s, p) => s + p.price, 0) / hourlyPrices.length : null),
     [hourlyPrices],
@@ -190,7 +193,6 @@ export function HomeScreen({
   // the gauge range from today's quarter-hours, and the next cheapest and
   // dearest quarter-hour from now on (today + tomorrow when published).
   const hero = useMemo(() => {
-    const now = new Date();
     const sorted = [...chartSlots].sort((a, b) => a.hour.getTime() - b.hour.getTime());
     const nowSlot = findCurrentPrice(sorted, now);
     const today = sorted.filter((s) => s.hour.toDateString() === now.toDateString());
@@ -209,13 +211,12 @@ export function HomeScreen({
       nextCheap,
       nextDear,
     };
-  }, [chartSlots]);
+  }, [chartSlots, now]);
 
   // Pro: the best upcoming window for each appliance in this household,
   // shaded on the chart and listed under it.
   const disabledDefaults = useUserStore((s) => s.disabledDefaultAppliances);
   const bestTimes: BestTime[] = useMemo(() => {
-    const now = new Date();
     const slots = [...todayPrices, ...tomorrowPrices];
     const nowSlot = findCurrentPrice(slots, now);
     const household = getHouseholdAppliances({ hasEv, disabledDefaults, registered: appliances }).filter((a) => a.shiftable);
@@ -249,7 +250,7 @@ export function HomeScreen({
       });
     }
     return result.sort((x, y) => x.start.getTime() - y.start.getTime());
-  }, [todayPrices, tomorrowPrices, hasEv, disabledDefaults, appliances, t]);
+  }, [todayPrices, tomorrowPrices, hasEv, disabledDefaults, appliances, t, now]);
   // Spot average for the share card: compareToOtherZones fetches other zones' raw spot prices, so the
   // comparison must stay spot-vs-spot regardless of what's displayed.
   const spotAveragePrice = useMemo(
@@ -261,14 +262,18 @@ export function HomeScreen({
     const point = zoneReferencePoints[zone];
     return point ? estimateSolarPotential(forecast, point.lat, point.lon) : [];
   }, [forecast, zone]);
+  // Sunrise/sunset only change with the day, not every quarter-hour.
+  const nowDay = now.toDateString();
   const sunTimes = useMemo((): { sunrise: Date | null; sunset: Date | null } => {
     const point = zoneReferencePoints[zone];
     if (!point) return { sunrise: null, sunset: null };
-    const times = getTimes(new Date(), point.lat, point.lon);
+    const midday = new Date(nowDay);
+    midday.setHours(12, 0, 0, 0);
+    const times = getTimes(midday, point.lat, point.lon);
     // Polar day/night (far north) gives invalid dates.
     const valid = (d: Date | null): Date | null => (d && !Number.isNaN(d.getTime()) ? d : null);
     return { sunrise: valid(times.sunrise), sunset: valid(times.sunset) };
-  }, [zone]);
+  }, [zone, nowDay]);
   const bonusHours = useMemo(
     () => findSolarBonusHours(hourlyPrices, solarPotential),
     [hourlyPrices, solarPotential],
@@ -380,7 +385,7 @@ export function HomeScreen({
       <View style={styles.centered}>
         <Text style={styles.error}>{t('home.loadFailed')}</Text>
         <View style={styles.retryButton}>
-          <SecondaryButton label={t('app.retry')} onPress={() => fetchPrices(zone)} />
+          <SecondaryButton label={t('app.retry')} onPress={() => fetchPrices(zone, { force: true })} />
         </View>
       </View>
     );
@@ -625,7 +630,7 @@ export function HomeScreen({
           </Text>
           <PriceChart
             slots={chartSlots}
-            now={new Date()}
+            now={now}
             bestTimes={isProSubscriber ? bestTimes : undefined}
             showTeaser
           />
@@ -638,7 +643,7 @@ export function HomeScreen({
               <DailyPlanCard
                 today={dailyPlan.today}
                 tomorrow={dailyPlan.tomorrow}
-                now={new Date()}
+                now={now}
                 hasEv={hasEv}
                 heatingType={heatingType}
                 disabledDefaults={disabledDefaults}
@@ -684,7 +689,7 @@ export function HomeScreen({
                     solarPotential={solarPotential}
                     sunrise={sunTimes.sunrise}
                     sunset={sunTimes.sunset}
-                    now={new Date()}
+                    now={now}
                     language={language}
                   />
                 </>

@@ -12,6 +12,19 @@ import { theme } from '../theme';
 import { Card } from '../components/Card';
 import { PriceChart } from '../components/PriceChart';
 import { Chip, type ChipVariant } from '../components/Chip';
+import {
+  OutlookChartCard,
+  OutlookChartPreview,
+  OutlookDaysCard,
+  OutlookDaysPreview,
+  SeasonalCard,
+  SeasonalPreview,
+} from '../components/OutlookCards';
+import { ProLockedCard } from '../components/ProLockedCard';
+import { useNow } from '../hooks/useNow';
+import { useOutlook } from '../hooks/useOutlook';
+import { useUserStore } from '../stores/useUserStore';
+import { IconCalendarMonth, IconCalendarStats, IconChartLine } from '@tabler/icons-react-native';
 
 const BAND_VARIANT: Record<PriceBand, ChipVariant> = {
   cheap: 'teal',
@@ -124,7 +137,9 @@ export function ForecastScreen() {
     fetchPrices(zone);
   }, [fetchPrices, zone]);
 
-  const now = new Date();
+  const now = useNow();
+  const isProSubscriber = useUserStore((s) => s.isProSubscriber);
+  const { outlook, isLoading: outlookLoading } = useOutlook(zone, isProSubscriber);
   const todayHourly = useMemo(() => groupPricesByHour(todayPrices), [todayPrices]);
   const tomorrowHourly = useMemo(() => groupPricesByHour(tomorrowPrices), [tomorrowPrices]);
 
@@ -132,6 +147,19 @@ export function ForecastScreen() {
   const tomorrowAvg =
     tomorrowHourly.length > 0 ? tomorrowHourly.reduce((s, p) => s + p.price, 0) / tomorrowHourly.length : null;
   const diffPct = todayAvg !== null && tomorrowAvg !== null && todayAvg > 0 ? ((tomorrowAvg - todayAvg) / todayAvg) * 100 : null;
+
+  const todaySummary = (
+    <DaySummary title={t('forecast.today')} hourlyPrices={todayHourly} language={language} emptyText={t('forecast.noPrices')} now={now} />
+  );
+  const tomorrowSummary = (
+    <DaySummary
+      title={t('forecast.tomorrow')}
+      hourlyPrices={tomorrowHourly}
+      language={language}
+      emptyText={t('forecast.tomorrowPending')}
+      now={now}
+    />
+  );
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -156,20 +184,74 @@ export function ForecastScreen() {
         </Card>
       )}
 
-      <DaySummary
-        title={t('forecast.today')}
-        hourlyPrices={todayHourly}
-        language={language}
-        emptyText={t('forecast.noPrices')}
-        now={now}
-      />
-      <DaySummary
-        title={t('forecast.tomorrow')}
-        hourlyPrices={tomorrowHourly}
-        language={language}
-        emptyText={t('forecast.tomorrowPending')}
-        now={now}
-      />
+      {/*
+        Order (UI/UX Pro Max content-priority, near → far): the quick answer and
+        the 48 h chart, then the coming days (the screen's main question), then
+        the hour-by-hour detail for tomorrow and today, then the longer views.
+        Tomorrow comes before today once published: today is already on Home.
+      */}
+      {isProSubscriber ? (
+        outlook ? (
+          <OutlookDaysCard outlook={outlook} todayAvg={todayAvg} zone={zone} />
+        ) : !outlookLoading ? (
+          <Card style={styles.dayCard}>
+            <Text style={styles.dayTitle}>{t('outlook.daysTitle')}</Text>
+            <Text style={styles.empty}>{t('outlook.notReady')}</Text>
+          </Card>
+        ) : null
+      ) : (
+        <View style={styles.locked}>
+          <ProLockedCard
+            icon={IconCalendarStats}
+            title={t('outlook.lockedTitle')}
+            subtitle={t('outlook.lockedText')}
+            source="generic"
+            preview={<OutlookDaysPreview />}
+          />
+        </View>
+      )}
+
+      {tomorrowHourly.length > 0 ? (
+        <>
+          {tomorrowSummary}
+          {todaySummary}
+        </>
+      ) : (
+        <>
+          {todaySummary}
+          {tomorrowSummary}
+        </>
+      )}
+
+      {isProSubscriber ? (
+        outlook && (
+          <>
+            <OutlookChartCard outlook={outlook} todayAvg={todayAvg} tomorrowAvg={tomorrowAvg} />
+            <SeasonalCard outlook={outlook} />
+          </>
+        )
+      ) : (
+        <>
+          <View style={styles.locked}>
+            <ProLockedCard
+              icon={IconChartLine}
+              title={t('outlook.lockedChartTitle')}
+              subtitle={t('outlook.lockedChartText')}
+              source="generic"
+              preview={<OutlookChartPreview />}
+            />
+          </View>
+          <View style={styles.locked}>
+            <ProLockedCard
+              icon={IconCalendarMonth}
+              title={t('outlook.lockedMonthsTitle')}
+              subtitle={t('outlook.lockedMonthsText')}
+              source="generic"
+              preview={<SeasonalPreview />}
+            />
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -182,6 +264,7 @@ const styles = StyleSheet.create({
   diffLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, flex: 1 },
   diffValue: { fontFamily: theme.typography.display, fontSize: theme.type.lg },
   dayCard: { marginBottom: 16 },
+  locked: { marginBottom: 16 },
   chartCard: { marginBottom: 16, overflow: 'hidden' },
   dayTitle: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginBottom: 6 },
   dayAverage: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },

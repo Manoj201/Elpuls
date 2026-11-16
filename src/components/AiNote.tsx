@@ -4,8 +4,12 @@ import { IconSparkles } from '@tabler/icons-react-native';
 import { theme } from '../theme';
 
 interface AiNoteProps {
-  /** `explainer`: AI-written text. `scan`: values an AI read from a photo or PDF. */
-  kind: 'explainer' | 'scan';
+  /**
+   * `explainer`: AI-written text. `scan`: values an AI read from a photo or PDF.
+   * `forecast`: numbers from the outlook model (trained on past prices + weather).
+   * `forecastShort`: the same, one short line (for a second card right below).
+   */
+  kind: 'explainer' | 'scan' | 'forecast' | 'forecastShort';
 }
 
 /**
@@ -15,7 +19,7 @@ interface AiNoteProps {
  */
 export function AiNote({ kind }: AiNoteProps) {
   const { t } = useTranslation();
-  const text = t(kind === 'explainer' ? 'ai.explainerNote' : 'ai.scanNote');
+  const text = t(`ai.${kind}Note`);
 
   return (
     <View style={styles.row} accessible accessibilityLabel={`${t('ai.badge')}. ${text}`}>

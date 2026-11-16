@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { IconArrowDownRight, IconArrowUpRight, IconCalculator, IconChartBar, IconClockHour4, IconMap2, IconReceipt } from '@tabler/icons-react-native';
+import { useNow } from '../hooks/useNow';
 import { useCountryStore } from '../stores/useCountryStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { useUserStore } from '../stores/useUserStore';
@@ -76,7 +77,8 @@ export function StatsScreen({ onOpenBillScan }: StatsScreenProps) {
   }, [config.priceProvider, zones]);
 
   const hourlyPrices = useMemo(() => groupPricesByHour(todayPrices), [todayPrices]);
-  const currentPrice = useMemo(() => findCurrentPrice(hourlyPrices, new Date()), [hourlyPrices]);
+  const now = useNow();
+  const currentPrice = useMemo(() => findCurrentPrice(hourlyPrices, now), [hourlyPrices, now]);
 
   const breakdown = currentPrice
     ? landedPriceBreakdown(currentPrice.price, gridFeeVariableSekPerKwh ?? 0, retailerMarkupSekPerKwh)

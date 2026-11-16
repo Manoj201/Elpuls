@@ -57,3 +57,6 @@ elpuls-ui-design-spec.md
 
 # Vercel
 .vercel/
+
+# Claude Code working files (private plan)
+.claude/

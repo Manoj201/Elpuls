@@ -1,5 +1,5 @@
-import { elprisetjustnuProvider } from '../../providers/price/elprisetjustnu';
-import { smhiProvider } from '../../providers/weather/smhi';
+import { firestorePriceProvider } from '../../providers/firestore/prices';
+import { firestoreWeatherProvider } from '../../providers/firestore/weather';
 import type { CountryConfig } from './types';
 
 export const swedenConfig: CountryConfig = {
@@ -9,6 +9,8 @@ export const swedenConfig: CountryConfig = {
   zones: ['SE1', 'SE2', 'SE3', 'SE4'],
   language: 'sv',
   vatRate: 0.25,
-  priceProvider: elprisetjustnuProvider,
-  weatherProvider: smhiProvider,
+  // Both read our own Firestore data, written by Cloud Functions. The app
+  // never depends on a third-party API directly.
+  priceProvider: firestorePriceProvider,
+  weatherProvider: firestoreWeatherProvider,
 };
