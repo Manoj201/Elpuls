@@ -394,7 +394,7 @@
     "markupLabel": "Påslag",
     "gridFeeLabel": "Nätavgift",
     "enterFeesManually": "Skriv in avgifterna själv",
-    "taxIncluded": "Energiskatt ({{tax}} öre/kWh) och moms ({{vat}} %) räknas in automatiskt.",
+    "taxIncluded": "Beloppen är utan moms, som på fakturan. Energiskatt ({{tax}} öre/kWh) och moms ({{vat}} %) läggs till i ditt pris.",
     "notifyCardTitle": "Elpuls säger till",
     "notifyCardText": "När det lönar sig att tvätta, ladda eller värma, och när priserna blir extrema.",
     "notifyOnCount": "{{on}} av {{total}} på",
@@ -420,7 +420,9 @@
     "spotNow": "Spotpris just nu",
     "valueOreShort": "{{value}} öre",
     "fixedFeeLabel": "Fast avgift",
-    "guide": "Så fungerar Elpuls"
+    "guide": "Så fungerar Elpuls",
+    "vatLabel": "Moms",
+    "vatValue": "{{value}} %"
   },
   "applianceRecommendations": {
     "title": "Apparatrekommendationer",
@@ -480,9 +482,6 @@
     "retailerGroup": "Elbolaget",
     "gridGroup": "Nätbolaget",
     "retailerFixedField": "Elbolagets fasta avgift",
-    "retailerFixedHelper": "Heter ofta \"månadsavgift\" eller \"årsavgift\". Skriv vad den blir per månad, med moms.",
-    "retailerFixedPlaceholder": "t.ex. 39",
-    "gridFixedHelper": "Heter ofta \"abonnemang\" eller \"nätabonnemang\". Per månad, med moms.",
     "otherBill": {
       "retailer": "Nätavgiften står på fakturan från ditt nätbolag. Skanna den också, så blir ditt pris rätt.",
       "grid": "Elbolagets påslag står på fakturan från ditt elbolag. Skanna den också, så blir ditt pris rätt."
@@ -493,7 +492,14 @@
     "resultDifferenceNoMarkup": "Skillnaden är nätavgift, energiskatt och moms. Elbolagets påslag saknas än, så ditt pris kan bli några öre högre.",
     "resultDone": "Klart",
     "usageGroup": "Din förbrukning",
-    "usageHelper": "Står på fakturan som \"Förbrukning\". Vi räknar om den till en månad. Används för att räkna kronor per månad."
+    "usageHelper": "Står på fakturan som \"Förbrukning\". Vi räknar om den till en månad. Används för att räkna kronor per månad.",
+    "fixedExclVat": "{{label}}, utan moms",
+    "unitKrPerYear": "kr/år",
+    "perYear": "Per år",
+    "perMonth": "Per månad",
+    "retailerFixedWhere": "Står på fakturan som t.ex. \"Årsavgift 528 kr/år\". Skriv beloppet från kolumnen Pris, utan moms.",
+    "gridFixedWhere": "Står på fakturan som t.ex. \"Abonnemang 6 468 kr/år\". Skriv beloppet från kolumnen Pris, utan moms.",
+    "withVat": "Med moms blir det {{amount}} kr/mån."
   },
   "paywall": {
     "headline": "Få ut mer av Elpuls med Pro",

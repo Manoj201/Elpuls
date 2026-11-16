@@ -394,7 +394,7 @@
     "markupLabel": "Markup",
     "gridFeeLabel": "Grid fee",
     "enterFeesManually": "Type the fees in yourself",
-    "taxIncluded": "Energy tax ({{tax}} öre/kWh) and VAT ({{vat}}%) are added automatically.",
+    "taxIncluded": "Amounts are without VAT, as on the bill. Energy tax ({{tax}} öre/kWh) and VAT ({{vat}}%) are added to your price.",
     "notifyCardTitle": "Elpuls tells you",
     "notifyCardText": "When it pays to run the laundry, charge or heat, and when prices get extreme.",
     "notifyOnCount": "{{on}} of {{total}} on",
@@ -420,7 +420,9 @@
     "spotNow": "Spot price now",
     "valueOreShort": "{{value}} öre",
     "fixedFeeLabel": "Fixed fee",
-    "guide": "How Elpuls works"
+    "guide": "How Elpuls works",
+    "vatLabel": "VAT",
+    "vatValue": "{{value}}%"
   },
   "applianceRecommendations": {
     "title": "Appliance recommendations",
@@ -480,9 +482,6 @@
     "retailerGroup": "Electricity company",
     "gridGroup": "Grid company",
     "retailerFixedField": "Electricity company's fixed fee",
-    "retailerFixedHelper": "Often called \"månadsavgift\" or \"årsavgift\". Enter what it comes to per month, with VAT.",
-    "retailerFixedPlaceholder": "e.g. 39",
-    "gridFixedHelper": "Often called \"abonnemang\" or \"nätabonnemang\". Per month, with VAT.",
     "otherBill": {
       "retailer": "The grid fee is on the bill from your grid company. Scan that one too to get your price right.",
       "grid": "The markup is on the bill from your electricity company. Scan that one too to get your price right."
@@ -493,7 +492,14 @@
     "resultDifferenceNoMarkup": "The difference is the grid fee, energy tax and VAT. Your electricity company's markup is still missing, so your price may be a few öre higher.",
     "resultDone": "Done",
     "usageGroup": "Your usage",
-    "usageHelper": "Shown on the bill as \"Förbrukning\". We convert it to a month. Used to work out kronor per month."
+    "usageHelper": "Shown on the bill as \"Förbrukning\". We convert it to a month. Used to work out kronor per month.",
+    "fixedExclVat": "{{label}}, excluding VAT",
+    "unitKrPerYear": "kr/year",
+    "perYear": "Per year",
+    "perMonth": "Per month",
+    "retailerFixedWhere": "Shown on the bill as e.g. \"Årsavgift 528 kr/år\". Enter the amount from the Pris (price) column, without VAT.",
+    "gridFixedWhere": "Shown on the bill as e.g. \"Abonnemang 6 468 kr/år\". Enter the amount from the Pris (price) column, without VAT.",
+    "withVat": "With VAT that's {{amount}} kr/month."
   },
   "paywall": {
     "headline": "Get more out of Elpuls with Pro",

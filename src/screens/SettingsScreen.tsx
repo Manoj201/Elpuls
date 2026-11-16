@@ -501,7 +501,10 @@ export function SettingsScreen({
                 t(`settings.realPrice.${row.key}`),
                 row.company,
                 row.done && row.perKwh !== null ? `${row.perKwhLabel} ${t('settings.valueOre', { value: formatDecimal(row.perKwh * 100) })}` : null,
-                row.done && row.perMonth !== null ? `${t('settings.fixedFeeLabel')} ${t('settings.valueKrMonth', { value: Math.round(row.perMonth) })}` : null,
+                row.done && row.perMonth !== null
+                  ? `${t('settings.fixedFeeLabel')} ${t('settings.valueKrMonth', { value: Math.round(row.perMonth / (1 + VAT_RATE)) })}`
+                  : null,
+                row.done ? `${t('settings.vatLabel')} ${t('settings.vatValue', { value: Math.round(VAT_RATE * 100) })}` : null,
                 row.done ? null : t(`settings.realPrice.${row.key}Missing`),
               ]
                 .filter(Boolean)
@@ -527,12 +530,19 @@ export function SettingsScreen({
                         <Text style={styles.feeValue}>{t('settings.valueOre', { value: formatDecimal(row.perKwh * 100) })}</Text>
                       </View>
                     )}
+                    {/* Shown like the bill: amounts excl. VAT, VAT on its own line. */}
                     {row.perMonth !== null && (
                       <View style={styles.feeLine}>
                         <Text style={styles.feeLabel}>{t('settings.fixedFeeLabel')}</Text>
-                        <Text style={styles.feeValue}>{t('settings.valueKrMonth', { value: Math.round(row.perMonth) })}</Text>
+                        <Text style={styles.feeValue}>
+                          {t('settings.valueKrMonth', { value: Math.round(row.perMonth / (1 + VAT_RATE)) })}
+                        </Text>
                       </View>
                     )}
+                    <View style={styles.feeLine}>
+                      <Text style={styles.feeLabel}>{t('settings.vatLabel')}</Text>
+                      <Text style={styles.feeValue}>{t('settings.vatValue', { value: Math.round(VAT_RATE * 100) })}</Text>
+                    </View>
                   </View>
                 ) : (
                   <Text style={styles.statusValue}>{t(`settings.realPrice.${row.key}Missing`)}</Text>
