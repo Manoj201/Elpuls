@@ -25,9 +25,9 @@
     "todayLabel": "Today",
     "country": "Sweden",
     "noPricesYet": "Today's prices aren't out yet.",
-    "belowAverage": "Cheaper than today's average right now",
-    "aboveAverage": "More expensive than today's average right now",
-    "aroundAverage": "About today's average right now",
+    "belowAverage": "Cheaper than today's average",
+    "aboveAverage": "Pricier than today's average",
+    "aroundAverage": "Close to today's average",
     "normalRisk": "Prices look normal today",
     "explainerTitle": "Why prices look like this today",
     "hourlyTitle": "Price per hour today",
@@ -59,7 +59,6 @@
     "landedPromptText": "Your price includes the grid fee from your bill. Scan the bill or type the fee in, and this view shows what each hour costs you.",
     "landedPromptScan": "Scan my bill",
     "landedPromptManual": "Type it in myself",
-    "landedExactCaption": "Includes grid fee, your company's markup, tax and VAT.",
     "priceUnitLanded": "öre/kWh, what you pay",
     "priceNowA11y": "{{price}} öre per kilowatt hour right now",
     "atHour": "at {{hour}}:00",
@@ -67,12 +66,9 @@
     "explainerNotReady": "Today's explanation isn't ready yet. It usually comes around 07:00.",
     "explainerLockedTitle": "Find out why prices change",
     "explainerLockedText": "A short daily explanation of what is pushing the price up or down.",
-    "explainerSample": "Cold weather and little wind push the price up this evening. Overnight there is more wind power, so the hours after midnight are much cheaper.",
     "proTipsTitle": "Your tips today",
     "proTipsLockedTitle": "Daily tips for your home",
     "proTipsLockedText": "When to heat, when to wash, and what tomorrow brings.",
-    "proTipsSampleHeating": "Heat the house 06:00 to 09:00 and let it cool a little 17:00 to 20:00.",
-    "proTipsSampleWeather": "Cold tomorrow morning. Preheat the car while it is plugged in.",
     "chartTitleTwoDays": "Price today and tomorrow",
     "validUntil": "until {{time}}",
     "nextCheapest": "Cheapest next",
@@ -87,14 +83,18 @@
     },
     "solarLockedTitle": "Best hours for your solar panels",
     "solarLockedText": "Pro shows each day when your solar power does the most good at home.",
-    "solarSampleNowTitle": "11:00–14:00 · Now",
-    "solarSampleNowText": "Strong sun · 41 öre/kWh. Run the laundry or dishes now.",
-    "solarSampleNextTitle": "15:00–16:00 · In 2 hrs",
-    "solarSampleNextText": "Good sun · 52 öre/kWh",
     "guideCardTitle": "How Elpuls works",
     "guideCardText": "What each tab does, how to get your real price, and answers to common questions.",
     "guideCardClose": "Hide this card",
-    "toolsTitle": "Tools"
+    "toolsTitle": "Tools",
+    "split": {
+      "spot": "Spot price",
+      "extra": "Fees and tax",
+      "total": "What you pay",
+      "a11y": "Spot price {{spot}} öre plus fees and tax {{extra}} öre. You pay {{total}} öre per kWh right now."
+    },
+    "dialLow": "Lowest today",
+    "dialHigh": "Highest today"
   },
   "weatherPrep": {
     "title": "Weather tip",
@@ -296,28 +296,10 @@
       "breakdownText": "Your price per kWh split into spot price, grid fee, tax and VAT.",
       "contractTitle": "Contract check",
       "contractText": "See what your electricity company's markup costs you each month.",
-      "sampleMarkupLabel": "Your markup",
-      "sampleMarkup": "11.05 öre/kWh",
-      "sampleUsageLabel": "Your usage",
-      "sampleUsage": "1,200 kWh/month",
-      "sampleMarkupCostLabel": "The markup costs you",
-      "sampleMarkupCost": "about 133 kr/month",
       "whatIfTitle": "Work out your bill",
       "whatIfText": "See what your bill could be if you change your habits.",
-      "sampleAsNowLabel": "As now",
-      "sampleAsNow": "2,262 kr/month",
-      "sampleShiftLabel": "Half your usage in the cheapest hour",
-      "sampleShift": "2,100 kr/month",
-      "sampleSaveLabel": "You save",
-      "sampleSave": "about 162 kr/month",
       "zonesTitle": "Zones in Sweden",
-      "zonesText": "Compare today's average price in SE1 to SE4.",
-      "sampleZone": {
-        "SE1": "32.1 öre",
-        "SE2": "33.0 öre",
-        "SE3": "78.4 öre",
-        "SE4": "95.2 öre"
-      }
+      "zonesText": "Compare today's average price in SE1 to SE4."
     },
     "contractNeedsMarkup": "Your electricity company's markup is missing. It's on the bill from your electricity company.",
     "contractNeedsUsage": "We need to know roughly how much electricity you use. It's on your bill as \"Förbrukning\".",
@@ -588,7 +570,14 @@
     "tag": "Pro",
     "tryFree": "Try free for {{days}} days",
     "example": "Example",
-    "getPro": "Get Pro"
+    "getPro": "Get Pro",
+    "upsell": {
+      "homeTitle": "More help every day with Pro",
+      "forecastTitle": "Look further ahead with Pro",
+      "statsTitle": "Understand your bill with Pro",
+      "pushesTitle": "Alerts when power is cheap",
+      "pushesText": "Elpuls tells you when it pays to run the dishwasher, laundry or charging."
+    }
   },
   "setup": {
     "title": "See what you really pay",
@@ -610,20 +599,23 @@
     "start": "Get started",
     "pageOf": "Page {{page}} of {{total}}",
     "page1Title": "See what electricity really costs you",
-    "page1Text": "The spot price in the news is only part of it. With the grid fee, energy tax and VAT it's often about double. Elpuls shows what you actually pay.",
+    "page1Text": "The spot price in the news is only part of it. With the grid fee, energy tax and VAT you often pay twice as much. Take a photo of your bill and Elpuls works out what you actually pay.",
     "page2Title": "Use electricity when it is cheap",
-    "page2Text": "Prices change every hour. Elpuls shows the cheapest hours and what the dishwasher, the washing machine or the car costs to run now or later.",
-    "exampleNow": "Dishwasher now",
-    "exampleLater": "At 02:00 tonight",
-    "exampleFootnote": "Example from a winter day in SE3.",
+    "page2Text": "The price changes every 15 minutes. Elpuls shows when power is cheapest today and tomorrow, what the dishwasher, laundry or charging costs now or later, and can warn you when prices get high.",
+    "exampleNow": "If you run it now",
+    "exampleLater": "If you wait until 02:00",
     "page3Title": "Plan ahead with Pro",
-    "page3Text": "Pro tells you why prices move and when to heat the house. Free for {{days}} days, then 39 kr a month.",
+    "page3Text": "Pro plans your day and tells you when it pays off. Free for {{days}} days, then 39 kr a month.",
     "pro": {
-      "explainer": "Why today's prices look the way they do",
-      "heating": "When to heat the house before the evening peak",
-      "weather": "Tips for cold mornings and good drying weather"
+      "plan": "Your plan for the day: when to do laundry, run the dishwasher, charge and heat",
+      "pushes": "Alerts when it's cheap to run your appliances",
+      "outlook": "Which day will probably be cheapest this week",
+      "explainer": "Why today's prices look the way they do"
     },
-    "breakdownFootnote": "Example with a grid fee of {{grid}} öre/kWh."
+    "exampleTag": "Example",
+    "breakdownScenario": "If the spot price is {{spot}} öre/kWh and your grid fee {{grid}} öre/kWh:",
+    "exampleScenario": "A dishwasher on an ordinary winter day:",
+    "ownPricesNote": "Made-up numbers. You'll see your own prices once you're set up."
   },
   "notifications": {
     "title": "Notifications",
@@ -698,15 +690,8 @@
       "peak": "Most expensive",
       "best": "Best times"
     },
-    "teaserTitle": "Best times for your appliances",
-    "teaserText": "Pro shows when the dishwasher, laundry and car charging cost the least, right in the chart.",
     "colCheapest": "Cheapest",
-    "colDearest": "Priciest",
-    "teaserSample": {
-      "washing_machine": "Today 10:45–12:15 · save about 2 kr",
-      "dishwasher": "Tonight 02:00–04:00 · save about 3 kr",
-      "ev": "Tonight 01:00–05:00 · save about 18 kr"
-    }
+    "colDearest": "Priciest"
   },
   "realPrice": {
     "spotLabel": "Spot price",
@@ -795,9 +780,6 @@
     },
     "lockedTitle": "Your plan for the day",
     "lockedText": "Elpuls works out when it's cheapest for your own appliances, every day.",
-    "sampleWasher": "10:15–11:45",
-    "sampleDishes": "Tonight 01:00–03:00",
-    "sampleAvoid": "17:00–20:00",
     "todayMissing": "There's no plan for today. Tomorrow's plan is ready, tap Tomorrow."
   },
   "outlook": {

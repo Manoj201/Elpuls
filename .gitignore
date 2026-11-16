@@ -60,3 +60,11 @@ elpuls-ui-design-spec.md
 
 # Claude Code working files (private plan)
 .claude/
+
+# Local iOS release (scripts/ios-release.sh)
+/build/
+*.ipa
+*.p8
+fastlane/report.xml
+fastlane/README.md
+fastlane/test_output/

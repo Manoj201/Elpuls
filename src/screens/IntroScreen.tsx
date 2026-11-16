@@ -11,7 +11,15 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconBolt, IconClock, IconFlame, IconSnowflake, IconSparkles } from '@tabler/icons-react-native';
+import {
+  IconBellRinging,
+  IconBolt,
+  IconBulb,
+  IconCalendarEvent,
+  IconCalendarStats,
+  IconClock,
+  IconSparkles,
+} from '@tabler/icons-react-native';
 import { DEFAULT_TRIAL_DAYS } from '../lib/purchases';
 import { calculateLandedPrice } from '../lib/landedCost';
 import { RealPriceBars } from '../components/RealPriceBars';
@@ -107,13 +115,14 @@ export function IntroScreen({ onDone }: IntroScreenProps) {
 
 function Page({ width, title, text, children }: { width: number; title: string; text: string; children: React.ReactNode }) {
   return (
-    <View style={[styles.page, { width }]}>
+    // Scrolls on small phones or large text sizes instead of clipping.
+    <ScrollView style={{ width }} contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
       <View style={styles.visual}>{children}</View>
       <Text style={styles.title} accessibilityRole="header">
         {title}
       </Text>
       <Text style={styles.text}>{text}</Text>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -128,17 +137,16 @@ function BillBreakdown() {
   const paidOre = Math.round(calculateLandedPrice(EXAMPLE_SPOT_SEK, EXAMPLE_GRID_FEE_SEK) * 100);
   const spotOre = Math.round(EXAMPLE_SPOT_SEK * 100);
   return (
-    <View style={styles.visualCard}>
+    <ExampleCard scenario={t('intro.breakdownScenario', { spot: spotOre, grid: Math.round(EXAMPLE_GRID_FEE_SEK * 100) })}>
       <RealPriceBars
         spotLabel={t('realPrice.spotLabel')}
         spotValue={t('realPrice.ore', { value: spotOre })}
         paidLabel={t('realPrice.paidLabel')}
         paidValue={t('realPrice.ore', { value: paidOre })}
         spotShare={spotOre / paidOre}
-        accessibilityLabel={t('realPrice.a11y', { spot: spotOre, paid: paidOre })}
+        accessibilityLabel={`${t('intro.exampleTag')}. ${t('realPrice.a11y', { spot: spotOre, paid: paidOre })}`}
       />
-      <Text style={styles.exampleFootnote}>{t('intro.breakdownFootnote', { grid: Math.round(EXAMPLE_GRID_FEE_SEK * 100) })}</Text>
-    </View>
+    </ExampleCard>
   );
 }
 
@@ -146,7 +154,7 @@ function BillBreakdown() {
 function WaitExample() {
   const { t } = useTranslation();
   return (
-    <View style={styles.visualCard}>
+    <ExampleCard scenario={t('intro.exampleScenario')}>
       <View style={styles.compareRow}>
         <View style={styles.compareIcon}>
           <IconBolt size={22} color={theme.colors.dangerEmberDeep} />
@@ -162,7 +170,29 @@ function WaitExample() {
         <Text style={styles.compareLabel}>{t('intro.exampleLater')}</Text>
         <Text style={[styles.comparePrice, { color: theme.colors.positiveTealDeep }]}>1,10 kr</Text>
       </View>
-      <Text style={styles.exampleFootnote}>{t('intro.exampleFootnote')}</Text>
+    </ExampleCard>
+  );
+}
+
+/**
+ * Frame for the made-up numbers on pages 1-2. Testers took them for live
+ * prices, so the "Exempel" tag and the what-if scenario come *before* the
+ * numbers, the dashed border reads as an illustration rather than an app
+ * card, and the last line says where the user's own prices show up.
+ */
+function ExampleCard({ scenario, children }: { scenario: string; children: React.ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <View style={[styles.visualCard, styles.exampleCard]}>
+      <View style={styles.exampleHeader}>
+        <View style={styles.exampleTag}>
+          <IconBulb size={14} color={theme.colors.accentPurpleDeep} />
+          <Text style={styles.exampleTagText}>{t('intro.exampleTag')}</Text>
+        </View>
+        <Text style={styles.exampleScenario}>{scenario}</Text>
+      </View>
+      {children}
+      <Text style={styles.exampleNote}>{t('intro.ownPricesNote')}</Text>
     </View>
   );
 }
@@ -170,10 +200,12 @@ function WaitExample() {
 /** Page 3: what Pro adds, with the AI feature clearly marked. */
 function ProList() {
   const { t } = useTranslation();
+  // Most valuable first; the same features the paywall and Home's Pro card lead with.
   const items = [
+    { key: 'plan', icon: IconCalendarEvent, ai: false },
+    { key: 'pushes', icon: IconBellRinging, ai: false },
+    { key: 'outlook', icon: IconCalendarStats, ai: true },
     { key: 'explainer', icon: IconSparkles, ai: true },
-    { key: 'heating', icon: IconFlame, ai: false },
-    { key: 'weather', icon: IconSnowflake, ai: false },
   ];
   return (
     <View style={styles.visualCard}>
@@ -201,7 +233,7 @@ const styles = StyleSheet.create({
   skip: { minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' },
   skipText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textSecondary },
   pager: { flex: 1 },
-  page: { paddingHorizontal: 24, justifyContent: 'center' },
+  page: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 16, justifyContent: 'center' },
   visual: { marginBottom: 32 },
   title: { fontFamily: theme.typography.display, fontSize: theme.type.xl, lineHeight: 30, color: theme.colors.textPrimary },
   text: { fontFamily: theme.typography.body, fontSize: theme.type.lg, lineHeight: 24, color: theme.colors.textSecondary, marginTop: 12 },
@@ -225,7 +257,28 @@ const styles = StyleSheet.create({
   compareLabel: { flex: 1, fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   comparePrice: { fontFamily: theme.typography.display, fontSize: theme.type.xl },
   compareDivider: { height: 1, backgroundColor: theme.colors.borderMuted },
-  exampleFootnote: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textMuted },
+  // Dashed = illustration, not a live card.
+  exampleCard: { borderStyle: 'dashed', borderColor: theme.colors.textMuted, backgroundColor: 'transparent' },
+  exampleHeader: { gap: 8 },
+  exampleTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    backgroundColor: theme.colors.accentPurpleSoft,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  exampleTagText: {
+    fontFamily: theme.typography.bodySemibold,
+    fontSize: theme.type.xs,
+    color: theme.colors.accentPurpleDeep,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  exampleScenario: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, lineHeight: 22, color: theme.colors.textPrimary },
+  exampleNote: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
   proRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   proIcon: {
     width: 44,

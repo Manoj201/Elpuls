@@ -53,6 +53,8 @@ const styles = StyleSheet.create({
   paidValue: { fontSize: theme.type.xl, color: theme.colors.textPrimary },
   track: { height: 14, borderRadius: 7, backgroundColor: theme.colors.surfaceElevated, overflow: 'hidden' },
   bar: { height: '100%', borderRadius: 7 },
+  // Same pair as PriceSplitBar: grey spot, brand purple for what you pay
+  // (amber means "dear" elsewhere in the app, and fees aren't a warning).
   spotBar: { backgroundColor: theme.colors.textMuted },
-  paidBar: { backgroundColor: theme.colors.accentAmber },
+  paidBar: { backgroundColor: theme.colors.accentPurple },
 });

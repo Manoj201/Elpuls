@@ -18,9 +18,8 @@ import {
   IconWind,
   IconHelpCircle,
   IconX,
-  IconBolt,
   IconCalendarEvent,
-  IconHandStop,
+  IconBell,
 } from '@tabler/icons-react-native';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
@@ -30,7 +29,7 @@ import { useWeatherStore } from '../stores/useWeatherStore';
 import { useUserStore } from '../stores/useUserStore';
 import { useApplianceStore } from '../stores/useApplianceStore';
 import { findCheapestWindow, findCurrentPrice, findExtremeHours, groupPricesByHour } from '../lib/priceUtils';
-import { APPLIANCE_ICONS, getHouseholdAppliances, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
+import { getHouseholdAppliances, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
 import { assessPriceRisk, type PriceRiskFactor } from '../lib/priceRisk';
 import { findWeatherPrepTip } from '../lib/weatherPrep';
 import { findHeatingPlan } from '../lib/heatingPlan';
@@ -58,7 +57,8 @@ import { whenOf } from '../lib/whenLabel';
 import { PriceChart, type BestTime } from '../components/PriceChart';
 import { ComparisonCard } from '../components/ComparisonCard';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { ProLockedCard } from '../components/ProLockedCard';
+import { ProUpsellCard } from '../components/ProUpsellCard';
+import { PriceSplitBar } from '../components/PriceSplitBar';
 import { SecondaryButton } from '../components/SecondaryButton';
 import { SetupChecklist, type SetupStep } from '../components/SetupChecklist';
 import { SolarBonusCard } from '../components/SolarBonusCard';
@@ -212,6 +212,17 @@ export function HomeScreen({
       nextDear,
     };
   }, [chartSlots, now]);
+
+  // Spot and what you pay for the current quarter-hour, side by side under the
+  // hero (both always shown once the grid fee is known, whichever is big).
+  const split = useMemo(() => {
+    if (!hasGridFee || gridFeeVariableSekPerKwh === null) return null;
+    const sorted = [...todayPrices, ...tomorrowPrices].sort((a, b) => a.hour.getTime() - b.hour.getTime());
+    const slot = findCurrentPrice(sorted, now);
+    if (!slot) return null;
+    const total = calculateLandedPrice(slot.price, gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh);
+    return { spotOre: slot.price * 100, totalOre: total * 100 };
+  }, [hasGridFee, gridFeeVariableSekPerKwh, retailerMarkupSekPerKwh, todayPrices, tomorrowPrices, now]);
 
   // Pro: the best upcoming window for each appliance in this household,
   // shaded on the chart and listed under it.
@@ -498,14 +509,20 @@ export function HomeScreen({
                 </View>
               ) : (
                 <>
-                  {landedActive && (
-                    <Text style={styles.landedCaption}>
-                      {t(retailerMarkupSekPerKwh === null ? 'home.landedEstimateCaption' : 'home.landedExactCaption')}
-                    </Text>
+                  {/* The split bar below already says what's included; only the
+                      "markup missing, so it's an estimate" caveat stays. */}
+                  {landedActive && retailerMarkupSekPerKwh === null && (
+                    <Text style={styles.landedCaption}>{t('home.landedEstimateCaption')}</Text>
                   )}
 
                   <View style={styles.dialSection}>
-                    <PriceDial value={hero.price} min={hero.dayMin} max={hero.dayMax} />
+                    <PriceDial
+                      value={hero.price}
+                      min={hero.dayMin}
+                      max={hero.dayMax}
+                      minLabel={`${t('home.dialLow')}\n${formatHeroOre(hero.dayMin * 100, language)}`}
+                      maxLabel={`${t('home.dialHigh')}\n${formatHeroOre(hero.dayMax * 100, language)}`}
+                    />
                     <AnimatedNumber
                       value={hero.price * 100}
                       format={(ore) => formatHeroOre(ore, language)}
@@ -528,6 +545,17 @@ export function HomeScreen({
                     />
                   </View>
 
+                  {split && (
+                    <View style={styles.splitWrap}>
+                      <PriceSplitBar
+                        spotOre={split.spotOre}
+                        totalOre={split.totalOre}
+                        highlight={landedActive ? 'total' : 'spot'}
+                        format={(ore) => formatHeroOre(ore, language)}
+                      />
+                    </View>
+                  )}
+
                   {hero.nextCheap && hero.nextDear && (
                     <View style={styles.statsRow}>
                       {[
@@ -541,7 +569,7 @@ export function HomeScreen({
                               <Icon size={14} color={iconColor} />
                               <Text style={[styles.statLabel, { color }]}>{label}</Text>
                             </View>
-                            <Text style={[styles.statPrice, styles.tabular]}>{formatOre(slot.price, language)} öre</Text>
+                            <Text style={[styles.statPrice, styles.tabular]}>{formatHeroOre(slot.price * 100, language)} öre</Text>
                             <Text style={[styles.statHour, styles.tabular]}>
                               {when} {formatClock(slot.hour)}
                             </Text>
@@ -632,7 +660,6 @@ export function HomeScreen({
             slots={chartSlots}
             now={now}
             bestTimes={isProSubscriber ? bestTimes : undefined}
-            showTeaser
           />
 
           {isProSubscriber ? (
@@ -768,62 +795,20 @@ export function HomeScreen({
               </Pressable>
             </View>
 
-            <View style={styles.sectionCard}>
-              <ProLockedCard
-                icon={IconSparkles}
-                title={t('home.explainerLockedTitle')}
-                subtitle={t('home.explainerLockedText')}
-                source="explainer"
-                preview={<Text style={styles.previewText}>{t('home.explainerSample')}</Text>}
-              />
-            </View>
-            <View style={styles.proTipsLocked}>
-              <View style={styles.planTeaser}>
-                <ProLockedCard
-                  icon={IconCalendarEvent}
-                  title={t('plan.lockedTitle')}
-                  subtitle={t('plan.lockedText')}
-                  source="proTips"
-                  preview={
-                    <View style={styles.previewList}>
-                      <InfoRow icon={APPLIANCE_ICONS.washing_machine ?? IconBolt} variant="neutral" title={t('plan.activity.washing_machine')} subtitle={t('plan.sampleWasher')} />
-                      <InfoRow icon={APPLIANCE_ICONS.dishwasher ?? IconBolt} variant="neutral" title={t('plan.activity.dishwasher')} subtitle={t('plan.sampleDishes')} />
-                      <InfoRow icon={IconHandStop} variant="danger" title={t('plan.activity.avoid')} subtitle={t('plan.sampleAvoid')} />
-                    </View>
-                  }
-                />
-              </View>
-              <ProLockedCard
-                icon={IconSparkles}
-                title={t('home.proTipsLockedTitle')}
-                subtitle={t('home.proTipsLockedText')}
-                source="proTips"
-                preview={
-                  <View style={styles.previewList}>
-                    {heatsWithElectricity && (
-                      <InfoRow icon={IconFlame} variant="amber" title={t('heatingPlan.title')} subtitle={t('home.proTipsSampleHeating')} />
-                    )}
-                    <InfoRow icon={IconSnowflake} variant="amber" title={t('weatherPrep.title')} subtitle={t('home.proTipsSampleWeather')} />
-                  </View>
-                }
-              />
-              {hasSolar && (
-                <View style={styles.solarTeaser}>
-                  <ProLockedCard
-                    icon={IconSun}
-                    title={t('home.solarLockedTitle')}
-                    subtitle={t('home.solarLockedText')}
-                    source="proTips"
-                    preview={
-                      <View style={styles.previewList}>
-                        <InfoRow icon={IconSun} variant="amber" title={t('home.solarSampleNowTitle')} subtitle={t('home.solarSampleNowText')} />
-                        <InfoRow icon={IconSun} variant="amber" title={t('home.solarSampleNextTitle')} subtitle={t('home.solarSampleNextText')} />
-                      </View>
-                    }
-                  />
-                </View>
-              )}
-            </View>
+            {/* Free: one Pro offer per screen, after the free tools (UI/UX Pro Max primary-action). */}
+            <ProUpsellCard
+              style={styles.upsell}
+              title={t('pro.upsell.homeTitle')}
+              source="proTips"
+              benefits={[
+                { icon: IconCalendarEvent, title: t('plan.lockedTitle'), text: t('plan.lockedText') },
+                { icon: IconBell, title: t('pro.upsell.pushesTitle'), text: t('pro.upsell.pushesText') },
+                { icon: IconSparkles, title: t('home.explainerLockedTitle'), text: t('home.explainerLockedText') },
+                hasSolar
+                  ? { icon: IconSun, title: t('home.solarLockedTitle'), text: t('home.solarLockedText') }
+                  : { icon: IconFlame, title: t('home.proTipsLockedTitle'), text: t('home.proTipsLockedText') },
+              ]}
+            />
             </>
           )}
         </>
@@ -897,6 +882,7 @@ const styles = StyleSheet.create({
   heroPrice: { fontFamily: theme.typography.display, fontSize: theme.type.display, color: theme.colors.textPrimary, marginTop: 8 },
   heroUnit: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 2, marginBottom: 12, textAlign: 'center' },
   averageChip: { alignSelf: 'center' },
+  splitWrap: { marginBottom: 20 },
   statsRow: { flexDirection: 'row', alignItems: 'stretch' },
   statBlockDivider: { borderLeftWidth: 1, borderLeftColor: theme.colors.borderMuted },
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -937,11 +923,7 @@ const styles = StyleSheet.create({
   tileText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
   explainerHeader: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   explainerText: { flex: 1, fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.textPrimary },
-  previewText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textPrimary },
-  previewList: { gap: 12 },
-  proTipsLocked: { marginTop: 8, marginBottom: 16 },
-  planTeaser: { marginBottom: 16 },
-  solarTeaser: { marginTop: 16 },
+  upsell: { marginTop: 8, marginBottom: 16 },
   emptyTitle: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   emptyText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 4 },
   error: { fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.dangerEmber, textAlign: 'center' },

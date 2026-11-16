@@ -25,9 +25,9 @@
     "todayLabel": "Idag",
     "country": "Sverige",
     "noPricesYet": "Dagens priser är inte publicerade än.",
-    "belowAverage": "Billigare än dagens snitt just nu",
-    "aboveAverage": "Dyrare än dagens snitt just nu",
-    "aroundAverage": "Nära dagens snitt just nu",
+    "belowAverage": "Billigare än dagens snitt",
+    "aboveAverage": "Dyrare än dagens snitt",
+    "aroundAverage": "Nära dagens snitt",
     "normalRisk": "Priserna ser normala ut idag",
     "explainerTitle": "Därför ser priserna ut så här idag",
     "hourlyTitle": "Pris per timme idag",
@@ -59,7 +59,6 @@
     "landedPromptText": "Ditt pris innehåller nätavgiften från fakturan. Skanna fakturan eller skriv in avgiften, så visar vyn vad varje timme kostar dig.",
     "landedPromptScan": "Skanna min faktura",
     "landedPromptManual": "Skriv in själv",
-    "landedExactCaption": "Med nätavgift, elbolagets påslag, skatt och moms.",
     "priceUnitLanded": "öre/kWh, det du betalar",
     "priceNowA11y": "{{price}} öre per kilowattimme just nu",
     "atHour": "kl {{hour}}:00",
@@ -67,12 +66,9 @@
     "explainerNotReady": "Dagens förklaring är inte klar än. Den kommer oftast runt 07:00.",
     "explainerLockedTitle": "Förstå varför priset ändras",
     "explainerLockedText": "En kort förklaring varje dag om vad som drar priset upp eller ner.",
-    "explainerSample": "Kallt väder och lite vind höjer priset i kväll. I natt blåser det mer, så timmarna efter midnatt blir mycket billigare.",
     "proTipsTitle": "Dina tips idag",
     "proTipsLockedTitle": "Dagliga tips för ditt hem",
     "proTipsLockedText": "När du ska värma, när du ska tvätta och vad morgondagen har att bjuda på.",
-    "proTipsSampleHeating": "Värm huset 06:00 till 09:00 och låt det svalna lite 17:00 till 20:00.",
-    "proTipsSampleWeather": "Kallt imorgon bitti. Förvärm bilen medan den står på laddning.",
     "chartTitleTwoDays": "Pris idag och imorgon",
     "validUntil": "till {{time}}",
     "nextCheapest": "Billigast härnäst",
@@ -87,14 +83,18 @@
     },
     "solarLockedTitle": "Bästa timmarna för dina solpaneler",
     "solarLockedText": "Pro visar varje dag när din solel gör mest nytta hemma.",
-    "solarSampleNowTitle": "11:00–14:00 · Pågår nu",
-    "solarSampleNowText": "Mycket sol · 41 öre/kWh. Kör tvätt eller disk nu.",
-    "solarSampleNextTitle": "15:00–16:00 · Om 2 tim",
-    "solarSampleNextText": "Bra sol · 52 öre/kWh",
     "guideCardTitle": "Så fungerar Elpuls",
     "guideCardText": "Vad flikarna gör, hur du får ditt riktiga pris och svar på vanliga frågor.",
     "guideCardClose": "Dölj kortet",
-    "toolsTitle": "Verktyg"
+    "toolsTitle": "Verktyg",
+    "split": {
+      "spot": "Spotpris",
+      "extra": "Avgifter och skatt",
+      "total": "Det du betalar",
+      "a11y": "Spotpris {{spot}} öre plus avgifter och skatt {{extra}} öre. Du betalar {{total}} öre per kWh just nu."
+    },
+    "dialLow": "Lägst idag",
+    "dialHigh": "Högst idag"
   },
   "weatherPrep": {
     "title": "Vädertips",
@@ -296,28 +296,10 @@
       "breakdownText": "Ditt pris per kWh uppdelat i spotpris, nätavgift, skatt och moms.",
       "contractTitle": "Avtalskoll",
       "contractText": "Se vad elbolagets påslag kostar dig varje månad.",
-      "sampleMarkupLabel": "Ditt påslag",
-      "sampleMarkup": "11,05 öre/kWh",
-      "sampleUsageLabel": "Din förbrukning",
-      "sampleUsage": "1 200 kWh/mån",
-      "sampleMarkupCostLabel": "Påslaget kostar dig",
-      "sampleMarkupCost": "ca 133 kr/mån",
       "whatIfTitle": "Räkna på din elräkning",
       "whatIfText": "Se vad räkningen blir om du ändrar dina vanor.",
-      "sampleAsNowLabel": "Som nu",
-      "sampleAsNow": "2 262 kr/mån",
-      "sampleShiftLabel": "Halva elen till billigaste timmen",
-      "sampleShift": "2 100 kr/mån",
-      "sampleSaveLabel": "Du sparar",
-      "sampleSave": "ca 162 kr/mån",
       "zonesTitle": "Elområden i Sverige",
-      "zonesText": "Jämför dagens snittpris i SE1 till SE4.",
-      "sampleZone": {
-        "SE1": "32,1 öre",
-        "SE2": "33,0 öre",
-        "SE3": "78,4 öre",
-        "SE4": "95,2 öre"
-      }
+      "zonesText": "Jämför dagens snittpris i SE1 till SE4."
     },
     "contractNeedsMarkup": "Elbolagets påslag saknas. Det står på fakturan från ditt elbolag.",
     "contractNeedsUsage": "Vi behöver veta ungefär hur mycket el du använder. Det står på din faktura som \"Förbrukning\".",
@@ -588,7 +570,14 @@
     "tag": "Pro",
     "tryFree": "Prova gratis i {{days}} dagar",
     "example": "Exempel",
-    "getPro": "Skaffa Pro"
+    "getPro": "Skaffa Pro",
+    "upsell": {
+      "homeTitle": "Mer hjälp varje dag med Pro",
+      "forecastTitle": "Se längre fram med Pro",
+      "statsTitle": "Förstå din elräkning med Pro",
+      "pushesTitle": "Notiser när det är billigt",
+      "pushesText": "Elpuls säger till när det lönar sig att köra disk, tvätt eller laddning."
+    }
   },
   "setup": {
     "title": "Se vad du verkligen betalar",
@@ -610,20 +599,23 @@
     "start": "Kom igång",
     "pageOf": "Sida {{page}} av {{total}}",
     "page1Title": "Se vad elen verkligen kostar dig",
-    "page1Text": "Spotpriset i nyheterna är bara en del. Med nätavgift, energiskatt och moms blir det ofta dubbelt så mycket. Elpuls visar vad du faktiskt betalar.",
+    "page1Text": "Spotpriset i nyheterna är bara en del. Med nätavgift, energiskatt och moms blir det ofta dubbelt så mycket. Fota din elräkning så räknar Elpuls ut vad du faktiskt betalar.",
     "page2Title": "Använd elen när den är billig",
-    "page2Text": "Priset ändras varje timme. Elpuls visar de billigaste timmarna och vad diskmaskinen, tvättmaskinen eller bilen kostar att köra nu eller senare.",
-    "exampleNow": "Diskmaskin nu",
-    "exampleLater": "Kl 02:00 i natt",
-    "exampleFootnote": "Exempel från en vinterdag i SE3.",
+    "page2Text": "Priset ändras var 15:e minut. Elpuls visar när elen är billigast idag och imorgon, vad disk, tvätt eller laddning kostar nu eller senare, och kan varna dig när priset blir högt.",
+    "exampleNow": "Om du kör den nu",
+    "exampleLater": "Om du väntar till 02:00",
     "page3Title": "Planera i förväg med Pro",
-    "page3Text": "Pro berättar varför priset ändras och när du ska värma huset. Gratis i {{days}} dagar, sedan 39 kr i månaden.",
+    "page3Text": "Pro planerar din dag och säger till när det lönar sig. Gratis i {{days}} dagar, sedan 39 kr i månaden.",
     "pro": {
-      "explainer": "Varför dagens priser ser ut som de gör",
-      "heating": "När du ska värma huset före kvällstoppen",
-      "weather": "Tips inför kalla morgnar och bra torkväder"
+      "plan": "Din plan för dagen: när du ska tvätta, diska, ladda och värma",
+      "pushes": "Notiser när det är billigt att köra dina apparater",
+      "outlook": "Vilken dag som troligen blir billigast i veckan",
+      "explainer": "Varför dagens priser ser ut som de gör"
     },
-    "breakdownFootnote": "Exempel med en nätavgift på {{grid}} öre/kWh."
+    "exampleTag": "Exempel",
+    "breakdownScenario": "Om spotpriset är {{spot}} öre/kWh och din nätavgift {{grid}} öre/kWh:",
+    "exampleScenario": "En diskmaskin en vanlig vinterdag:",
+    "ownPricesNote": "Påhittade siffror. Dina egna priser ser du när du har kommit igång."
   },
   "notifications": {
     "title": "Notiser",
@@ -698,15 +690,8 @@
       "peak": "Dyrast",
       "best": "Bästa tider"
     },
-    "teaserTitle": "Bästa tider för dina apparater",
-    "teaserText": "Pro visar när disk, tvätt och laddning kostar minst, direkt i grafen.",
     "colCheapest": "Billigast",
-    "colDearest": "Dyrast",
-    "teaserSample": {
-      "washing_machine": "Idag 10:45–12:15 · spara ca 2 kr",
-      "dishwasher": "I natt 02:00–04:00 · spara ca 3 kr",
-      "ev": "I natt 01:00–05:00 · spara ca 18 kr"
-    }
+    "colDearest": "Dyrast"
   },
   "realPrice": {
     "spotLabel": "Spotpriset",
@@ -795,9 +780,6 @@
     },
     "lockedTitle": "Din plan för dagen",
     "lockedText": "Elpuls räknar ut när det är billigast för just dina apparater, varje dag.",
-    "sampleWasher": "10:15–11:45",
-    "sampleDishes": "I natt 01:00–03:00",
-    "sampleAvoid": "17:00–20:00",
     "todayMissing": "Det finns ingen plan för idag. Morgondagens plan är klar, tryck på Imorgon."
   },
   "outlook": {

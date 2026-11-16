@@ -11,31 +11,24 @@ import type { SupportedLanguage } from '../i18n';
 import { theme } from '../theme';
 import { Card } from '../components/Card';
 import { PriceChart } from '../components/PriceChart';
-import { Chip, type ChipVariant } from '../components/Chip';
 import {
   OutlookChartCard,
-  OutlookChartPreview,
   OutlookDaysCard,
-  OutlookDaysPreview,
   SeasonalCard,
-  SeasonalPreview,
 } from '../components/OutlookCards';
-import { ProLockedCard } from '../components/ProLockedCard';
+import { ProUpsellCard } from '../components/ProUpsellCard';
 import { useNow } from '../hooks/useNow';
 import { useOutlook } from '../hooks/useOutlook';
 import { useUserStore } from '../stores/useUserStore';
 import { IconCalendarMonth, IconCalendarStats, IconChartLine } from '@tabler/icons-react-native';
 
-const BAND_VARIANT: Record<PriceBand, ChipVariant> = {
-  cheap: 'teal',
-  normal: 'neutral',
-  dear: 'amber',
-  peak: 'danger',
+// Text tone for the band word, matching the row's bar. All ≥ 9:1 on the card.
+const BAND_TEXT: Record<PriceBand, string> = {
+  cheap: theme.colors.positiveTealDeep,
+  normal: theme.colors.textSecondary,
+  dear: theme.colors.accentAmberDeep,
+  peak: theme.colors.dangerEmberDeep,
 };
-
-// Wide enough that the tags line up. A minimum, not a fixed width, so larger
-// text (the phone's text-size setting) grows the tag instead of breaking it.
-const BAND_TAG_WIDTH = 92;
 
 /** "HH:MM", but midnight at the end of a period reads 24:00. */
 function clockLabel(d: Date, isEnd: boolean): string {
@@ -43,20 +36,18 @@ function clockLabel(d: Date, isEnd: boolean): string {
   return formatClock(d);
 }
 
-// "Normal" has no strong colour of its own, and the shared Chip's neutral
-// variant looked almost invisible on the card, so it gets a raised pill.
+/**
+ * The band in words. Plain text, not a pill (UI/UX Pro Max color-not-only,
+ * compact-label-overflow): the bar on the left already carries the colour, and
+ * filled pills on every row added a second coloured shape and looked tappable.
+ */
 function BandTag({ band }: { band: PriceBand }) {
   const { t } = useTranslation();
-  if (band === 'normal') {
-    return (
-      <View style={styles.normalTag}>
-        <Text style={styles.normalTagText} numberOfLines={1}>
-          {t('chart.legend.normal')}
-        </Text>
-      </View>
-    );
-  }
-  return <Chip label={t(`chart.legend.${band}`)} variant={BAND_VARIANT[band]} style={styles.bandTagChip} />;
+  return (
+    <Text style={[styles.bandTag, { color: BAND_TEXT[band] }]} numberOfLines={1}>
+      {t(`chart.legend.${band}`)}
+    </Text>
+  );
 }
 
 function DaySummary({
@@ -199,17 +190,7 @@ export function ForecastScreen() {
             <Text style={styles.empty}>{t('outlook.notReady')}</Text>
           </Card>
         ) : null
-      ) : (
-        <View style={styles.locked}>
-          <ProLockedCard
-            icon={IconCalendarStats}
-            title={t('outlook.lockedTitle')}
-            subtitle={t('outlook.lockedText')}
-            source="generic"
-            preview={<OutlookDaysPreview />}
-          />
-        </View>
-      )}
+      ) : null}
 
       {tomorrowHourly.length > 0 ? (
         <>
@@ -231,26 +212,17 @@ export function ForecastScreen() {
           </>
         )
       ) : (
-        <>
-          <View style={styles.locked}>
-            <ProLockedCard
-              icon={IconChartLine}
-              title={t('outlook.lockedChartTitle')}
-              subtitle={t('outlook.lockedChartText')}
-              source="generic"
-              preview={<OutlookChartPreview />}
-            />
-          </View>
-          <View style={styles.locked}>
-            <ProLockedCard
-              icon={IconCalendarMonth}
-              title={t('outlook.lockedMonthsTitle')}
-              subtitle={t('outlook.lockedMonthsText')}
-              source="generic"
-              preview={<SeasonalPreview />}
-            />
-          </View>
-        </>
+        // Free: one Pro offer at the end instead of a locked card per section.
+        <ProUpsellCard
+          style={styles.locked}
+          title={t('pro.upsell.forecastTitle')}
+          source="generic"
+          benefits={[
+            { icon: IconCalendarStats, title: t('outlook.lockedTitle'), text: t('outlook.lockedText') },
+            { icon: IconChartLine, title: t('outlook.lockedChartTitle'), text: t('outlook.lockedChartText') },
+            { icon: IconCalendarMonth, title: t('outlook.lockedMonthsTitle'), text: t('outlook.lockedMonthsText') },
+          ]}
+        />
       )}
     </ScrollView>
   );
@@ -291,24 +263,14 @@ const styles = StyleSheet.create({
   nowText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm, color: theme.colors.accentPurple },
   periodHint: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
   // Never squeezed: the text column on the left wraps instead.
-  periodValue: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+  periodValue: { alignItems: 'flex-end', gap: 2, flexShrink: 0 },
+  // The number people came for, so it's the strongest thing on the right.
   periodPrice: {
     fontFamily: theme.typography.displayMedium,
-    fontSize: theme.type.sm,
+    fontSize: theme.type.md,
     color: theme.colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
   periodPriceUnit: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary },
-  normalTag: {
-    minWidth: BAND_TAG_WIDTH,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.pill,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  normalTagText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
-  bandTagChip: { minWidth: BAND_TAG_WIDTH, justifyContent: 'center', alignSelf: 'flex-end' },
+  bandTag: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm },
 });

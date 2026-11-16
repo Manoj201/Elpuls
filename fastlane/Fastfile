@@ -1,0 +1,31 @@
+# Uploads an .ipa built locally (`eas build --local`) straight to App Store
+# Connect / TestFlight, without EAS Submit's queue. Run via
+# `npm run release:ios` (scripts/ios-release.sh), or on its own:
+#   fastlane ios upload ipa:/absolute/path/to/app.ipa
+#
+# Auth: an App Store Connect API key, read from the environment
+# (scripts/ios-release.sh loads them from .env.release.local):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH (path to the .p8 file)
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload an .ipa to TestFlight"
+  lane :upload do |options|
+    ipa = options[:ipa] || ENV["IPA_PATH"]
+    UI.user_error!("Pass ipa:/path/to/app.ipa") unless ipa && File.exist?(ipa)
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV.fetch("ASC_KEY_PATH"),
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa,
+      # Don't sit and wait 5-30 min for Apple's processing; you get an email.
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end

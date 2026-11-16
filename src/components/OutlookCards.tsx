@@ -378,99 +378,9 @@ const styles = StyleSheet.create({
   note: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 8 },
 
   monthTiles: { flexDirection: 'row', columnGap: 8, marginTop: 12 },
-  previewRows: { marginTop: 8 },
   monthTile: { flex: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center' },
   monthName: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
   monthIcon: { marginTop: 8 },
   monthBig: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.xl, color: theme.colors.textPrimary, marginTop: 4, fontVariant: ['tabular-nums'] },
   monthWord: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary, marginTop: 2 },
 });
-
-/**
- * Example data for the Pro teasers: dates are the real coming days and months,
- * prices are made up (the teaser box is labelled "Exempel").
- */
-function sampleOutlook(): { outlook: Outlook; todayAvg: number } {
-  const now = new Date();
-  const key = (offset: number) => stockholmDate.format(new Date(now.getTime() + offset * 24 * 3600 * 1000));
-  const month = (offset: number) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + offset, 15);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  };
-  const day = (offset: number, mid: number, spread: number, uncertain = false): OutlookDay => ({
-    date: key(offset),
-    mid,
-    low: mid - spread,
-    high: mid + spread,
-    uncertain,
-  });
-  return {
-    todayAvg: 0.85,
-    outlook: {
-      recent: [
-        { date: key(-3), avg: 0.92 },
-        { date: key(-2), avg: 0.78 },
-        { date: key(-1), avg: 0.8 },
-      ],
-      tomorrowAvg: 0.9,
-      days: [day(2, 0.6, 0.15), day(3, 0.82, 0.18), day(4, 1.1, 0.25), day(5, 1.0, 0.25), day(6, 0.75, 0.3, true), day(7, 0.9, 0.32, true)],
-      seasonal: [
-        { month: month(1), change: 0.2, years: 3 },
-        { month: month(2), change: 0.3, years: 3 },
-        { month: month(3), change: 0.0, years: 3 },
-      ],
-      show: true,
-      hitRate: 0.7,
-      text: null,
-    },
-  };
-}
-
-/** Teaser preview for "Kommande dagar": the summary tile and three range-bar rows. */
-export function OutlookDaysPreview() {
-  const { i18n } = useTranslation();
-  const language = i18n.language as SupportedLanguage;
-  const { outlook, todayAvg } = sampleOutlook();
-  const days = outlook.days.slice(0, 3);
-  const values = outlook.days.flatMap((d) => [d.low, d.high]).concat(todayAvg);
-  const scale = { min: Math.min(...values), max: Math.max(...values) };
-  const best = bestDay(outlook.days, todayAvg);
-  return (
-    <View>
-      <SummaryTile days={outlook.days} todayAvg={todayAvg} language={language} />
-      <View style={styles.previewRows}>
-        {days.map((d, i) => (
-          <DayRangeRow
-            key={d.date}
-            day={d}
-            dir={directionOf(d.mid, todayAvg)}
-            scale={scale}
-            todayAvg={todayAvg}
-            isBest={best?.date === d.date}
-            first={i === 0}
-            language={language}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/** Teaser preview for "Snittpris per dag": the real chart with example data. */
-export function OutlookChartPreview() {
-  const { outlook, todayAvg } = sampleOutlook();
-  const now = new Date();
-  return (
-    <OutlookChart
-      recent={outlook.recent}
-      today={{ date: stockholmDate.format(now), avg: todayAvg }}
-      tomorrow={{ date: stockholmDate.format(new Date(now.getTime() + 24 * 3600 * 1000)), avg: outlook.tomorrowAvg as number }}
-      days={outlook.days}
-    />
-  );
-}
-
-/** Teaser preview for "Kommande månader": the month tiles with example changes. */
-export function SeasonalPreview() {
-  return <MonthTiles seasonal={sampleOutlook().outlook.seasonal} />;
-}

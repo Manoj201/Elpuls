@@ -16,7 +16,8 @@ import { SecondaryButton } from '../components/SecondaryButton';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
 import { InfoRow } from '../components/InfoRow';
-import { PreviewRow, ProLockedCard } from '../components/ProLockedCard';
+import { PreviewRow } from '../components/ProLockedCard';
+import { ProUpsellCard } from '../components/ProUpsellCard';
 
 const USAGE_STEPS = [-20, -10, 0, 10, 20];
 const SHIFT_STEPS = [0, 25, 50, 75, 100];
@@ -124,63 +125,26 @@ export function StatsScreen({ onOpenBillScan }: StatsScreenProps) {
       <Text style={styles.subtitle}>{t('stats.subtitle')}</Text>
 
       {!isProSubscriber ? (
-        // Free: one teaser per Pro section, in the same order as Pro users see them.
-        <View style={styles.teaserList}>
-          <ProLockedCard
-            icon={IconChartBar}
-            title={t('stats.locked.breakdownTitle')}
-            subtitle={t('stats.locked.breakdownText')}
-            source="stats"
-            preview={
-              <View>
-                <PreviewRow label={t('stats.spot')} value={t('stats.sample.spot')} />
-                <PreviewRow label={t('stats.gridFee')} value={t('stats.sample.gridFee')} />
-                <PreviewRow label={t('stats.energyTax')} value={t('stats.sample.energyTax')} />
-                <PreviewRow label={t('stats.vat')} value={t('stats.sample.vat')} />
-                <PreviewRow label={t('stats.total')} value={t('stats.sample.total')} strong />
-              </View>
-            }
-          />
-          <ProLockedCard
-            icon={IconReceipt}
-            title={t('stats.locked.contractTitle')}
-            subtitle={t('stats.locked.contractText')}
-            source="stats"
-            preview={
-              <View>
-                <PreviewRow label={t('stats.locked.sampleMarkupLabel')} value={t('stats.locked.sampleMarkup')} />
-                <PreviewRow label={t('stats.locked.sampleUsageLabel')} value={t('stats.locked.sampleUsage')} />
-                <PreviewRow label={t('stats.locked.sampleMarkupCostLabel')} value={t('stats.locked.sampleMarkupCost')} strong />
-              </View>
-            }
-          />
-          <ProLockedCard
-            icon={IconCalculator}
-            title={t('stats.locked.whatIfTitle')}
-            subtitle={t('stats.locked.whatIfText')}
-            source="stats"
-            preview={
-              <View>
-                <PreviewRow label={t('stats.locked.sampleAsNowLabel')} value={t('stats.locked.sampleAsNow')} />
-                <PreviewRow label={t('stats.locked.sampleShiftLabel')} value={t('stats.locked.sampleShift')} />
-                <PreviewRow label={t('stats.locked.sampleSaveLabel')} value={t('stats.locked.sampleSave')} strong />
-              </View>
-            }
-          />
-          <ProLockedCard
-            icon={IconMap2}
-            title={t('stats.locked.zonesTitle')}
-            subtitle={t('stats.locked.zonesText')}
-            source="stats"
-            preview={
-              <View>
-                {(['SE1', 'SE2', 'SE3', 'SE4'] as const).map((z) => (
-                  <PreviewRow key={z} label={z} value={t(`stats.locked.sampleZone.${z}`)} strong={z === zone} />
-                ))}
-              </View>
-            }
-          />
-        </View>
+        // Free: the whole screen is Pro, so one offer with one example (the cost breakdown).
+        <ProUpsellCard
+          title={t('pro.upsell.statsTitle')}
+          source="stats"
+          preview={
+            <View>
+              <PreviewRow label={t('stats.spot')} value={t('stats.sample.spot')} />
+              <PreviewRow label={t('stats.gridFee')} value={t('stats.sample.gridFee')} />
+              <PreviewRow label={t('stats.energyTax')} value={t('stats.sample.energyTax')} />
+              <PreviewRow label={t('stats.vat')} value={t('stats.sample.vat')} />
+              <PreviewRow label={t('stats.total')} value={t('stats.sample.total')} strong />
+            </View>
+          }
+          benefits={[
+            { icon: IconChartBar, title: t('stats.locked.breakdownTitle'), text: t('stats.locked.breakdownText') },
+            { icon: IconReceipt, title: t('stats.locked.contractTitle'), text: t('stats.locked.contractText') },
+            { icon: IconCalculator, title: t('stats.locked.whatIfTitle'), text: t('stats.locked.whatIfText') },
+            { icon: IconMap2, title: t('stats.locked.zonesTitle'), text: t('stats.locked.zonesText') },
+          ]}
+        />
       ) : (
         <>
           <Text style={styles.sectionTitle}>{t('stats.costBreakdown')}</Text>
@@ -380,7 +344,6 @@ const styles = StyleSheet.create({
   breakdownDivider: { height: 1, backgroundColor: theme.colors.borderMuted, marginVertical: 8 },
   contractHealthHero: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
   contractHealthResult: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 4 },
-  teaserList: { gap: 16 },
   missing: { gap: 12 },
   missingText: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 22, color: theme.colors.textSecondary },
   textLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center' },

@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { theme } from '../theme';
 
@@ -7,6 +7,9 @@ interface PriceDialProps {
   min: number;
   max: number;
   size?: number;
+  /** Scale ends, e.g. "Lägst idag 101" / "Högst idag 312", shown under the arc's ends. */
+  minLabel?: string;
+  maxLabel?: string;
 }
 
 const STROKE_WIDTH = 12;
@@ -29,7 +32,7 @@ function arcPath(cx: number, cy: number, r: number, fromAngle: number, toAngle: 
  * needle points at the price. Static on purpose: the sweep animation
  * felt laggy on real phones.
  */
-export function PriceDial({ value, min, max, size = 220 }: PriceDialProps) {
+export function PriceDial({ value, min, max, size = 220, minLabel, maxLabel }: PriceDialProps) {
   const radius = size / 2 - STROKE_WIDTH;
   const cx = size / 2;
   const cy = size / 2;
@@ -41,7 +44,7 @@ export function PriceDial({ value, min, max, size = 220 }: PriceDialProps) {
   const needleTip = polarToCartesian(cx, cy, radius - STROKE_WIDTH - 2, needleAngle);
 
   return (
-    <View style={{ width: size, height }} accessible={false} importantForAccessibility="no-hide-descendants">
+    <View style={{ width: size }} accessible={false} importantForAccessibility="no-hide-descendants">
       <Svg width={size} height={height}>
         <Defs>
           <LinearGradient id="dialGradient" x1={0} y1={0} x2={size} y2={0} gradientUnits="userSpaceOnUse">
@@ -82,6 +85,26 @@ export function PriceDial({ value, min, max, size = 220 }: PriceDialProps) {
         />
         <Circle cx={cx} cy={cy} r={9} fill={theme.colors.surfaceElevated} stroke={theme.colors.textPrimary} strokeWidth={3} />
       </Svg>
+      {/* Scale ends in words, so the gauge reads as "where today's range is" (UI/UX Pro Max: label the axis). */}
+      {minLabel && maxLabel ? (
+        <View style={styles.ends}>
+          <Text style={styles.endText}>{minLabel}</Text>
+          <Text style={[styles.endText, styles.endRight]}>{maxLabel}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  ends: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
+  endText: {
+    fontFamily: theme.typography.body,
+    fontSize: theme.type.xs,
+    lineHeight: 16,
+    color: theme.colors.textSecondary,
+    fontVariant: ['tabular-nums'],
+    maxWidth: '40%',
+  },
+  endRight: { textAlign: 'right' },
+});

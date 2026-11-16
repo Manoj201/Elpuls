@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconArrowDownRight, IconArrowUpRight, IconBolt, IconSparkles } from '@tabler/icons-react-native';
+import { IconArrowDownRight, IconArrowUpRight, IconBolt } from '@tabler/icons-react-native';
 import { APPLIANCE_ICONS } from '../lib/applianceDisplay';
 import { whenOf } from '../lib/whenLabel';
 import { useUserStore } from '../stores/useUserStore';
@@ -12,8 +12,6 @@ import type { SupportedLanguage } from '../i18n';
 import type { HourlyPrice } from '../providers/types';
 import { theme } from '../theme';
 import { Chip } from './Chip';
-import { ProLockedCard } from './ProLockedCard';
-import { InfoRow } from './InfoRow';
 import { PriceAreaChart } from './PriceAreaChart';
 import { PriceBar } from './PriceBar';
 
@@ -38,9 +36,6 @@ interface PriceChartProps {
   now: Date;
   /** Pro: best window per household appliance, shaded on the chart and listed below it. */
   bestTimes?: BestTime[];
-  /** Shown instead of the list for free users. */
-  /** Free users: show the Pro teaser under the chart. */
-  showTeaser?: boolean;
 }
 
 /**
@@ -48,7 +43,7 @@ interface PriceChartProps {
  * phone), a one-line summary in words for each day (cheapest and dearest
  * slot), and the Pro "best times" for the user's appliances.
  */
-export function PriceChart({ slots, now, bestTimes, showTeaser }: PriceChartProps) {
+export function PriceChart({ slots, now, bestTimes }: PriceChartProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
   const view = useUserStore((s) => s.chartView);
@@ -191,31 +186,6 @@ export function PriceChart({ slots, now, bestTimes, showTeaser }: PriceChartProp
         </View>
       )}
 
-      {/* Free users: the shared Pro teaser, inline, as a link (Home has other teasers too). */}
-      {!bestTimes && showTeaser && (
-        <View style={styles.teaserWrap}>
-          <ProLockedCard
-            inline
-            icon={IconSparkles}
-            title={t('chart.teaserTitle')}
-            subtitle={t('chart.teaserText')}
-            source="proTips"
-            preview={
-              <View style={styles.teaserPreview}>
-                {(['washing_machine', 'dishwasher', 'ev'] as const).map((id) => (
-                  <InfoRow
-                    key={id}
-                    icon={APPLIANCE_ICONS[id]}
-                    variant="neutral"
-                    title={t(`ticker.appliances.${id}`)}
-                    subtitle={t(`chart.teaserSample.${id}`)}
-                  />
-                ))}
-              </View>
-            }
-          />
-        </View>
-      )}
     </View>
   );
 }
@@ -264,6 +234,4 @@ const styles = StyleSheet.create({
   bestText: { flex: 1, gap: 2 },
   bestLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   bestTime: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
-  teaserWrap: { marginTop: 16 },
-  teaserPreview: { gap: 12 },
 });
