@@ -9,7 +9,8 @@
     "titleHighlight": "cheap",
     "subtitle": "Elpuls shows what your electricity actually costs, not just the spot price. It explains why prices move using weather data and tells you when to run the dishwasher, charge the car or heat the house. No hardware, no switching provider.",
     "ctaPrimary": "See how it works",
-    "ctaSecondary": "Elpuls Pro"
+    "ctaSecondary": "Elpuls Pro",
+    "ctaDownload": "Download on the App Store"
   },
   "howItWorks": {
     "heading": "How it works",
@@ -89,10 +90,10 @@
     "screenshotLabel": "Overview"
   },
   "cta": {
-    "heading": "Launching soon in Sweden",
-    "subtitle": "Elpuls isn't live in the App Store or Play Store yet.",
-    "appStore": "App Store — coming soon",
-    "googlePlay": "Google Play — coming soon"
+    "heading": "Now on the App Store",
+    "subtitle": "Free to download for iPhone. Android is coming later.",
+    "appStore": "Download on the App Store",
+    "googlePlay": "Google Play: coming soon"
   },
   "footer": {
     "privacyPolicy": "Privacy Policy",

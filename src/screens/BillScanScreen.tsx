@@ -56,6 +56,7 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
   const [gridFixedInput, setGridFixedInput] = useState(startManual ? formatInput(user.gridFeeFixedSekPerMonth) : '');
   const [retailerMarkupInput, setRetailerMarkupInput] = useState(startManual ? formatOre(user.retailerMarkupSekPerKwh) : '');
   const [retailerFixedInput, setRetailerFixedInput] = useState(startManual ? formatInput(user.retailerFixedSekPerMonth) : '');
+  const [usageInput, setUsageInput] = useState(formatInput(user.estimatedMonthlyKwh));
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [realPrice, setRealPrice] = useState<{ spotOre: number; paidOre: number; hasMarkup: boolean } | null>(null);
@@ -77,6 +78,12 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
       setGridFixedInput(formatInput(normalized.gridFeeFixedSekPerMonth ?? null));
       setRetailerMarkupInput(formatInput(normalized.retailerMarkupOrePerKwh));
       setRetailerFixedInput(formatInput(normalized.retailerFixedSekPerMonth ?? null));
+      // Usage per month from the bill's kWh and period; otherwise keep what's saved.
+      const monthly =
+        normalized.consumptionKwh && normalized.periodDays && normalized.periodDays >= 7
+          ? Math.round(((normalized.consumptionKwh / normalized.periodDays) * 30.4) / 10) * 10
+          : null;
+      setUsageInput(formatInput(monthly ?? user.estimatedMonthlyKwh));
       setStep('confirm');
     } catch (err) {
       console.log('Bill scan failed:', err);
@@ -104,6 +111,7 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
     setGridFixedInput(formatInput(user.gridFeeFixedSekPerMonth));
     setRetailerMarkupInput(formatOre(user.retailerMarkupSekPerKwh));
     setRetailerFixedInput(formatInput(user.retailerFixedSekPerMonth));
+    setUsageInput(formatInput(user.estimatedMonthlyKwh));
     setStep('confirm');
   }
 
@@ -122,11 +130,14 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
       if (result?.retailerName) changes.retailerName = result.retailerName;
     }
 
+    const estimatedMonthlyKwh = parseOre(usageInput);
+
     setSaving(true);
     setSaveError(null);
     try {
-      await setDoc(doc(db, 'users', uid), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(doc(db, 'users', uid), { ...changes, estimatedMonthlyKwh, updatedAt: serverTimestamp() }, { merge: true });
       setBillDetails(changes);
+      useUserStore.getState().setEstimatedMonthlyKwh(estimatedMonthlyKwh);
       const shown = await currentRealPrice();
       if (shown) {
         setRealPrice(shown);
@@ -297,6 +308,21 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
             />
           </View>
         )}
+
+        <View style={styles.group}>
+          <Text style={styles.groupTitle} accessibilityRole="header">
+            {t('billScan.usageGroup')}
+          </Text>
+          <LabeledInput
+            label={t('fields.estimatedMonthlyKwhLabel')}
+            unit={t('fields.unitKwhPerMonth')}
+            helper={t('billScan.usageHelper')}
+            placeholder={t('fields.exampleMonthlyKwh')}
+            keyboardType="decimal-pad"
+            value={usageInput}
+            onChangeText={setUsageInput}
+          />
+        </View>
 
         {!isManual && result.billType !== 'combined' && (
           <Text style={styles.otherBillNote}>{t(`billScan.otherBill.${result.billType}`)}</Text>

@@ -31,10 +31,28 @@ export interface ScanElectricityBillResult {
   retailerMarkupOrePerKwh: number | null;
   /** Retailer's fixed fee (månadsavgift / årsavgift), kr per month incl. VAT. */
   retailerFixedSekPerMonth: number | null;
+  /** Electricity used in the billing period (kWh) and how many days that period is, so the app can work out usage per month. */
+  consumptionKwh: number | null;
+  periodDays: number | null;
   confidence: 'high' | 'low';
 }
 
 const NUMBER_OR_NULL = ['number', 'null'];
+const DAYS_PER_MONTH = 365 / 12;
+
+/**
+ * Fixed fee as printed on the bill (rate + unit + VAT or not) → kr per
+ * month incl. VAT. Done here, not by the model: asking the model to convert
+ * made it return the period total excl. VAT instead (a real Vattenfall bill
+ * gave 549,34 kr for "Abonnemang 6 468 kr/år", which is 673,75 kr/month).
+ */
+function monthlyInclVat(rate: unknown, per: unknown, includesVat: unknown): number | null {
+  if (typeof rate !== 'number' || !Number.isFinite(rate) || rate < 0) return null;
+  const perMonth = per === 'year' ? rate / 12 : per === 'day' ? rate * DAYS_PER_MONTH : per === 'month' ? rate : null;
+  if (perMonth === null) return null;
+  const withVat = includesVat === true ? perMonth : perMonth * 1.25;
+  return Math.round(withVat * 100) / 100;
+}
 const STRING_OR_NULL = ['string', 'null'];
 
 /**
@@ -102,20 +120,46 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
                   description:
                     'Grid company\'s variable transfer fee in öre/kWh EXCLUDING VAT, usually "Elöverföring" or "Överföringsavgift". Not energy tax. Null if not on this bill.',
                 },
-                gridFeeFixedSekPerMonth: {
+                gridFixedRate: {
                   type: NUMBER_OR_NULL,
                   description:
-                    'Grid company\'s fixed subscription fee ("Abonnemang", "Nätabonnemang", "Fast avgift") in kr per MONTH INCLUDING 25% VAT. Convert: yearly ÷ 12, and multiply by 1.25 if the bill states it excluding VAT. Null if not on this bill.',
+                    'Grid company\'s fixed fee ("Abonnemang", "Nätabonnemang", "Fast avgift") as the RATE printed in the price column (e.g. "6 468,00 kr/år" → 6468), NOT the period total in the sum column. Null if not on this bill.',
+                },
+                gridFixedPer: {
+                  type: STRING_OR_NULL,
+                  enum: ['year', 'month', 'day', null],
+                  description: 'What gridFixedRate is per: "year" (kr/år), "month" (kr/mån) or "day" (kr/dygn). Null if not on this bill.',
+                },
+                gridFixedIncludesVat: {
+                  type: ['boolean', 'null'],
+                  description: 'True if gridFixedRate already includes VAT (moms). On Swedish bills where moms is a separate line at the end of the section, it does NOT. Null if not on this bill.',
                 },
                 retailerMarkupOrePerKwh: {
                   type: NUMBER_OR_NULL,
                   description:
                     'Retailer\'s own markup on top of the spot price, in öre/kWh EXCLUDING VAT: the sum of lines like "Påslag", "Fast påslag", "Rörliga kostnader", "Tillägg". NOT the spot price itself, NOT the grid fee, NOT energy tax or elcertifikat. Null if not on this bill.',
                 },
-                retailerFixedSekPerMonth: {
+                retailerFixedRate: {
                   type: NUMBER_OR_NULL,
                   description:
-                    'Retailer\'s fixed fee ("Månadsavgift", "Årsavgift", "Fast avgift") in kr per MONTH INCLUDING 25% VAT. Convert: yearly ÷ 12, and multiply by 1.25 if stated excluding VAT. Null if not on this bill.',
+                    'Retailer\'s fixed fee ("Årsavgift", "Månadsavgift", "Fast avgift") as the RATE printed in the price column (e.g. "6 468,00 kr/år" → 6468), NOT the period total in the sum column. Null if not on this bill.',
+                },
+                retailerFixedPer: {
+                  type: STRING_OR_NULL,
+                  enum: ['year', 'month', 'day', null],
+                  description: 'What retailerFixedRate is per: "year" (kr/år), "month" (kr/mån) or "day" (kr/dygn). Null if not on this bill.',
+                },
+                retailerFixedIncludesVat: {
+                  type: ['boolean', 'null'],
+                  description: 'True if retailerFixedRate already includes VAT (moms). On Swedish bills where moms is a separate line at the end of the section, it does NOT. Null if not on this bill.',
+                },
+                consumptionKwh: {
+                  type: NUMBER_OR_NULL,
+                  description: 'Total electricity used in the billing period, in kWh ("Förbrukning", the kWh quantity on the spot price or elöverföring line). Null if not shown.',
+                },
+                periodDays: {
+                  type: NUMBER_OR_NULL,
+                  description: 'Number of days in the billing period that consumptionKwh covers (from the period dates, e.g. 2026-10-01 to 2026-10-31 = 31). Null if unclear.',
                 },
                 confidence: {
                   type: 'string',
@@ -128,9 +172,15 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
                 'retailerName',
                 'gridCompanyName',
                 'gridFeeVariableOrePerKwh',
-                'gridFeeFixedSekPerMonth',
+                'gridFixedRate',
+                'gridFixedPer',
+                'gridFixedIncludesVat',
                 'retailerMarkupOrePerKwh',
-                'retailerFixedSekPerMonth',
+                'retailerFixedRate',
+                'retailerFixedPer',
+                'retailerFixedIncludesVat',
+                'consumptionKwh',
+                'periodDays',
                 'confidence',
               ],
             },
@@ -143,7 +193,7 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
               fileContent,
               {
                 type: 'text',
-                text: 'This is a Swedish electricity bill. Many households get two separate bills: one from the electricity supplier (elhandel) and one from the local grid company (elnät); some get one combined invoice. First decide which kind this is. Then report only the fees that appear on this bill and use null for the rest. Per-kWh fees in öre/kWh excluding VAT; fixed fees in kr per month including VAT (convert yearly fees and add 25% VAT if needed). Report your findings using the tool.',
+                text: 'This is a Swedish electricity bill. Many households get two separate bills: one from the electricity supplier (elhandel) and one from the local grid company (elnät); some get one combined invoice. First decide which kind this is. Then report only the fees that appear on this bill and use null for the rest. Also report the kWh used in the billing period and how many days the period covers. Per-kWh fees in öre/kWh excluding VAT. For fixed fees, copy the rate exactly as printed (with its unit and whether it includes VAT); do not convert it. Report your findings using the tool.',
               },
             ],
           },
@@ -160,7 +210,7 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
       throw new HttpsError('internal', 'Could not read the bill. Try again or enter the values manually.');
     }
 
-    const input = toolUse.input as Partial<ScanElectricityBillResult>;
+    const input = toolUse.input as Partial<ScanElectricityBillResult> & Record<string, unknown>;
     const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null);
     const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 60) : null);
     return {
@@ -168,9 +218,11 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
       retailerName: str(input.retailerName),
       gridCompanyName: str(input.gridCompanyName),
       gridFeeVariableOrePerKwh: num(input.gridFeeVariableOrePerKwh),
-      gridFeeFixedSekPerMonth: num(input.gridFeeFixedSekPerMonth),
+      gridFeeFixedSekPerMonth: monthlyInclVat(input.gridFixedRate, input.gridFixedPer, input.gridFixedIncludesVat),
       retailerMarkupOrePerKwh: num(input.retailerMarkupOrePerKwh),
-      retailerFixedSekPerMonth: num(input.retailerFixedSekPerMonth),
+      retailerFixedSekPerMonth: monthlyInclVat(input.retailerFixedRate, input.retailerFixedPer, input.retailerFixedIncludesVat),
+      consumptionKwh: num(input.consumptionKwh),
+      periodDays: num(input.periodDays),
       confidence: input.confidence === 'high' ? 'high' : 'low',
     };
   },

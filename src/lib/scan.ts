@@ -20,6 +20,9 @@ export interface BillScanResult {
   gridFeeFixedSekPerMonth: number | null;
   retailerMarkupOrePerKwh: number | null;
   retailerFixedSekPerMonth: number | null;
+  /** kWh used in the billing period and its length in days (both may be missing on older servers). */
+  consumptionKwh?: number | null;
+  periodDays?: number | null;
   confidence: 'high' | 'low';
 }
 

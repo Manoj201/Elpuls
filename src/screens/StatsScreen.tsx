@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconArrowDownRight, IconArrowUpRight, IconChartBar, IconClockHour4 } from '@tabler/icons-react-native';
+import { IconArrowDownRight, IconArrowUpRight, IconCalculator, IconChartBar, IconClockHour4, IconMap2, IconReceipt } from '@tabler/icons-react-native';
 import { useCountryStore } from '../stores/useCountryStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { useUserStore } from '../stores/useUserStore';
@@ -11,6 +11,7 @@ import { compareAllZones, type ZoneAverage } from '../lib/zoneComparison';
 import { formatOre, formatPrice } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
 import { theme } from '../theme';
+import { SecondaryButton } from '../components/SecondaryButton';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
 import { InfoRow } from '../components/InfoRow';
@@ -31,7 +32,12 @@ function formatWholeKr(value: number, language: SupportedLanguage): string {
   return Math.round(value).toLocaleString(language === 'sv' ? 'sv-SE' : 'en-GB');
 }
 
-export function StatsScreen() {
+interface StatsScreenProps {
+  /** Opens the bill scan (or, with manual = true, the type-it-in form). */
+  onOpenBillScan: (manual?: boolean) => void;
+}
+
+export function StatsScreen({ onOpenBillScan }: StatsScreenProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
   const zone = useCountryStore((s) => s.zone);
@@ -116,21 +122,63 @@ export function StatsScreen() {
       <Text style={styles.subtitle}>{t('stats.subtitle')}</Text>
 
       {!isProSubscriber ? (
-        <ProLockedCard
-          icon={IconChartBar}
-          title={t('paywall.headlineStats')}
-          subtitle={t('paywall.lockedStatsSubtitle')}
-          source="stats"
-          preview={
-            <View>
-              <PreviewRow label={t('stats.spot')} value={t('stats.sample.spot')} />
-              <PreviewRow label={t('stats.gridFee')} value={t('stats.sample.gridFee')} />
-              <PreviewRow label={t('stats.energyTax')} value={t('stats.sample.energyTax')} />
-              <PreviewRow label={t('stats.vat')} value={t('stats.sample.vat')} />
-              <PreviewRow label={t('stats.total')} value={t('stats.sample.total')} strong />
-            </View>
-          }
-        />
+        // Free: one teaser per Pro section, in the same order as Pro users see them.
+        <View style={styles.teaserList}>
+          <ProLockedCard
+            icon={IconChartBar}
+            title={t('stats.locked.breakdownTitle')}
+            subtitle={t('stats.locked.breakdownText')}
+            source="stats"
+            preview={
+              <View>
+                <PreviewRow label={t('stats.spot')} value={t('stats.sample.spot')} />
+                <PreviewRow label={t('stats.gridFee')} value={t('stats.sample.gridFee')} />
+                <PreviewRow label={t('stats.energyTax')} value={t('stats.sample.energyTax')} />
+                <PreviewRow label={t('stats.vat')} value={t('stats.sample.vat')} />
+                <PreviewRow label={t('stats.total')} value={t('stats.sample.total')} strong />
+              </View>
+            }
+          />
+          <ProLockedCard
+            icon={IconReceipt}
+            title={t('stats.locked.contractTitle')}
+            subtitle={t('stats.locked.contractText')}
+            source="stats"
+            preview={
+              <View>
+                <PreviewRow label={t('stats.locked.sampleMarkupLabel')} value={t('stats.locked.sampleMarkup')} />
+                <PreviewRow label={t('stats.locked.sampleUsageLabel')} value={t('stats.locked.sampleUsage')} />
+                <PreviewRow label={t('stats.locked.sampleMarkupCostLabel')} value={t('stats.locked.sampleMarkupCost')} strong />
+              </View>
+            }
+          />
+          <ProLockedCard
+            icon={IconCalculator}
+            title={t('stats.locked.whatIfTitle')}
+            subtitle={t('stats.locked.whatIfText')}
+            source="stats"
+            preview={
+              <View>
+                <PreviewRow label={t('stats.locked.sampleAsNowLabel')} value={t('stats.locked.sampleAsNow')} />
+                <PreviewRow label={t('stats.locked.sampleShiftLabel')} value={t('stats.locked.sampleShift')} />
+                <PreviewRow label={t('stats.locked.sampleSaveLabel')} value={t('stats.locked.sampleSave')} strong />
+              </View>
+            }
+          />
+          <ProLockedCard
+            icon={IconMap2}
+            title={t('stats.locked.zonesTitle')}
+            subtitle={t('stats.locked.zonesText')}
+            source="stats"
+            preview={
+              <View>
+                {(['SE1', 'SE2', 'SE3', 'SE4'] as const).map((z) => (
+                  <PreviewRow key={z} label={z} value={t(`stats.locked.sampleZone.${z}`)} strong={z === zone} />
+                ))}
+              </View>
+            }
+          />
+        </View>
       ) : (
         <>
           <Text style={styles.sectionTitle}>{t('stats.costBreakdown')}</Text>
@@ -154,10 +202,23 @@ export function StatsScreen() {
 
           <Text style={styles.sectionTitle}>{t('stats.contractHealthTitle')}</Text>
           <Card style={styles.sectionCard}>
-            {retailerMarkupSekPerKwh === null ? (
-              <Text style={styles.empty}>{t('stats.contractHealthNeedsBillScan')}</Text>
-            ) : estimatedMonthlyKwh === null ? (
-              <Text style={styles.empty}>{t('stats.contractHealthNeedsUsage')}</Text>
+            {retailerMarkupSekPerKwh === null || estimatedMonthlyKwh === null ? (
+              // Say exactly what's missing and where it is, with a way straight to it.
+              <View style={styles.missing}>
+                <Text style={styles.missingText}>
+                  {t(
+                    retailerMarkupSekPerKwh === null && estimatedMonthlyKwh === null
+                      ? 'stats.contractNeedsBoth'
+                      : retailerMarkupSekPerKwh === null
+                        ? 'stats.contractNeedsMarkup'
+                        : 'stats.contractNeedsUsage',
+                  )}
+                </Text>
+                <SecondaryButton size="compact" label={t('stats.contractScanBill')} onPress={() => onOpenBillScan()} />
+                <Pressable onPress={() => onOpenBillScan(true)} hitSlop={8} style={styles.textLink} accessibilityRole="button">
+                  <Text style={styles.textLinkLabel}>{t('stats.contractTypeIn')}</Text>
+                </Pressable>
+              </View>
             ) : (
               monthlyOverpayKr !== null && (
                 <>
@@ -317,6 +378,11 @@ const styles = StyleSheet.create({
   breakdownDivider: { height: 1, backgroundColor: theme.colors.borderMuted, marginVertical: 8 },
   contractHealthHero: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
   contractHealthResult: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 4 },
+  teaserList: { gap: 16 },
+  missing: { gap: 12 },
+  missingText: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 22, color: theme.colors.textSecondary },
+  textLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center' },
+  textLinkLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textSecondary, textDecorationLine: 'underline' },
   whatIfIntro: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 22, color: theme.colors.textSecondary, marginBottom: 14 },
   whatIfResult: {
     backgroundColor: theme.colors.surfaceElevated,

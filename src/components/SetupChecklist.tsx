@@ -15,6 +15,8 @@ export interface SetupStep {
 interface SetupChecklistProps {
   steps: SetupStep[];
   onDismiss: () => void;
+  /** Optional "Så fungerar Elpuls" link at the bottom. */
+  onOpenGuide?: () => void;
 }
 
 /**
@@ -23,7 +25,7 @@ interface SetupChecklistProps {
  * each one tap away, with a progress bar. The caller hides it once every
  * step is done or the user dismisses it.
  */
-export function SetupChecklist({ steps, onDismiss }: SetupChecklistProps) {
+export function SetupChecklist({ steps, onDismiss, onOpenGuide }: SetupChecklistProps) {
   const { t } = useTranslation();
   const doneCount = steps.filter((s) => s.done).length;
   const progress = steps.length === 0 ? 0 : doneCount / steps.length;
@@ -76,6 +78,13 @@ export function SetupChecklist({ steps, onDismiss }: SetupChecklistProps) {
           <IconChevronRight size={20} color={theme.colors.textMuted} />
         </Pressable>
       ))}
+
+      {onOpenGuide && (
+        <Pressable onPress={onOpenGuide} style={({ pressed }) => [styles.guideLink, pressed && styles.pressed]} accessibilityRole="button">
+          <Text style={styles.guideLinkText}>{t('guide.title')}</Text>
+          <IconChevronRight size={16} color={theme.colors.accentPurpleDeep} />
+        </Pressable>
+      )}
     </Card>
   );
 }
@@ -93,6 +102,16 @@ const styles = StyleSheet.create({
   progressText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 8 },
   pressed: { opacity: 0.6 },
+  guideLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    minHeight: 44,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderMuted,
+  },
+  guideLinkText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm, color: theme.colors.accentPurpleDeep },
   stepTitle: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   stepTitleDone: { color: theme.colors.textSecondary },
   stepSubtitle: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 2 },

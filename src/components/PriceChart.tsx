@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconArrowDownRight, IconArrowUpRight, IconBolt, IconChevronRight, IconSparkles } from '@tabler/icons-react-native';
+import { IconArrowDownRight, IconArrowUpRight, IconBolt, IconSparkles } from '@tabler/icons-react-native';
 import { APPLIANCE_ICONS } from '../lib/applianceDisplay';
 import { whenOf } from '../lib/whenLabel';
 import { useUserStore } from '../stores/useUserStore';
@@ -12,6 +12,8 @@ import type { SupportedLanguage } from '../i18n';
 import type { HourlyPrice } from '../providers/types';
 import { theme } from '../theme';
 import { Chip } from './Chip';
+import { ProLockedCard } from './ProLockedCard';
+import { InfoRow } from './InfoRow';
 import { PriceAreaChart } from './PriceAreaChart';
 import { PriceBar } from './PriceBar';
 
@@ -37,7 +39,8 @@ interface PriceChartProps {
   /** Pro: best window per household appliance, shaded on the chart and listed below it. */
   bestTimes?: BestTime[];
   /** Shown instead of the list for free users. */
-  onUpgrade?: () => void;
+  /** Free users: show the Pro teaser under the chart. */
+  showTeaser?: boolean;
 }
 
 /**
@@ -45,13 +48,11 @@ interface PriceChartProps {
  * phone), a one-line summary in words for each day (cheapest and dearest
  * slot), and the Pro "best times" for the user's appliances.
  */
-export function PriceChart({ slots, now, bestTimes, onUpgrade }: PriceChartProps) {
+export function PriceChart({ slots, now, bestTimes, showTeaser }: PriceChartProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
   const view = useUserStore((s) => s.chartView);
-  const trialDays = useUserStore((s) => s.trialDays);
   // Only promise a trial this Apple ID can still get.
-  const teaserCta = trialDays ? t('pro.tryFree', { days: trialDays }) : t('pro.getPro');
   const setView = useUserStore((s) => s.setChartView);
 
   const sorted = useMemo(() => [...slots].sort((a, b) => a.hour.getTime() - b.hour.getTime()), [slots]);
@@ -190,30 +191,30 @@ export function PriceChart({ slots, now, bestTimes, onUpgrade }: PriceChartProps
         </View>
       )}
 
-      {/* Free users: a small card in the same place and style as the Pro
-          "best times" card, so it reads as an offer, not a warning. */}
-      {!bestTimes && onUpgrade && (
-        <Pressable
-          onPress={onUpgrade}
-          style={({ pressed }) => [styles.teaser, pressed && styles.pressed]}
-          accessibilityRole="button"
-          accessibilityLabel={`${t('chart.teaserTitle')}. ${t('chart.teaserText')} ${teaserCta}`}
-        >
-          <View style={styles.teaserIcon}>
-            <IconSparkles size={18} color={theme.colors.accentPurpleDeep} />
-          </View>
-          <View style={styles.teaserText}>
-            <View style={styles.teaserHeader}>
-              <Text style={styles.teaserTitle}>{t('chart.teaserTitle')}</Text>
-              <Chip label={t('pro.tag')} variant="amber" />
-            </View>
-            <Text style={styles.teaserBody}>{t('chart.teaserText')}</Text>
-            <View style={styles.teaserCtaRow}>
-              <Text style={styles.teaserCta}>{teaserCta}</Text>
-              <IconChevronRight size={16} color={theme.colors.accentPurpleDeep} />
-            </View>
-          </View>
-        </Pressable>
+      {/* Free users: the shared Pro teaser, inline, as a link (Home has other teasers too). */}
+      {!bestTimes && showTeaser && (
+        <View style={styles.teaserWrap}>
+          <ProLockedCard
+            inline
+            icon={IconSparkles}
+            title={t('chart.teaserTitle')}
+            subtitle={t('chart.teaserText')}
+            source="proTips"
+            preview={
+              <View style={styles.teaserPreview}>
+                {(['washing_machine', 'dishwasher', 'ev'] as const).map((id) => (
+                  <InfoRow
+                    key={id}
+                    icon={APPLIANCE_ICONS[id]}
+                    variant="neutral"
+                    title={t(`ticker.appliances.${id}`)}
+                    subtitle={t(`chart.teaserSample.${id}`)}
+                  />
+                ))}
+              </View>
+            }
+          />
+        </View>
       )}
     </View>
   );
@@ -263,29 +264,6 @@ const styles = StyleSheet.create({
   bestText: { flex: 1, gap: 2 },
   bestLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   bestTime: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
-  teaser: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-    padding: 14,
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  pressed: { opacity: 0.85 },
-  teaserIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.accentPurpleSoft,
-  },
-  teaserText: { flex: 1, gap: 4 },
-  teaserHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  teaserTitle: { flex: 1, fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
-  teaserBody: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
-  teaserCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4, minHeight: 24 },
-  teaserCta: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm, color: theme.colors.accentPurpleDeep },
+  teaserWrap: { marginTop: 16 },
+  teaserPreview: { gap: 12 },
 });

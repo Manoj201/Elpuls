@@ -71,6 +71,8 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
       const userSnap = await db.collection('users').doc(uid).get();
       const user = userSnap.data();
       if (!user?.isProSubscriber) continue;
+      // Switched off in the app's Notiser screen (missing = on, for older profiles).
+      if (user.notificationPrefs?.dailyBriefing === false) continue;
 
       const language = resolveServerLanguage(user?.language);
 

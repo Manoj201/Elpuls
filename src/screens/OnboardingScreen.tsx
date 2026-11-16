@@ -7,7 +7,6 @@ import { useCountryStore } from '../stores/useCountryStore';
 import { useUserStore, type HeatingType } from '../stores/useUserStore';
 import { guessZoneFromPostcode } from '../lib/postcodeZone';
 import { theme } from '../theme';
-import { Chip } from '../components/Chip';
 import { OptionCard } from '../components/OptionCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
@@ -21,7 +20,7 @@ interface OnboardingScreenProps {
   onDone: () => void;
 }
 
-const HEATING_VALUES: NonNullable<HeatingType>[] = ['district', 'electric', 'heat_pump', 'other'];
+const HEATING_VALUES: NonNullable<HeatingType>[] = ['heat_pump', 'district', 'electric', 'other'];
 
 const STEP_COUNT = 6;
 
@@ -155,13 +154,16 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
             <Text style={styles.postcodeGuessHint}>{t('onboarding.postcodeGuessed', { zone })}</Text>
           )}
 
-          <View style={styles.zoneRow}>
-            {config.zones.map((z) => (
-              <Chip key={z} label={z} selected={z === zone} onPress={() => handleZoneChipPress(z)} />
-            ))}
-          </View>
-
-          {zone && <Text style={styles.zoneInfoText}>{t(`onboarding.zoneInfo.${zone}`)}</Text>}
+          {config.zones.map((z) => (
+            <OptionCard
+              key={z}
+              label={`${z} · ${t(`onboarding.zoneName.${z}`)}`}
+              description={t(`onboarding.zoneTowns.${z}`)}
+              selected={z === zone}
+              onPress={() => handleZoneChipPress(z)}
+            />
+          ))}
+          <Text style={styles.zoneInfoText}>{t('onboarding.zoneBillHint')}</Text>
         </Step>
       )}
 
@@ -171,6 +173,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
             <OptionCard
               key={value}
               label={t(`onboarding.heating.${value}`)}
+              description={t(`onboarding.heatingDesc.${value}`)}
               selected={heatingType === value}
               onPress={() => setHeatingType(value)}
             />
@@ -311,7 +314,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: theme.colors.accentAmberDeep,
   },
-  zoneRow: { flexDirection: 'row', gap: 8 },
   zoneInfoText: {
     fontFamily: theme.typography.body,
     fontSize: theme.type.sm,

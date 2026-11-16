@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
-  IconAlertTriangle,
   IconArrowDownRight,
   IconArrowUpRight,
   IconCalculator,
@@ -17,6 +16,8 @@ import {
   IconSparkles,
   IconSun,
   IconWind,
+  IconHelpCircle,
+  IconX,
 } from '@tabler/icons-react-native';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
@@ -27,8 +28,7 @@ import { useUserStore } from '../stores/useUserStore';
 import { useApplianceStore } from '../stores/useApplianceStore';
 import { findCheapestWindow, findCurrentPrice, findExtremeHours, groupPricesByHour } from '../lib/priceUtils';
 import { getHouseholdAppliances, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
-import { useUiStore } from '../stores/useUiStore';
-import { assessPriceRisk, type PriceRiskAssessment, type PriceRiskFactor } from '../lib/priceRisk';
+import { assessPriceRisk, type PriceRiskFactor } from '../lib/priceRisk';
 import { findWeatherPrepTip } from '../lib/weatherPrep';
 import { findHeatingPlan } from '../lib/heatingPlan';
 import { writeWidgetSnapshot } from '../lib/widgetBridge';
@@ -44,7 +44,7 @@ import { formatClock, formatOre } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
 import { AiNote } from '../components/AiNote';
 import { Card } from '../components/Card';
-import { Chip, type ChipVariant } from '../components/Chip';
+import { Chip } from '../components/Chip';
 import { InfoRow } from '../components/InfoRow';
 import { PriceDial } from '../components/PriceDial';
 import { AnimatedNumber } from '../components/AnimatedNumber';
@@ -64,11 +64,6 @@ function formatHeroOre(ore: number, language: SupportedLanguage): string {
   return ore.toLocaleString(language === 'sv' ? 'sv-SE' : 'en-GB', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-const RISK_VARIANT: Record<PriceRiskAssessment['level'], ChipVariant> = {
-  low: 'teal',
-  medium: 'amber',
-  high: 'danger',
-};
 
 const WEATHER_PREP_ICON = {
   coldSnapEv: IconSnowflake,
@@ -83,7 +78,8 @@ interface HomeScreenProps {
   /** Opens the bill scan; `manual` goes straight to typing the numbers in. */
   onOpenBillScan: (manual?: boolean) => void;
   onOpenApplianceScan: () => void;
-  onOpenSettings: () => void;
+  onOpenNotifications: () => void;
+  onOpenGuide: () => void;
 }
 
 export function HomeScreen({
@@ -92,12 +88,12 @@ export function HomeScreen({
   onOpenApplianceRecommendations,
   onOpenBillScan,
   onOpenApplianceScan,
-  onOpenSettings,
+  onOpenNotifications,
+  onOpenGuide,
 }: HomeScreenProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
   const { todayPrices, tomorrowPrices, isLoading, error, fetchPrices } = usePriceStore();
-  const showPaywall = useUiStore((s) => s.showPaywall);
   const { forecast, fetchForecast } = useWeatherStore();
   const zone = useCountryStore((s) => s.zone);
   const setZone = useCountryStore((s) => s.setZone);
@@ -110,7 +106,10 @@ export function HomeScreen({
   const priceAlertLowEnabled = useUserStore((s) => s.priceAlertLowEnabled);
   const setupDismissedAt = useUserStore((s) => s.setupDismissedAt);
   const dismissSetup = useUserStore((s) => s.dismissSetup);
+  const guideCardHiddenAt = useUserStore((s) => s.guideCardHiddenAt);
+  const hideGuideCard = useUserStore((s) => s.hideGuideCard);
   const hasEv = useUserStore((s) => s.hasEv);
+  const hasSolar = useUserStore((s) => s.hasSolar);
   const heatingType = useUserStore((s) => s.heatingType);
   const appliances = useApplianceStore((s) => s.appliances);
   const fetchAppliances = useApplianceStore((s) => s.fetchAppliances);
@@ -296,14 +295,16 @@ export function HomeScreen({
       title: t('setup.alertsTitle'),
       subtitle: t('setup.alertsSubtitle'),
       done: priceAlertHighThresholdOre !== null || priceAlertLowEnabled,
-      onPress: onOpenSettings,
+      onPress: onOpenNotifications,
     },
   ];
   const showSetup = setupDismissedAt === null && setupSteps.some((s) => !s.done);
 
-  function riskFactorText(factor: PriceRiskFactor): string {
-    const value = factor.value.toFixed(1).replace('.', language === 'sv' ? ',' : '.');
-    return t(`home.riskFactors.${factor.kind}`, { value });
+  /** "−3 °C" / "2 m/s": whole numbers, a real minus sign, as on a weather forecast. */
+  function weatherValue(factor: PriceRiskFactor): string {
+    const n = Math.round(factor.value);
+    const num = n < 0 ? `−${Math.abs(n)}` : String(n);
+    return factor.kind === 'cold' ? `${num} °C` : `${num} m/s`;
   }
 
   // Once a comparison is computed, the ComparisonCard mounts off-screen
@@ -402,6 +403,16 @@ export function HomeScreen({
             ) : (
               <IconChevronDown size={16} color={theme.colors.textSecondary} />
             )}
+          </Pressable>
+          {/* Help is always one tap away, where people expect it. */}
+          <Pressable
+            onPress={onOpenGuide}
+            accessibilityRole="button"
+            accessibilityLabel={t('guide.title')}
+            hitSlop={8}
+            style={styles.iconButton}
+          >
+            <IconHelpCircle size={22} color={theme.colors.textSecondary} />
           </Pressable>
           <Pressable
             onPress={handleShare}
@@ -529,19 +540,37 @@ export function HomeScreen({
                     </View>
                   )}
 
-                  {/* Weather-based outlook: only shown when there is something to warn about. */}
-                  {risk && risk.level !== 'low' && (
-                    <View style={styles.tipRow}>
-                      <InfoRow
-                        icon={IconAlertTriangle}
-                        variant={RISK_VARIANT[risk.level]}
-                        title={
-                          risk.level === 'high' ? t('home.higherRisk') : t('home.elevatedRisk')
-                        }
-                        subtitle={risk.factors.length > 0 ? risk.factors.map(riskFactorText).join(' · ') : undefined}
-                      />
-                    </View>
-                  )}
+                  {/* Weather behind today's price: named in plain words, with why it
+                      matters and the values on the right. Calm amber, not a red
+                      warning: it's background, and the exact prices are above. */}
+                  {risk && risk.level !== 'low' && risk.factors.length > 0 && (() => {
+                    const cold = risk.factors.find((f) => f.kind === 'cold');
+                    const wind = risk.factors.find((f) => f.kind === 'lowWind');
+                    const key = cold && wind ? 'coldWind' : cold ? 'cold' : 'wind';
+                    const WeatherIcon = cold ? IconSnowflake : IconWind;
+                    return (
+                      <View
+                        style={[styles.tipRow, styles.weatherRow]}
+                        accessible
+                        accessibilityLabel={`${t(`home.weather.${key}Title`)}. ${t(`home.weather.${key}Text`)} ${risk.factors.map(weatherValue).join(', ')}`}
+                      >
+                        <View style={styles.weatherIcon}>
+                          <WeatherIcon size={20} color={theme.colors.accentAmberDeep} />
+                        </View>
+                        <View style={styles.weatherText}>
+                          <Text style={styles.weatherTitle}>{t(`home.weather.${key}Title`)}</Text>
+                          <Text style={styles.weatherBody}>{t(`home.weather.${key}Text`)}</Text>
+                        </View>
+                        <View style={styles.weatherValues}>
+                          {risk.factors.map((f) => (
+                            <Text key={f.kind} style={styles.weatherValue}>
+                              {weatherValue(f)}
+                            </Text>
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  })()}
                 </>
               )}
             </Card>
@@ -549,34 +578,42 @@ export function HomeScreen({
 
           {showSetup && (
             <View style={styles.sectionCard}>
-              <SetupChecklist steps={setupSteps} onDismiss={dismissSetup} />
+              <SetupChecklist steps={setupSteps} onDismiss={dismissSetup} onOpenGuide={onOpenGuide} />
             </View>
           )}
 
-          {/* Quick actions: the two tools people use before switching something on. */}
-          <View style={styles.tilesRow}>
+          {/* New users: a small way into the guide, below the price (never above
+              it). Not shown next to the setup checklist, which links to it instead.
+              Gone once the guide has been opened or the card closed. */}
+          {!showSetup && guideCardHiddenAt === null && (
             <Pressable
-              style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
-              onPress={onOpenKostnadskoll}
+              onPress={onOpenGuide}
               accessibilityRole="button"
-              accessibilityLabel={`${t('home.openKostnadskollTitle')}. ${t('home.openKostnadskollSubtitle')}`}
+              accessibilityLabel={`${t('home.guideCardTitle')}. ${t('home.guideCardText')}`}
+              style={({ pressed }) => [styles.guideCard, pressed && styles.pressed]}
             >
-              <IconCalculator size={26} color={theme.colors.accentPurpleDeep} />
-              <Text style={styles.tileTitle}>{t('home.openKostnadskollTitle')}</Text>
-              <Text style={styles.tileText}>{t('home.openKostnadskollSubtitle')}</Text>
+              <View style={styles.guideIcon}>
+                <IconHelpCircle size={22} color={theme.colors.accentPurpleDeep} />
+              </View>
+              <View style={styles.guideText}>
+                <Text style={styles.guideTitle}>{t('home.guideCardTitle')}</Text>
+                <Text style={styles.guideBody}>{t('home.guideCardText')}</Text>
+              </View>
+              <Pressable
+                onPress={hideGuideCard}
+                hitSlop={12}
+                style={styles.guideClose}
+                accessibilityRole="button"
+                accessibilityLabel={t('home.guideCardClose')}
+              >
+                <IconX size={18} color={theme.colors.textSecondary} />
+              </Pressable>
             </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
-              onPress={onOpenApplianceRecommendations}
-              accessibilityRole="button"
-              accessibilityLabel={`${t('home.openApplianceRecommendationsTitle')}. ${t('home.openApplianceRecommendationsSubtitle')}`}
-            >
-              <IconListCheck size={26} color={theme.colors.accentPurpleDeep} />
-              <Text style={styles.tileTitle}>{t('home.openApplianceRecommendationsTitle')}</Text>
-              <Text style={styles.tileText}>{t('home.openApplianceRecommendationsSubtitle')}</Text>
-            </Pressable>
-          </View>
+          )}
 
+          {/* Order (UI/UX Pro Max, content priority): price now → when it's cheap
+              → what to do today → why → tools. Free users get their free tools
+              before the Pro offers, which sit together at the end. */}
           <Text style={styles.sectionTitle} accessibilityRole="header">
             {t(tomorrowPrices.length > 0 ? 'home.chartTitleTwoDays' : 'home.hourlyTitle')}
           </Text>
@@ -584,39 +621,8 @@ export function HomeScreen({
             slots={chartSlots}
             now={new Date()}
             bestTimes={isProSubscriber ? bestTimes : undefined}
-            onUpgrade={() => showPaywall('proTips')}
+            showTeaser
           />
-
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            {t('home.explainerTitle')}
-          </Text>
-          {isProSubscriber ? (
-            <Card style={styles.sectionCard}>
-              {explainer.isLoading ? (
-                <ActivityIndicator color={theme.colors.textSecondary} accessibilityLabel={t('home.loading')} />
-              ) : explainer.text ? (
-                <>
-                  <View style={styles.explainerHeader}>
-                    <IconCloud size={20} color={theme.colors.accentPurpleDeep} />
-                    <Text style={styles.explainerText}>{explainer.text}</Text>
-                  </View>
-                  <AiNote kind="explainer" />
-                </>
-              ) : (
-                <Text style={styles.emptyText}>{t('home.explainerNotReady')}</Text>
-              )}
-            </Card>
-          ) : (
-            <View style={styles.sectionCard}>
-              <ProLockedCard
-                icon={IconSparkles}
-                title={t('home.explainerLockedTitle')}
-                subtitle={t('home.explainerLockedText')}
-                source="explainer"
-                preview={<Text style={styles.previewText}>{t('home.explainerSample')}</Text>}
-              />
-            </View>
-          )}
 
           {isProSubscriber ? (
             <>
@@ -654,17 +660,102 @@ export function HomeScreen({
                   }
                 />
               </Card>
-              <Text style={styles.subSectionTitle}>{t('home.solarBonusHours')}</Text>
-              <SolarBonusCard
-                bonusHours={bonusHours}
-                solarPotential={solarPotential}
-                sunrise={sunTimes.sunrise}
-                sunset={sunTimes.sunset}
-                now={new Date()}
-                language={language}
-              />
+              {hasSolar && (
+                <>
+                  <Text style={styles.subSectionTitle}>{t('home.solarBonusHours')}</Text>
+                  <SolarBonusCard
+                    bonusHours={bonusHours}
+                    solarPotential={solarPotential}
+                    sunrise={sunTimes.sunrise}
+                    sunset={sunTimes.sunset}
+                    now={new Date()}
+                    language={language}
+                  />
+                </>
+              )}
+
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t('home.explainerTitle')}
+            </Text>
+            <Card style={styles.sectionCard}>
+              {explainer.isLoading ? (
+                <ActivityIndicator color={theme.colors.textSecondary} accessibilityLabel={t('home.loading')} />
+              ) : explainer.text ? (
+                <>
+                  <View style={styles.explainerHeader}>
+                    <IconCloud size={20} color={theme.colors.accentPurpleDeep} />
+                    <Text style={styles.explainerText}>{explainer.text}</Text>
+                  </View>
+                  <AiNote kind="explainer" />
+                </>
+              ) : (
+                <Text style={styles.emptyText}>{t('home.explainerNotReady')}</Text>
+              )}
+            </Card>
+
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t('home.toolsTitle')}
+            </Text>
+            <View style={styles.tilesRow}>
+              <Pressable
+                style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+                onPress={onOpenKostnadskoll}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('home.openKostnadskollTitle')}. ${t('home.openKostnadskollSubtitle')}`}
+              >
+                <IconCalculator size={26} color={theme.colors.accentPurpleDeep} />
+                <Text style={styles.tileTitle}>{t('home.openKostnadskollTitle')}</Text>
+                <Text style={styles.tileText}>{t('home.openKostnadskollSubtitle')}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+                onPress={onOpenApplianceRecommendations}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('home.openApplianceRecommendationsTitle')}. ${t('home.openApplianceRecommendationsSubtitle')}`}
+              >
+                <IconListCheck size={26} color={theme.colors.accentPurpleDeep} />
+                <Text style={styles.tileTitle}>{t('home.openApplianceRecommendationsTitle')}</Text>
+                <Text style={styles.tileText}>{t('home.openApplianceRecommendationsSubtitle')}</Text>
+              </Pressable>
+            </View>
             </>
           ) : (
+            <>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t('home.toolsTitle')}
+            </Text>
+            <View style={styles.tilesRow}>
+              <Pressable
+                style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+                onPress={onOpenKostnadskoll}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('home.openKostnadskollTitle')}. ${t('home.openKostnadskollSubtitle')}`}
+              >
+                <IconCalculator size={26} color={theme.colors.accentPurpleDeep} />
+                <Text style={styles.tileTitle}>{t('home.openKostnadskollTitle')}</Text>
+                <Text style={styles.tileText}>{t('home.openKostnadskollSubtitle')}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+                onPress={onOpenApplianceRecommendations}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('home.openApplianceRecommendationsTitle')}. ${t('home.openApplianceRecommendationsSubtitle')}`}
+              >
+                <IconListCheck size={26} color={theme.colors.accentPurpleDeep} />
+                <Text style={styles.tileTitle}>{t('home.openApplianceRecommendationsTitle')}</Text>
+                <Text style={styles.tileText}>{t('home.openApplianceRecommendationsSubtitle')}</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <ProLockedCard
+                icon={IconSparkles}
+                title={t('home.explainerLockedTitle')}
+                subtitle={t('home.explainerLockedText')}
+                source="explainer"
+                preview={<Text style={styles.previewText}>{t('home.explainerSample')}</Text>}
+              />
+            </View>
             <View style={styles.proTipsLocked}>
               <ProLockedCard
                 icon={IconSparkles}
@@ -677,11 +768,27 @@ export function HomeScreen({
                       <InfoRow icon={IconFlame} variant="amber" title={t('heatingPlan.title')} subtitle={t('home.proTipsSampleHeating')} />
                     )}
                     <InfoRow icon={IconSnowflake} variant="amber" title={t('weatherPrep.title')} subtitle={t('home.proTipsSampleWeather')} />
-                    <InfoRow icon={IconSun} variant="teal" title={t('home.solarBonusHours')} subtitle={t('home.proTipsSampleSolar')} />
                   </View>
                 }
               />
+              {hasSolar && (
+                <View style={styles.solarTeaser}>
+                  <ProLockedCard
+                    icon={IconSun}
+                    title={t('home.solarLockedTitle')}
+                    subtitle={t('home.solarLockedText')}
+                    source="proTips"
+                    preview={
+                      <View style={styles.previewList}>
+                        <InfoRow icon={IconSun} variant="amber" title={t('home.solarSampleNowTitle')} subtitle={t('home.solarSampleNowText')} />
+                        <InfoRow icon={IconSun} variant="amber" title={t('home.solarSampleNextTitle')} subtitle={t('home.solarSampleNextText')} />
+                      </View>
+                    }
+                  />
+                </View>
+              )}
             </View>
+            </>
           )}
         </>
       )}
@@ -716,6 +823,29 @@ const styles = StyleSheet.create({
   zoneDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.positiveTeal },
   zoneButtonText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.positiveTealDeep },
   iconButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  guideCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  guideIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.accentPurpleSoft,
+  },
+  guideText: { flex: 1 },
+  guideTitle: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  guideBody: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 2 },
+  guideClose: { alignSelf: 'flex-start', padding: 2 },
   zonePicker: { marginBottom: 16 },
   zonePickerHint: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginBottom: 8 },
   zoneRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
@@ -740,6 +870,20 @@ const styles = StyleSheet.create({
   statPrice: { fontFamily: theme.typography.display, fontSize: theme.type.lg, color: theme.colors.textPrimary, marginTop: 4 },
   statHour: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 2 },
   tipRow: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted, marginTop: 16, paddingTop: 16 },
+  weatherRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  weatherIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.accentAmberSoft,
+  },
+  weatherText: { flex: 1, gap: 2 },
+  weatherTitle: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  weatherBody: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
+  weatherValues: { alignItems: 'flex-end', gap: 2 },
+  weatherValue: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, fontVariant: ['tabular-nums'] },
   sectionCard: { marginBottom: 16 },
   tilesRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
   tile: {
@@ -760,6 +904,7 @@ const styles = StyleSheet.create({
   previewText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textPrimary },
   previewList: { gap: 12 },
   proTipsLocked: { marginTop: 8, marginBottom: 16 },
+  solarTeaser: { marginTop: 16 },
   emptyTitle: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   emptyText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 4 },
   error: { fontFamily: theme.typography.body, fontSize: theme.type.md, color: theme.colors.dangerEmber, textAlign: 'center' },

@@ -14,6 +14,8 @@ export interface NotificationPrefs {
   cheapNow: boolean;
   /** Pro: heat the house ahead of the evening peak (electric / heat pump homes). */
   heatAhead: boolean;
+  /** Pro: the 07:10 morning briefing (dailyBriefing.ts). */
+  dailyBriefing: boolean;
   quietStartHour: number;
   quietEndHour: number;
   maxPerDay: number;
@@ -26,6 +28,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   applianceWindows: true,
   cheapNow: true,
   heatAhead: true,
+  dailyBriefing: true,
   quietStartHour: 22,
   quietEndHour: 7,
   maxPerDay: 2,
@@ -83,6 +86,8 @@ interface UserState {
   proOfferSeenAt: number | null;
   /** When the user dismissed the Home setup checklist (epoch ms). */
   setupDismissedAt: number | null;
+  /** When the Home "Så fungerar Elpuls" card was closed or the guide opened (epoch ms). Per phone. */
+  guideCardHiddenAt: number | null;
   /** True once the persisted profile has been read back from AsyncStorage on app start. Not persisted itself. */
   hasHydrated: boolean;
   setUid: (uid: string | null) => void;
@@ -112,6 +117,9 @@ interface UserState {
   markIntroSeen: () => void;
   markProOfferSeen: () => void;
   dismissSetup: () => void;
+  /** Shows the Home setup checklist again (from the guide). */
+  restoreSetup: () => void;
+  hideGuideCard: () => void;
 }
 
 export type BillDetails = Pick<
@@ -219,6 +227,7 @@ export const useUserStore = create<UserState>()(
   introSeenAt: null,
   proOfferSeenAt: null,
   setupDismissedAt: null,
+  guideCardHiddenAt: null,
   hasHydrated: false,
   setUid: (uid) => set({ uid }),
   setOnboardingInfo: (info) => set((state) => ({ ...info, onboardedAt: state.onboardedAt ?? Date.now() })),
@@ -248,6 +257,8 @@ export const useUserStore = create<UserState>()(
   markIntroSeen: () => set((state) => ({ introSeenAt: state.introSeenAt ?? Date.now() })),
   markProOfferSeen: () => set((state) => ({ proOfferSeenAt: state.proOfferSeenAt ?? Date.now() })),
   dismissSetup: () => set({ setupDismissedAt: Date.now() }),
+  restoreSetup: () => set({ setupDismissedAt: null }),
+  hideGuideCard: () => set((state) => ({ guideCardHiddenAt: state.guideCardHiddenAt ?? Date.now() })),
     }),
     {
       name: 'elpuls-user-profile',
@@ -264,6 +275,7 @@ export const useUserStore = create<UserState>()(
         introSeenAt: state.introSeenAt,
         proOfferSeenAt: state.proOfferSeenAt,
         setupDismissedAt: state.setupDismissedAt,
+        guideCardHiddenAt: state.guideCardHiddenAt,
         notificationPrefs: state.notificationPrefs,
         chartView: state.chartView,
         priceView: state.priceView,

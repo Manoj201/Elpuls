@@ -18,6 +18,7 @@ import { PaywallScreen } from './src/screens/PaywallScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { IntroScreen } from './src/screens/IntroScreen';
+import { GuideScreen } from './src/screens/GuideScreen';
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen';
 import { ScreenBackground } from './src/components/ScreenBackground';
 import { usePushRegistration } from './src/hooks/usePushRegistration';
@@ -35,7 +36,15 @@ import { initI18n, syncCurrentLanguageToFirestore } from './src/i18n';
 import { theme } from './src/theme';
 
 type TabScreen = 'overview' | 'forecast' | 'stats' | 'settings';
-type StackScreen = 'kostnadskoll' | 'applianceRecommendations' | 'applianceScan' | 'billScan' | 'notifications' | null;
+type StackScreen =
+  | 'kostnadskoll'
+  | 'applianceRecommendations'
+  | 'applianceScan'
+  | 'billScan'
+  | 'notifications'
+  | 'guide'
+  | 'introReplay'
+  | null;
 type AppState = 'loading' | 'intro' | 'login' | 'onboarding' | 'main';
 
 const TABS: { id: TabScreen; labelKey: string; icon: ComponentType<{ size?: number; color?: string }> }[] = [
@@ -371,6 +380,21 @@ export default function App() {
             {stackScreen === 'notifications' && (
               <NotificationSettingsScreen uid={activeUid} onBack={() => setStackScreen(null)} />
             )}
+            {stackScreen === 'guide' && (
+              <GuideScreen
+                uid={activeUid}
+                onBack={() => setStackScreen(null)}
+                onOpenBillScan={openBillScan}
+                onOpenApplianceScan={() => {
+                  setEditingAppliance(null);
+                  setStackScreen('applianceScan');
+                }}
+                onOpenNotifications={() => setStackScreen('notifications')}
+                onReplayIntro={() => setStackScreen('introReplay')}
+              />
+            )}
+            {/* The intro again, from the guide; "done" returns to the guide. */}
+            {stackScreen === 'introReplay' && <IntroScreen onDone={() => setStackScreen('guide')} />}
             {stackScreen === 'billScan' && (
               <BillScanScreen uid={activeUid} startManual={billScanManual} onBack={() => setStackScreen(null)} />
             )}
@@ -387,11 +411,12 @@ export default function App() {
                   setEditingAppliance(null);
                   setStackScreen('applianceScan');
                 }}
-                onOpenSettings={() => setTab('settings')}
+                onOpenNotifications={() => setStackScreen('notifications')}
+                onOpenGuide={() => setStackScreen('guide')}
               />
             )}
             {tab === 'forecast' && <ForecastScreen />}
-            {tab === 'stats' && <StatsScreen />}
+            {tab === 'stats' && <StatsScreen onOpenBillScan={openBillScan} />}
             {tab === 'settings' && activeUid && (
               <SettingsScreen
                 uid={activeUid}
@@ -401,6 +426,7 @@ export default function App() {
                 }}
                 onOpenBillScan={openBillScan}
                 onOpenNotifications={() => setStackScreen('notifications')}
+                onOpenGuide={() => setStackScreen('guide')}
                 onDevReset={handleDevReset}
                 onAccountDeleted={handleAccountDeleted}
                 onSignedIn={handleSignedIn}

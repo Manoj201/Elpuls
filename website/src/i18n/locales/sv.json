@@ -9,7 +9,8 @@
     "titleHighlight": "billig",
     "subtitle": "Elpuls visar vad elen faktiskt kostar dig, inte bara spotpriset. Appen förklarar varför priserna ändras med hjälp av väderdata och säger till när du ska köra diskmaskinen, ladda bilen eller värma huset. Ingen hårdvara, inget byte av elbolag.",
     "ctaPrimary": "Se hur det fungerar",
-    "ctaSecondary": "Elpuls Pro"
+    "ctaSecondary": "Elpuls Pro",
+    "ctaDownload": "Ladda ner i App Store"
   },
   "howItWorks": {
     "heading": "Så fungerar det",
@@ -89,10 +90,10 @@
     "screenshotLabel": "Översikt"
   },
   "cta": {
-    "heading": "Lanseras snart i Sverige",
-    "subtitle": "Elpuls finns inte i App Store eller Play Store än.",
-    "appStore": "App Store — kommer snart",
-    "googlePlay": "Google Play — kommer snart"
+    "heading": "Finns nu i App Store",
+    "subtitle": "Gratis att ladda ner till iPhone. Android kommer senare.",
+    "appStore": "Ladda ner i App Store",
+    "googlePlay": "Google Play: kommer snart"
   },
   "footer": {
     "privacyPolicy": "Integritetspolicy",

@@ -7,6 +7,9 @@ import { HowItWorks } from "../components/HowItWorks";
 import { Benefits } from "../components/Benefits";
 import styles from "./Home.module.css";
 
+/** No country code: Apple sends each visitor to their own store (Elpuls is sold in Sweden). */
+const APP_STORE_URL = "https://apps.apple.com/app/elpuls/id6834149193";
+
 function AppleIcon() {
   return (
     <svg
@@ -51,11 +54,11 @@ export function Home() {
             </h1>
             <p className={styles.heroSubtitle}>{t("hero.subtitle")}</p>
             <div className={styles.heroActions}>
-              <Link to="/#how-it-works" className="button button-primary">
+              <a href={APP_STORE_URL} className="button button-primary" target="_blank" rel="noopener noreferrer">
+                {t("hero.ctaDownload")}
+              </a>
+              <Link to="/#how-it-works" className="button button-secondary">
                 {t("hero.ctaPrimary")}
-              </Link>
-              <Link to="/#pro" className="button button-secondary">
-                {t("hero.ctaSecondary")}
               </Link>
             </div>
           </div>
@@ -119,10 +122,15 @@ export function Home() {
           <h2 className={styles.sectionHeading}>{t("cta.heading")}</h2>
           <p className={styles.sectionSubtitle}>{t("cta.subtitle")}</p>
           <div className={styles.ctaBadges}>
-            <span className={styles.badge}>
+            <a
+              href={APP_STORE_URL}
+              className={`${styles.badge} ${styles.badgeLive}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <AppleIcon />
               {t("cta.appStore")}
-            </span>
+            </a>
             <span className={styles.badge}>
               <PlayIcon />
               {t("cta.googlePlay")}

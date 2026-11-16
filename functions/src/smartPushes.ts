@@ -25,6 +25,8 @@ export interface NotificationPrefs {
   applianceWindows: boolean;
   cheapNow: boolean;
   heatAhead: boolean;
+  /** Pro: the 07:10 morning briefing (dailyBriefing.ts). */
+  dailyBriefing: boolean;
   quietStartHour: number;
   quietEndHour: number;
   maxPerDay: number;
@@ -37,6 +39,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   applianceWindows: true,
   cheapNow: true,
   heatAhead: true,
+  dailyBriefing: true,
   quietStartHour: 22,
   quietEndHour: 7,
   maxPerDay: 2,

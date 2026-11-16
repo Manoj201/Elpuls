@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { IconLock } from '@tabler/icons-react-native';
+import { IconChevronRight, IconLock } from '@tabler/icons-react-native';
 import { useUiStore, type PaywallSource } from '../stores/useUiStore';
 import { useUserStore } from '../stores/useUserStore';
 import { theme } from '../theme';
@@ -19,42 +19,74 @@ interface ProLockedCardProps {
   ctaLabel?: string;
   /** Tells the paywall which feature was tapped, for a matching headline. */
   source?: PaywallSource;
+  /**
+   * 'link' (default): a text link, the same on every screen so all Pro
+   * teasers look alike and never compete with a screen's real actions.
+   * 'button': a filled button, kept for a possible full-screen upsell.
+   */
+  ctaStyle?: 'button' | 'link';
+  /** Bordered box instead of a full Card, for use inside another card (e.g. the price chart). */
+  inline?: boolean;
 }
 
+// Icon (32) + gap (12) from InfoRow: lines the link up with the title text.
+const TEXT_INDENT = 44;
+
 /** Teaser shown in place of a Pro feature when the user isn't subscribed. Tapping anywhere opens the paywall. */
-export function ProLockedCard({ title, subtitle, icon = IconLock, preview, ctaLabel, source = 'generic' }: ProLockedCardProps) {
+export function ProLockedCard({
+  title,
+  subtitle,
+  icon = IconLock,
+  preview,
+  ctaLabel,
+  source = 'generic',
+  ctaStyle = 'link',
+  inline = false,
+}: ProLockedCardProps) {
   const { t } = useTranslation();
   const showPaywall = useUiStore((s) => s.showPaywall);
   const trialDays = useUserStore((s) => s.trialDays);
   // Only promise a trial the store says this Apple ID can still get.
   const cta = ctaLabel ?? (trialDays ? t('pro.tryFree', { days: trialDays }) : t('pro.getPro'));
 
+  const content = (
+    <>
+      <View style={styles.headerRow}>
+        <View style={styles.flex}>
+          <InfoRow icon={icon} variant="amber" title={title} subtitle={subtitle} />
+        </View>
+        <Chip label={t('pro.tag')} variant="amber" />
+      </View>
+
+      {preview ? (
+        <View style={styles.preview} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+          <Text style={styles.exampleLabel}>{t('pro.example')}</Text>
+          <View style={styles.previewContent}>{preview}</View>
+        </View>
+      ) : null}
+
+      {ctaStyle === 'button' ? (
+        <View style={styles.cta}>
+          <IconLock size={14} color={theme.colors.onInkButton} />
+          <Text style={styles.ctaText}>{cta}</Text>
+        </View>
+      ) : (
+        <View style={[styles.link, !preview && styles.linkIndented]}>
+          <Text style={styles.linkText}>{cta}</Text>
+          <IconChevronRight size={16} color={theme.colors.accentPurpleDeep} />
+        </View>
+      )}
+    </>
+  );
+
   return (
     <Pressable
       onPress={() => showPaywall(source)}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${subtitle}. ${cta}`}
+      style={({ pressed }) => pressed && styles.pressed}
     >
-      <Card style={styles.card}>
-        <View style={styles.headerRow}>
-          <View style={styles.flex}>
-            <InfoRow icon={icon} variant="amber" title={title} subtitle={subtitle} />
-          </View>
-          <Chip label={t('pro.tag')} variant="amber" />
-        </View>
-
-        {preview ? (
-          <View style={styles.preview} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-            <Text style={styles.exampleLabel}>{t('pro.example')}</Text>
-            <View style={styles.previewContent}>{preview}</View>
-          </View>
-        ) : null}
-
-        <View style={styles.cta}>
-          <IconLock size={14} color={theme.colors.onInkButton} />
-          <Text style={styles.ctaText}>{cta}</Text>
-        </View>
-      </Card>
+      {inline ? <View style={[styles.card, styles.inline]}>{content}</View> : <Card style={styles.card}>{content}</Card>}
     </Pressable>
   );
 }
@@ -93,6 +125,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.inkButton,
   },
   ctaText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm, color: theme.colors.onInkButton },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 24 },
+  linkIndented: { marginLeft: TEXT_INDENT, marginTop: -4 },
+  linkText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm, color: theme.colors.accentPurpleDeep },
+  inline: {
+    padding: 14,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  pressed: { opacity: 0.85 },
 });
 
 /** One label/value line for a teaser's "Example" preview (e.g. a sample cost breakdown). */
