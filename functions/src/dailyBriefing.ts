@@ -5,14 +5,18 @@ import { findExtremeHours, type PriceHour } from './priceUtils';
 import { findWeatherPrepTip, type WeatherHour } from './weatherPrep';
 import { findHeatingPlan } from './heatingPlan';
 import { sendExpoPushToUid } from './sendPriceNotifications';
+import { localClock, type PlanWindow } from './dailyPlan';
 import {
   APPLIANCE_NOTE_COPY,
+  applianceName,
   DAILY_BRIEFING_TITLE,
   HEATING_PLAN_COPY,
   PRICE_RECAP_COPY,
   WEATHER_TIP_COPY,
   resolveServerLanguage,
 } from './pushCopy';
+
+const DAILY_PLAN_TITLE = { sv: 'Din plan idag', en: 'Your plan today' } as const;
 
 const SWEDISH_ZONES = ['SE1', 'SE2', 'SE3', 'SE4'];
 
@@ -41,11 +45,13 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
   const tomorrowDateKey = stockholmDateFormatter.format(tomorrow);
 
   for (const zone of SWEDISH_ZONES) {
-    const [priceSnap, explainerSnap, weatherSnap] = await Promise.all([
+    const [priceSnap, explainerSnap, weatherSnap, planSnap] = await Promise.all([
       db.collection('prices').doc(`SE-${zone}-${todayDateKey}`).get(),
       db.collection('explainers').doc(`SE-${zone}-${todayDateKey}`).get(),
       db.collection('weather').doc(`SE-${zone}`).get(),
+      db.collection('plans').doc(`SE-${zone}-${todayDateKey}`).get(),
     ]);
+    const plan = planSnap.data() as { windows?: PlanWindow[]; text_sv?: string | null; text_en?: string | null } | undefined;
 
     if (!priceSnap.exists) {
       logger.info(`No prices cached for ${zone} on ${todayDateKey}, skipping briefing.`);
@@ -75,6 +81,20 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
       if (user.notificationPrefs?.dailyBriefing === false) continue;
 
       const language = resolveServerLanguage(user?.language);
+
+      // "Din plan" (section G): the day's AI summary plus this household's
+      // first upcoming window. Falls back to the template below without a plan.
+      const planText = plan ? (language === 'sv' ? plan.text_sv : plan.text_en) : null;
+      if (planText) {
+        const disabled = Array.isArray(user.disabledDefaultAppliances) ? (user.disabledDefaultAppliances as string[]) : [];
+        const mine = ['washing_machine', 'dishwasher', 'dryer', ...(user.hasEv ? ['ev'] : [])].filter((id) => !disabled.includes(id));
+        const next = (plan?.windows ?? [])
+          .filter((w) => mine.includes(w.activity) && new Date(w.start).getTime() > Date.now())
+          .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
+        const windowLine = next ? ` ${applianceName(language, next.activity)} ${localClock(next.start)}–${localClock(next.end)}.` : '';
+        await sendExpoPushToUid(db, uid, DAILY_PLAN_TITLE[language], `${planText}${windowLine}`, { zone, dateKey: todayDateKey });
+        continue;
+      }
 
       const pendingSnap = await db
         .collection('pendingApplianceNotifications')

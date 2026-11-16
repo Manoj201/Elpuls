@@ -18,6 +18,9 @@ import {
   IconWind,
   IconHelpCircle,
   IconX,
+  IconBolt,
+  IconCalendarEvent,
+  IconHandStop,
 } from '@tabler/icons-react-native';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
@@ -27,7 +30,7 @@ import { useWeatherStore } from '../stores/useWeatherStore';
 import { useUserStore } from '../stores/useUserStore';
 import { useApplianceStore } from '../stores/useApplianceStore';
 import { findCheapestWindow, findCurrentPrice, findExtremeHours, groupPricesByHour } from '../lib/priceUtils';
-import { getHouseholdAppliances, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
+import { APPLIANCE_ICONS, getHouseholdAppliances, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
 import { assessPriceRisk, type PriceRiskFactor } from '../lib/priceRisk';
 import { findWeatherPrepTip } from '../lib/weatherPrep';
 import { findHeatingPlan } from '../lib/heatingPlan';
@@ -39,6 +42,8 @@ import { compareToOtherZones, type ZoneComparison } from '../lib/zoneComparison'
 import { calculateLandedPrice } from '../lib/landedCost';
 import { zoneReferencePoints } from '../config/zoneReferencePoints';
 import { useExplainer } from '../hooks/useExplainer';
+import { useDailyPlan } from '../hooks/useDailyPlan';
+import { DailyPlanCard } from '../components/DailyPlanCard';
 import { theme } from '../theme';
 import { formatClock, formatOre } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
@@ -138,6 +143,7 @@ export function HomeScreen({
   const risk = useMemo(() => assessPriceRisk(forecast, new Date()), [forecast]);
   const weatherPrepTip = useMemo(() => findWeatherPrepTip(forecast, new Date(), hasEv), [forecast, hasEv]);
   const explainer = useExplainer(zone);
+  const dailyPlan = useDailyPlan(zone, isProSubscriber);
 
   const hourlyPrices = useMemo(() => groupPricesByHour(todayPrices), [todayPrices]);
   const heatingPlan = useMemo(() => findHeatingPlan(hourlyPrices), [hourlyPrices]);
@@ -629,7 +635,17 @@ export function HomeScreen({
               <Text style={styles.sectionTitle} accessibilityRole="header">
                 {t('home.proTipsTitle')}
               </Text>
-              {heatsWithElectricity && (
+              <DailyPlanCard
+                today={dailyPlan.today}
+                tomorrow={dailyPlan.tomorrow}
+                now={new Date()}
+                hasEv={hasEv}
+                heatingType={heatingType}
+                disabledDefaults={disabledDefaults}
+                registeredLabels={appliances.map((a) => a.label)}
+              />
+              {/* The plan's own heat rows replace this card when today's plan exists (no two answers). */}
+              {heatsWithElectricity && !dailyPlan.today && (
                 <Card style={styles.sectionCard}>
                   <InfoRow
                     icon={IconFlame}
@@ -757,6 +773,21 @@ export function HomeScreen({
               />
             </View>
             <View style={styles.proTipsLocked}>
+              <View style={styles.planTeaser}>
+                <ProLockedCard
+                  icon={IconCalendarEvent}
+                  title={t('plan.lockedTitle')}
+                  subtitle={t('plan.lockedText')}
+                  source="proTips"
+                  preview={
+                    <View style={styles.previewList}>
+                      <InfoRow icon={APPLIANCE_ICONS.washing_machine ?? IconBolt} variant="neutral" title={t('plan.activity.washing_machine')} subtitle={t('plan.sampleWasher')} />
+                      <InfoRow icon={APPLIANCE_ICONS.dishwasher ?? IconBolt} variant="neutral" title={t('plan.activity.dishwasher')} subtitle={t('plan.sampleDishes')} />
+                      <InfoRow icon={IconHandStop} variant="danger" title={t('plan.activity.avoid')} subtitle={t('plan.sampleAvoid')} />
+                    </View>
+                  }
+                />
+              </View>
               <ProLockedCard
                 icon={IconSparkles}
                 title={t('home.proTipsLockedTitle')}
@@ -904,6 +935,7 @@ const styles = StyleSheet.create({
   previewText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textPrimary },
   previewList: { gap: 12 },
   proTipsLocked: { marginTop: 8, marginBottom: 16 },
+  planTeaser: { marginBottom: 16 },
   solarTeaser: { marginTop: 16 },
   emptyTitle: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   emptyText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 4 },

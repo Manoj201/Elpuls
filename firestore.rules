@@ -47,5 +47,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if false;
     }
+
+    // "Din plan": zone-level daily plan, written by Cloud Functions only.
+    match /plans/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
   }
 }

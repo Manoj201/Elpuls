@@ -765,5 +765,37 @@
     },
     "replayIntro": "Show the intro again",
     "replayHint": "Three short pages about what Elpuls does."
+  },
+  "plan": {
+    "title": "Your plan",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "notReady": "The plan is made when electricity prices are published, usually shortly after 13:00. Check back this afternoon.",
+    "flatDay": "The price is even all day, so it makes little difference when you run the laundry or dishes.",
+    "statusNow": "Now",
+    "statusSoon": "Soon",
+    "statusPast": "Passed",
+    "statusIn_one": "In {{count}} hr",
+    "statusIn_other": "In {{count}} hrs",
+    "nightHint": "Set a delayed start in the evening.",
+    "coastHint": "Turn the heat down a little; the house stays warm for a while.",
+    "avoidPrice": "about {{price}} öre/kWh",
+    "timesNote": "The times are worked out from the electricity prices.",
+    "activity": {
+      "washing_machine": "Laundry",
+      "dishwasher": "Dishes",
+      "dryer": "Tumble dryer",
+      "ev": "Charge the car",
+      "pool_heater": "Pool heating",
+      "heatBank": "Heat the house",
+      "heatCoast": "Let the house cool a little",
+      "avoid": "Avoid using a lot of power"
+    },
+    "lockedTitle": "Your plan for the day",
+    "lockedText": "Elpuls works out when it's cheapest for your own appliances, every day.",
+    "sampleWasher": "10:15–11:45",
+    "sampleDishes": "Tonight 01:00–03:00",
+    "sampleAvoid": "17:00–20:00",
+    "todayMissing": "There's no plan for today. Tomorrow's plan is ready, tap Tomorrow."
   }
 }
