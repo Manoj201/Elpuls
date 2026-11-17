@@ -3,8 +3,9 @@ import { ActivityIndicator, Linking, Pressable, SafeAreaView, ScrollView, StyleS
 import { useTranslation } from 'react-i18next';
 import {
   IconBellRinging,
+  IconCalendarEvent,
+  IconCalendarStats,
   IconChartBar,
-  IconFlame,
   IconListCheck,
   IconSnowflake,
   IconSparkles,
@@ -31,9 +32,11 @@ const TERMS_URL = 'https://elpuls.ravenbees.com/terms';
 const PRIVACY_URL = 'https://elpuls.ravenbees.com/privacy';
 
 const FEATURES = [
+  // Same order as the intro's Pro page. The heating plan is part of Din plan now.
+  { key: 'plan', icon: IconCalendarEvent, ai: false },
   { key: 'smartPushes', icon: IconBellRinging, ai: false },
+  { key: 'outlook', icon: IconCalendarStats, ai: true },
   { key: 'explainer', icon: IconSparkles, ai: true },
-  { key: 'heatingPlan', icon: IconFlame, ai: false },
   { key: 'recommendations', icon: IconListCheck, ai: false },
   { key: 'weatherPrep', icon: IconSnowflake, ai: false },
   { key: 'solarBonus', icon: IconSun, ai: false },

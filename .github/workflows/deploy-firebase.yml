@@ -85,6 +85,12 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Sync Cloud Functions secrets from GitHub
+        env:
+          REVENUECAT_SECRET_KEY: ${{ secrets.REVENUECAT_SECRET_KEY }}
+          REVENUECAT_WEBHOOK_AUTH: ${{ secrets.REVENUECAT_WEBHOOK_AUTH }}
+        run: ./scripts/sync-function-secrets.sh
+
       # The predeploy hook in firebase.json compiles functions with tsc.
       # --force: don't block on prompts (e.g. deleting a removed function).
       - name: Deploy

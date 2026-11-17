@@ -5,6 +5,7 @@ import { findExtremeHours, type PriceHour } from './priceUtils';
 import { findWeatherPrepTip, type WeatherHour } from './weatherPrep';
 import { findHeatingPlan } from './heatingPlan';
 import { sendExpoPushToUid } from './sendPriceNotifications';
+import { isProUser } from './proStatus';
 import { localClock, type PlanWindow } from './dailyPlan';
 import {
   APPLIANCE_NOTE_COPY,
@@ -76,7 +77,7 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
       const uid = sub.id;
       const userSnap = await db.collection('users').doc(uid).get();
       const user = userSnap.data();
-      if (!user?.isProSubscriber) continue;
+      if (!user || !isProUser(user)) continue;
       // Switched off in the app's Notiser screen (missing = on, for older profiles).
       if (user.notificationPrefs?.dailyBriefing === false) continue;
 

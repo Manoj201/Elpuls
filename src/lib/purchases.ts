@@ -6,14 +6,16 @@ import Purchases, {
   type CustomerInfo,
   type PurchasesPackage,
 } from 'react-native-purchases';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from './firebase';
 import { useUserStore } from '../stores/useUserStore';
 
 /** RevenueCat entitlement identifier — whatever product/offering is configured in the dashboard just needs to grant this. */
 export const PRO_ENTITLEMENT_ID = 'pro';
 
 let configured = false;
+
+const refreshProStatusCallable = httpsCallable<void, { isPro: boolean }>(functions, 'refreshProStatus');
 
 /**
  * Why the last getCurrentOfferingPackage() call came back empty, or null if it
@@ -40,13 +42,12 @@ function syncProStatus(info: CustomerInfo): void {
     expirationMillis: entitlement?.expirationDateMillis ?? null,
   });
 
-  // Best-effort mirror so Cloud Functions (e.g. the daily briefing) can
-  // gate on Pro status server-side — RevenueCat's own status never reaches
-  // Firestore otherwise. Never allowed to block the purchase/restore flow.
-  const uid = useUserStore.getState().uid;
-  if (uid) {
-    setDoc(doc(db, 'users', uid), { isProSubscriber }, { merge: true }).catch((err) => {
-      console.log('Failed to mirror Pro status to Firestore:', err);
+  // Server copy for Cloud Functions (smart pushes, daily briefing). The app
+  // can't write isProSubscriber itself (firestore.rules); the server checks
+  // RevenueCat and writes it. Best-effort, never blocks purchase/restore.
+  if (useUserStore.getState().uid) {
+    refreshProStatusCallable().catch((err) => {
+      console.log('Failed to refresh server Pro status:', err);
     });
   }
 }

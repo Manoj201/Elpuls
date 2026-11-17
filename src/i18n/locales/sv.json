@@ -501,9 +501,10 @@
       "solarBonus": "Bästa soltimmarna",
       "stats": "Kostnadsuppdelning och statistik",
       "recommendations": "Apparattips",
-      "heatingPlan": "Värmeplan",
       "weatherPrep": "Vädertips",
-      "smartPushes": "Smarta tips"
+      "smartPushes": "Smarta tips",
+      "plan": "Din plan för dagen",
+      "outlook": "Kommande dagar"
     },
     "ownedByOtherAccount": "Prenumerationen på det här Apple-ID:t är kopplad till ett annat Elpuls-konto. Logga in på det kontot för att använda Pro.",
     "nothingToRestore": "Ingen aktiv prenumeration hittades för det här Apple-ID:t.",
@@ -516,14 +517,15 @@
     "close": "Stäng",
     "featureText": {
       "explainer": "Varje morgon: vad som drar priset upp eller ner idag.",
-      "heatingPlan": "När du ska värma huset för att slippa kvällstoppen.",
       "recommendations": "För varje apparat: kör nu eller vänta på en billigare timme.",
       "weatherPrep": "Kalla morgnar, bra torkväder och liknande påminnelser.",
       "solarBonus": "Timmarna då din egen solel är värd mest.",
       "stats": "Din elräkning uppdelad, plus en jämförelse av alla fyra elområden.",
-      "smartPushes": "Ett meddelande när det är bra läge att starta tvättmaskinen, diskmaskinen eller laddningen."
+      "smartPushes": "Ett meddelande när det är bra läge att starta tvättmaskinen, diskmaskinen eller laddningen.",
+      "plan": "När du ska tvätta, diska, ladda och värma huset idag och imorgon.",
+      "outlook": "Vilken dag i veckan som troligen blir billigast, och hur de kommande månaderna brukar bli."
     },
-    "aiFootnote": "Den dagliga förklaringen skrivs av AI. Den är en vägledning och kan ha fel.",
+    "aiFootnote": "Prisförklaringen och prognosen för kommande dagar tas fram med AI. De är en vägledning och kan ha fel.",
     "trialBig": "{{days}} dagar gratis",
     "trialThen": "Sedan {{price}} i månaden.",
     "pricePerMonth": "{{price}} i månaden",

@@ -2,7 +2,8 @@ import type { Firestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { findCheapestWindow, type PriceHour } from './priceUtils';
 import { APPLIANCE_PRESETS, NIGHT_FRIENDLY_PRESETS, durationForRegistered, matchPresetId } from './appliances';
-import { findHeatingPlan } from './heatingPlan';
+import { buildPlanWindows } from './dailyPlan';
+import { isProUser } from './proStatus';
 import { SMART_PUSH_COPY, applianceName, joinNames, resolveServerLanguage, type ServerLanguage } from './pushCopy';
 
 /**
@@ -16,7 +17,7 @@ import { SMART_PUSH_COPY, applianceName, joinNames, resolveServerLanguage, type 
  *  - appliance: cheapest window per household appliance, with the saving
  *    vs. the evening peak. Windows inside quiet hours become a 21:30-ish
  *    "plan the night" heads-up instead (delayed start / plug in the car).
- *  - heatAhead: start of the morning heat-banking window (electric / heat pump).
+ *  - heatAhead: start of Din plan's heat-up window (electric / heat pump).
  *  - cheapNow: one push when a slot is far below the day's average.
  */
 
@@ -238,28 +239,38 @@ export function planForUser(
 
   const heating = user.heatingType;
   if (prefs.heatAhead && (heating === 'electric' || heating === 'heat_pump')) {
-    const plan = findHeatingPlan(hours);
-    if (plan) {
-      // Fire at the start of the banking window, or when quiet hours end if that's later.
-      const fireHour = Math.max(plan.bankStartHour, prefs.quietEndHour);
-      if (fireHour < plan.bankEndHour) {
-        const dateKey = withLocal[0]?.t.dateKey;
-        if (dateKey) {
-          candidates.push({
-            kind: 'heatAhead',
-            fireDateKey: dateKey,
-            slot: fireHour * 4,
-            clock: clock(fireHour, 0),
-            value: 0.5,
-            names: [],
-            applianceIds: [],
-            detail: {
-              bankEnd: clock(plan.bankEndHour, 0),
-              coastStart: clock(plan.coastStartHour, 0),
-              coastEnd: clock(plan.coastEndHour, 0),
-            },
-          });
-        }
+    // Same windows as "Din plan" (buildPlanWindows), so the push and the
+    // plan card never give different times: heat up in the cheapest 3 hours
+    // before the evening stretch, not a fixed 06-09.
+    const planWindows = buildPlanWindows(hours);
+    const bank = planWindows.find((w) => w.activity === 'heatBank');
+    const coast = planWindows.find((w) => w.activity === 'heatCoast');
+    if (bank && coast) {
+      const bankStartMs = new Date(bank.start).getTime();
+      const bankEndMs = new Date(bank.end).getTime();
+      // First quarter-hour of the bank window outside quiet hours.
+      const fire = withLocal.find((x) => {
+        const t = new Date(x.h.hour).getTime();
+        return t >= bankStartMs && t < bankEndMs && !isQuiet(x.t.hour, prefs);
+      });
+      if (fire) {
+        const end = local(new Date(bankEndMs));
+        const coastStart = local(new Date(coast.start));
+        const coastEnd = local(new Date(coast.end));
+        candidates.push({
+          kind: 'heatAhead',
+          fireDateKey: fire.t.dateKey,
+          slot: fire.t.hour * 4 + Math.floor(fire.t.minute / 15),
+          clock: clock(fire.t.hour, fire.t.minute),
+          value: 0.5,
+          names: [],
+          applianceIds: [],
+          detail: {
+            bankEnd: clock(end.hour, end.minute),
+            coastStart: clock(coastStart.hour, coastStart.minute),
+            coastEnd: clock(coastEnd.hour, coastEnd.minute),
+          },
+        });
       }
     }
   }
@@ -363,7 +374,7 @@ export async function scheduleSmartPushes(db: Firestore, zone: string, dateKey: 
     const userSnap = await db.collection('users').doc(uid).get();
     const user = userSnap.data() ?? {};
     // Pro feature, checked on the server.
-    if (user.isProSubscriber !== true) continue;
+    if (!isProUser(user)) continue;
 
     const prefs = resolvePrefs(user.notificationPrefs);
     if (!prefs.applianceWindows && !prefs.cheapNow && !prefs.heatAhead) continue;

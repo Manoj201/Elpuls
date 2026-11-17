@@ -12,4 +12,5 @@ export { sendDailyBriefings } from './dailyBriefing';
 export { buildPriceOutlooks } from './priceOutlook';
 export { checkDataHealth } from './dataHealth';
 export { deleteMyAccount } from './deleteAccount';
+export { refreshProStatus, revenueCatWebhook } from './proStatus';
 export { dedupePushTokens } from './dedupePushTokens';

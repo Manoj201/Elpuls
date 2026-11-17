@@ -36,7 +36,7 @@
       }
     },
     "plugins": [
-      "expo-notifications",
+      ["expo-notifications", { "mode": "production" }],
       "expo-font",
       "expo-localization",
       [

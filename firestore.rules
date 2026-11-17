@@ -7,9 +7,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Users can only read/write their own profile.
+    // Users can only read/write their own profile, except the Pro fields:
+    // those are written only by Cloud Functions (functions/src/proStatus.ts)
+    // from RevenueCat's records, so nobody can switch on Pro pushes for free.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+      allow read, delete: if isOwner();
+      allow create: if isOwner()
+        && !request.resource.data.keys().hasAny(['isProSubscriber', 'proExpiresAt', 'proCheckedAt']);
+      allow update: if isOwner()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['isProSubscriber', 'proExpiresAt', 'proCheckedAt']);
     }
 
     // Appliances registered via photo scan — self-owned like /users.

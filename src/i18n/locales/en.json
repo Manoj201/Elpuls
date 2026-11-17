@@ -501,9 +501,10 @@
       "solarBonus": "Best solar hours",
       "stats": "Cost breakdown and statistics",
       "recommendations": "Appliance tips",
-      "heatingPlan": "Heating plan",
       "weatherPrep": "Weather tips",
-      "smartPushes": "Smart tips"
+      "smartPushes": "Smart tips",
+      "plan": "Your plan for the day",
+      "outlook": "Coming days"
     },
     "ownedByOtherAccount": "This Apple ID’s subscription is linked to another Elpuls account. Sign in to that account to use Pro.",
     "nothingToRestore": "No active subscription found for this Apple ID.",
@@ -516,14 +517,15 @@
     "close": "Close",
     "featureText": {
       "explainer": "Every morning: what is pushing the price up or down today.",
-      "heatingPlan": "When to heat the house so you avoid the evening peak.",
       "recommendations": "For each appliance: run now, or wait for a cheaper hour.",
       "weatherPrep": "Cold mornings, good drying weather and similar heads-ups.",
       "solarBonus": "The hours when your own solar power is worth the most.",
       "stats": "Your bill split into parts, plus a comparison of all four zones.",
-      "smartPushes": "A message when it is a good time to start the washing machine, dishwasher or charging."
+      "smartPushes": "A message when it is a good time to start the washing machine, dishwasher or charging.",
+      "plan": "When to do laundry, run the dishwasher, charge and heat the house, today and tomorrow.",
+      "outlook": "Which day this week will probably be cheapest, and how the coming months usually go."
     },
-    "aiFootnote": "The daily explanation is written by AI. It is a guide and can be wrong.",
+    "aiFootnote": "The price explanation and the coming-days forecast are made with AI. They are a guide and can be wrong.",
     "trialBig": "{{days}} days free",
     "trialThen": "Then {{price}} a month.",
     "pricePerMonth": "{{price}} a month",
