@@ -4,7 +4,7 @@
 #   fastlane ios upload ipa:/absolute/path/to/app.ipa
 #
 # Auth: an App Store Connect API key, read from the environment
-# (scripts/ios-release.sh loads them from .env.release.local):
+# (scripts/ios-release.sh loads them from ~/.config/elpuls/release.env):
 #   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH (path to the .p8 file)
 
 default_platform(:ios)

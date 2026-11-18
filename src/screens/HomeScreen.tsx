@@ -44,6 +44,8 @@ import { useExplainer } from '../hooks/useExplainer';
 import { useNow } from '../hooks/useNow';
 import { useDailyPlan } from '../hooks/useDailyPlan';
 import { DailyPlanCard } from '../components/DailyPlanCard';
+import { SavingsCard } from '../components/SavingsCard';
+import { useMonthlySavings } from '../hooks/useMonthlySavings';
 import { theme } from '../theme';
 import { formatClock, formatOre } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
@@ -227,6 +229,13 @@ export function HomeScreen({
   // Pro: the best upcoming window for each appliance in this household,
   // shaded on the chart and listed under it.
   const disabledDefaults = useUserStore((s) => s.disabledDefaultAppliances);
+  const onboardedAt = useUserStore((s) => s.onboardedAt);
+  // Free: "Möjlig besparing" this month for this household (an estimate, see SavingsCard).
+  const savingsHousehold = useMemo(
+    () => getHouseholdAppliances({ hasEv, disabledDefaults, registered: appliances }),
+    [hasEv, disabledDefaults, appliances],
+  );
+  const savings = useMonthlySavings(zone, savingsHousehold, todayPrices, now, onboardedAt);
   const bestTimes: BestTime[] = useMemo(() => {
     const slots = [...todayPrices, ...tomorrowPrices];
     const nowSlot = findCurrentPrice(slots, now);
@@ -661,6 +670,11 @@ export function HomeScreen({
             now={now}
             bestTimes={isProSubscriber ? bestTimes : undefined}
           />
+
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            {t('savings.sectionTitle')}
+          </Text>
+          <SavingsCard savings={savings} household={savingsHousehold} language={language} now={now} />
 
           {isProSubscriber ? (
             <>

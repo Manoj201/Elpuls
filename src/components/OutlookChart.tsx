@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import type { OutlookDay } from '../hooks/useOutlook';
 import type { SupportedLanguage } from '../i18n';
 import { DIRECTION_STYLE, directionOf } from '../lib/outlookDirection';
@@ -18,8 +18,8 @@ type Point =
   | { kind: 'actual'; date: string; value: number }
   | { kind: 'forecast'; date: string; value: number; low: number; high: number; uncertain: boolean; day: OutlookDay };
 
-const HEIGHT = 170;
-const TOP = 26;
+const HEIGHT = 180;
+const TOP = 28;
 const BOTTOM = 26;
 const SIDE = 14;
 // Forecast line and likely-range band in brand purple (not a price colour);
@@ -33,6 +33,39 @@ const RECENT_DAYS = 3;
 const LABEL_GAP = 38;
 const BAND = theme.colors.accentPurple;
 const ACTUAL = theme.colors.textSecondary;
+/**
+ * Aurora shimmer in the likely-range band (experiment 2026-11-18): the AI
+ * part of the chart slowly flows purple → blue → teal → pink, the same
+ * colours as the AI badge (AuroraBorder), by request. Teal also means
+ * "cheaper" on the dots; the band's teal is soft and always moving, the dots
+ * are solid, and every day's word says the direction. Two identical cycles
+ * side by side, shifted by one cycle width, so the loop is seamless.
+ */
+const AURORA_BAND = [theme.colors.accentPurple, '#4F7BFF', theme.colors.positiveTeal, '#C084FC'];
+const AURORA_MS = 8000;
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+
+/**
+ * Smooth path through points (Catmull-Rom → cubic Bézier, tension 0.5 with
+ * the control points clamped vertically between neighbours, so the curve
+ * never overshoots into a fake high or low).
+ */
+function smooth(pts: { x: number; y: number }[], moveTo = true): string {
+  if (pts.length === 0) return '';
+  let d = moveTo ? `M ${pts[0].x} ${pts[0].y}` : `L ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const lo = Math.min(p1.y, p2.y);
+    const hi = Math.max(p1.y, p2.y);
+    const c1y = Math.min(hi, Math.max(lo, p1.y + (p2.y - p0.y) / 6));
+    const c2y = Math.min(hi, Math.max(lo, p2.y - (p3.y - p1.y) / 6));
+    d += ` C ${p1.x + (p2.x - p0.x) / 6} ${c1y} ${p2.x - (p3.x - p1.x) / 6} ${c2y} ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
 
 /**
  * Line with a likely-range band (UI/UX Pro Max: forecasts = "line with
@@ -46,6 +79,23 @@ export function OutlookChart({ recent, today, tomorrow, days }: OutlookChartProp
   const language = i18n.language as SupportedLanguage;
   const locale = language === 'sv' ? 'sv-SE' : 'en-GB';
   const [width, setWidth] = useState(0);
+  const flow = useRef(new Animated.Value(0)).current;
+  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(setReduceMotion)
+      .catch(() => setReduceMotion(false));
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    if (reduceMotion !== false) return;
+    // JS driver: SVG attributes can't run on the native driver. One small
+    // rect, slow loop: cheap.
+    const loop = Animated.loop(Animated.timing(flow, { toValue: 1, duration: AURORA_MS, easing: Easing.linear, useNativeDriver: false }));
+    loop.start();
+    return () => loop.stop();
+  }, [reduceMotion, flow]);
 
   const points: Point[] = useMemo(
     () => [
@@ -57,7 +107,8 @@ export function OutlookChart({ recent, today, tomorrow, days }: OutlookChartProp
     [recent, today, tomorrow, days],
   );
   const firstForecast = points.findIndex((p) => p.kind === 'forecast');
-  const [selected, setSelected] = useState<number>(firstForecast >= 0 ? firstForecast : points.length - 1);
+  // null = nothing tapped yet: show the cheapest coming day (what the card is about).
+  const [picked, setSelected] = useState<number | null>(null);
 
   const values = points.flatMap((p) => (p.kind === 'forecast' ? [p.low, p.high, p.value] : [p.value]));
   const yMin = Math.max(0, Math.min(...values)) * 0.9;
@@ -70,22 +121,24 @@ export function OutlookChart({ recent, today, tomorrow, days }: OutlookChartProp
   const y = (v: number) => TOP + (HEIGHT - TOP - BOTTOM) * (1 - (Math.max(v, yMin) - yMin) / (yMax - yMin || 1));
 
   const lastActual = firstForecast > 0 ? firstForecast - 1 : points.length - 1;
-  const actualPath = points
-    .slice(0, lastActual + 1)
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(p.value)}`)
-    .join(' ');
-  const forecastPath =
-    firstForecast > 0
-      ? [`M ${x(lastActual)} ${y(points[lastActual].value)}`, ...points.slice(firstForecast).map((p, k) => `L ${x(firstForecast + k)} ${y(p.value)}`)].join(' ')
-      : '';
-  // Band: starts as a point at the last known day, widens over the forecast.
-  const bandPath = (() => {
-    if (firstForecast <= 0) return '';
-    const fc = points.slice(firstForecast) as Extract<Point, { kind: 'forecast' }>[];
-    const top = fc.map((p, k) => `L ${x(firstForecast + k)} ${y(p.high)}`).join(' ');
-    const bottom = [...fc].reverse().map((p, k) => `L ${x(points.length - 1 - k)} ${y(p.low)}`).join(' ');
-    return `M ${x(lastActual)} ${y(points[lastActual].value)} ${top} ${bottom} Z`;
-  })();
+  const baseY = HEIGHT - BOTTOM;
+  const actualPts = points.slice(0, lastActual + 1).map((p, i) => ({ x: x(i), y: y(p.value) }));
+  const actualPath = smooth(actualPts);
+  // Soft area under the known prices: depth without a second meaning.
+  const actualArea = actualPts.length > 1 ? `${actualPath} L ${actualPts[actualPts.length - 1].x} ${baseY} L ${actualPts[0].x} ${baseY} Z` : '';
+  const fc = (firstForecast > 0 ? points.slice(firstForecast) : []) as Extract<Point, { kind: 'forecast' }>[];
+  const anchor = { x: x(lastActual), y: y(points[lastActual].value) };
+  const forecastPath = fc.length ? smooth([anchor, ...fc.map((p, k) => ({ x: x(firstForecast + k), y: y(p.value) }))]) : '';
+  // Band: starts as a point at the last known day and widens over the forecast; smoothed edges.
+  const bandPath = fc.length
+    ? `${smooth([anchor, ...fc.map((p, k) => ({ x: x(firstForecast + k), y: y(p.high) }))])} ${smooth(
+        [...fc].reverse().map((p, k) => ({ x: x(points.length - 1 - k), y: y(p.low) })).concat([anchor]),
+        false,
+      )} Z`
+    : '';
+  // Selective direct label: only the cheapest forecast day gets its number.
+  const cheapestIdx = fc.length ? firstForecast + fc.reduce((bi, p, k) => (p.value < fc[bi].value ? k : bi), 0) : -1;
+  const selected = Math.min(picked ?? (cheapestIdx >= 0 ? cheapestIdx : todayIndex), points.length - 1);
 
   function onPress(e: GestureResponderEvent) {
     if (step === 0) return;
@@ -100,7 +153,7 @@ export function OutlookChart({ recent, today, tomorrow, days }: OutlookChartProp
   };
   const ore = (v: number) => String(Math.max(0, Math.round(v * 100)));
 
-  const sel = points[Math.min(selected, points.length - 1)];
+  const sel = points[selected];
   const readoutDetail =
     sel.kind === 'forecast'
       ? `${t(`outlook.dir.${directionOf(sel.value, today.avg)}`)} · ${t('outlook.range', { low: ore(sel.low), high: ore(sel.high) })}${sel.uncertain ? ` · ${t('outlook.uncertain')}` : ''}`
@@ -117,65 +170,133 @@ export function OutlookChart({ recent, today, tomorrow, days }: OutlookChartProp
       <Pressable onPress={onPress} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} accessible={false}>
         {width > 0 && (
           <Svg width={width} height={HEIGHT}>
-            {/* Forecast zone label */}
+            <Defs>
+              <LinearGradient id="bandFill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={BAND} stopOpacity={0.38} />
+                <Stop offset="1" stopColor={BAND} stopOpacity={0.12} />
+              </LinearGradient>
+              <LinearGradient id="auroraFill" x1="0" y1="0" x2="1" y2="0">
+                {[...AURORA_BAND, ...AURORA_BAND, AURORA_BAND[0]].map((c, i, all) => (
+                  <Stop key={i} offset={i / (all.length - 1)} stopColor={c} stopOpacity={0.55} />
+                ))}
+              </LinearGradient>
+              {bandPath ? (
+                <ClipPath id="bandClip">
+                  <Path d={bandPath} />
+                </ClipPath>
+              ) : null}
+              <LinearGradient id="actualFill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={ACTUAL} stopOpacity={0.22} />
+                <Stop offset="1" stopColor={ACTUAL} stopOpacity={0} />
+              </LinearGradient>
+            </Defs>
+
+            {/* Future zone: a faint panel behind the forecast, labelled in words. */}
             {firstForecast > 0 && (
-              <SvgText x={x(firstForecast) - 4} y={12} fill={theme.colors.textSecondary} fontSize={theme.type.xs} fontFamily={theme.typography.bodyMedium}>
-                {t('outlook.forecastTag')} →
-              </SvgText>
+              <>
+                <Rect x={anchor.x} y={TOP - 10} width={width - SIDE - anchor.x + SIDE / 2} height={baseY - TOP + 10} fill={BAND} opacity={0.06} rx={8} />
+                <SvgText x={anchor.x + 8} y={TOP - 14} fill={theme.colors.accentPurpleDeep} fontSize={theme.type.xs} fontFamily={theme.typography.bodySemibold}>
+                  {t('outlook.forecastTag')}
+                </SvgText>
+              </>
             )}
 
-            {/* Today's level */}
-            <Line x1={SIDE} x2={width - SIDE} y1={y(today.avg)} y2={y(today.avg)} stroke={theme.colors.textMuted} strokeWidth={1} strokeDasharray="3 4" />
+            {/* Today's level, labelled at the end instead of in the legend. */}
+            <Line x1={SIDE} x2={width - SIDE} y1={y(today.avg)} y2={y(today.avg)} stroke={theme.colors.textMuted} strokeWidth={1} strokeDasharray="2 5" />
 
-            {/* Likely range */}
-            {bandPath ? <Path d={bandPath} fill={BAND} opacity={0.22} /> : null}
-
-            {/* Selected day */}
-            <Rect x={x(selected) - step / 2} y={TOP - 6} width={step} height={HEIGHT - TOP - BOTTOM + 12} fill={theme.colors.textPrimary} opacity={0.06} rx={6} />
-
-            {/* Actual (solid) and forecast (dashed) */}
-            <Path d={actualPath} stroke={ACTUAL} strokeWidth={2} fill="none" strokeLinejoin="round" />
-            {forecastPath ? <Path d={forecastPath} stroke={FORECAST} strokeWidth={2} strokeDasharray="5 5" fill="none" /> : null}
-
-            {points.map((p, i) =>
-              p.kind === 'actual' ? (
-                <Circle
-                  key={p.date}
-                  cx={x(i)}
-                  cy={y(p.value)}
-                  r={p.date === today.date ? 5.5 : i === selected ? 5 : 3.5}
-                  fill={p.date === today.date ? theme.colors.textPrimary : ACTUAL}
-                  stroke={theme.colors.surface}
-                  strokeWidth={2}
+            {actualArea ? <Path d={actualArea} fill="url(#actualFill)" /> : null}
+            {bandPath ? (
+              <G clipPath="url(#bandClip)">
+                {/* Aurora flowing left → right, then the vertical fade on top. */}
+                <AnimatedRect
+                  x={flow.interpolate({ inputRange: [0, 1], outputRange: [anchor.x - (width - anchor.x), anchor.x] })}
+                  y={TOP - 10}
+                  width={(width - anchor.x) * 2}
+                  height={baseY - TOP + 10}
+                  fill="url(#auroraFill)"
                 />
-              ) : (
+                <Path d={bandPath} fill="url(#bandFill)" />
+              </G>
+            ) : null}
+
+            {/* Selected day: thin crosshair line instead of a grey block. */}
+            <Line x1={x(selected)} x2={x(selected)} y1={TOP - 4} y2={baseY} stroke={theme.colors.textPrimary} strokeOpacity={0.35} strokeWidth={1} />
+
+            <Path d={actualPath} stroke={ACTUAL} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            {forecastPath ? (
+              <Path d={forecastPath} stroke={FORECAST} strokeWidth={2.5} strokeDasharray="6 5" strokeLinecap="round" fill="none" />
+            ) : null}
+
+            {/* Dots only where they mean something: today, each forecast day, the selected day. */}
+            {points.map((p, i) => {
+              const isToday = p.date === today.date;
+              const isSel = i === selected;
+              if (p.kind === 'actual') {
+                if (!isToday && !isSel) return null;
+                return (
+                  <Circle
+                    key={p.date}
+                    cx={x(i)}
+                    cy={y(p.value)}
+                    r={isToday ? 6 : 5}
+                    fill={isToday ? theme.colors.textPrimary : ACTUAL}
+                    stroke={theme.colors.surface}
+                    strokeWidth={2.5}
+                  />
+                );
+              }
+              return (
                 <Circle
                   key={p.date}
                   cx={x(i)}
                   cy={y(p.value)}
-                  r={i === selected ? 6.5 : 5}
+                  r={isSel ? 7 : 5}
                   fill={DIRECTION_STYLE[directionOf(p.value, today.avg)].color}
                   stroke={theme.colors.surface}
-                  strokeWidth={2}
-                  opacity={p.uncertain ? 0.65 : 1}
+                  strokeWidth={2.5}
+                  opacity={p.uncertain ? 0.7 : 1}
                 />
-              ),
+              );
+            })}
+
+            {/* Direct labels: today's value at the right end of its line, and the cheapest forecast day. */}
+            <SvgText
+              x={SIDE}
+              y={y(today.avg) - 6}
+              textAnchor="start"
+              fill={theme.colors.textSecondary}
+              fontSize={theme.type.xs}
+              fontFamily={theme.typography.bodyMedium}
+            >
+              {t('outlook.legendToday', { ore: ore(today.avg) })}
+            </SvgText>
+            {cheapestIdx >= 0 && (
+              <SvgText
+                x={x(cheapestIdx)}
+                y={y(points[cheapestIdx].value) + 22}
+                textAnchor="middle"
+                fill={theme.colors.textPrimary}
+                fontSize={theme.type.sm}
+                fontFamily={theme.typography.bodySemibold}
+              >
+                {ore(points[cheapestIdx].value)}
+              </SvgText>
             )}
 
             {/* Day labels: every labelStride-th day counted out from today, so they never overlap on narrow phones. */}
             {points.map((p, i) =>
               (i - todayIndex) % labelStride !== 0 ? null : (
-              <SvgText
-                key={`l${p.date}`}
-                x={x(i)}
-                y={HEIGHT - 6}
-                textAnchor="middle"
-                fill={p.date === today.date ? theme.colors.textPrimary : theme.colors.textSecondary}
-                fontSize={theme.type.xs}
-                fontFamily={p.date === today.date ? theme.typography.bodySemibold : theme.typography.body}
-              >
-                {p.date === today.date ? t('outlook.todayShort') : weekdayShort(p.date)}
-              </SvgText>
+                <SvgText
+                  key={`l${p.date}`}
+                  x={x(i)}
+                  y={HEIGHT - 6}
+                  textAnchor="middle"
+                  fill={p.date === today.date ? theme.colors.textPrimary : theme.colors.textSecondary}
+                  fontSize={theme.type.xs}
+                  fontFamily={p.date === today.date ? theme.typography.bodySemibold : theme.typography.body}
+                >
+                  {p.date === today.date ? t('outlook.todayShort') : weekdayShort(p.date)}
+                </SvgText>
               ),
             )}
           </Svg>
@@ -195,10 +316,6 @@ export function OutlookChart({ recent, today, tomorrow, days }: OutlookChartProp
           </View>
           <Text style={styles.legendText}>{t('outlook.legendForecast')}</Text>
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendLine, styles.legendToday]} />
-          <Text style={styles.legendText}>{t('outlook.legendToday', { ore: ore(today.avg) })}</Text>
-        </View>
       </View>
     </View>
   );
@@ -210,9 +327,8 @@ const styles = StyleSheet.create({
   readoutDay: { fontFamily: theme.typography.bodySemibold, color: theme.colors.textPrimary },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6, marginTop: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center' },
-  legendLine: { width: 16, height: 2, borderRadius: 1, marginRight: 6 },
+  legendLine: { width: 16, height: 3, borderRadius: 1, marginRight: 6 },
   legendDashed: { width: 18, borderTopWidth: 2, borderStyle: 'dashed', borderColor: FORECAST, height: 0 },
   legendBand: { width: 18, height: 10, borderRadius: 2, backgroundColor: `${BAND}4D` /* 30 % */, justifyContent: 'center', marginRight: 6 },
-  legendToday: { height: 0, borderTopWidth: 1, borderStyle: 'dashed', borderColor: theme.colors.textMuted },
   legendText: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary },
 });

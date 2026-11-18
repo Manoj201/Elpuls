@@ -8,7 +8,6 @@ import { DIRECTION_STYLE, directionOf, type Direction } from '../lib/outlookDire
 import { theme } from '../theme';
 import { AiNote } from './AiNote';
 import { Card } from './Card';
-import { Chip } from './Chip';
 import { OutlookChart } from './OutlookChart';
 
 const stockholmDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Stockholm' });
@@ -47,50 +46,6 @@ function Disclosure({ label, hint, children }: { label: string; hint?: string; c
   );
 }
 
-/**
- * The answer as a tile, not a paragraph (dataviz: a single headline is a stat
- * tile). Cheapest coming day if one is clearly cheaper than today; otherwise
- * whether the week looks dearer or flat.
- */
-function SummaryTile({ days, todayAvg, language }: { days: OutlookDay[]; todayAvg: number; language: SupportedLanguage }) {
-  const { t } = useTranslation();
-  const dirs = days.map((d) => directionOf(d.mid, todayAvg));
-  const cheaper = days.filter((_, i) => dirs[i] === 'cheaper');
-
-  let dir: Direction;
-  let label: string;
-  let value: string;
-  let detail: string | null = null;
-  if (cheaper.length > 0) {
-    const best = cheaper.reduce((a, b) => (b.mid < a.mid ? b : a));
-    dir = 'cheaper';
-    label = t('outlook.tileCheapest');
-    value = dayLabel(best.date, language, 'long');
-    detail = t('outlook.range', { low: ore(best.low), high: ore(best.high) });
-  } else if (dirs.some((d) => d === 'dearer')) {
-    dir = 'dearer';
-    label = t('outlook.tileNoCheaper');
-    value = t('outlook.tileUseToday');
-  } else {
-    dir = 'same';
-    label = t('outlook.tileFlat');
-    value = t('outlook.tileFlatValue');
-  }
-  const { Icon, color, soft } = DIRECTION_STYLE[dir];
-  return (
-    <View style={[styles.tile, { backgroundColor: soft }]} accessible accessibilityLabel={[label, value, detail].filter(Boolean).join(', ')}>
-      <View style={[styles.tileIcon, { borderColor: color }]}>
-        <Icon size={20} color={color} />
-      </View>
-      <View style={styles.tileText}>
-        <Text style={styles.tileLabel}>{label}</Text>
-        <Text style={styles.tileValue}>{value}</Text>
-      </View>
-      {detail && <Text style={styles.tileDetail}>{detail}</Text>}
-    </View>
-  );
-}
-
 /** The coming day with the lowest expected average, if it's clearly cheaper than today. */
 function bestDay(days: OutlookDay[], todayAvg: number | null): OutlookDay | null {
   if (todayAvg === null) return null;
@@ -105,71 +60,123 @@ function shortDay(dateKey: string, language: SupportedLanguage): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function weekday(dateKey: string, language: SupportedLanguage): string {
+  const text = new Date(`${dateKey}T12:00:00`).toLocaleDateString(language === 'sv' ? 'sv-SE' : 'en-GB', { weekday: 'long' });
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Readable text tones for the direction words (all ≥ 9:1 on the card). */
+const DIR_TEXT: Record<Direction, string> = {
+  cheaper: theme.colors.positiveTealDeep,
+  same: theme.colors.textSecondary,
+  dearer: theme.colors.accentAmberDeep,
+};
+
 /**
- * One day as a range bar on a scale shared by all rows (the weather-app
- * 10-day pattern): low number, bar from low to high in the direction colour,
- * high number, and a white tick at today's average. Arrow icon + the
- * screen-reader label carry the direction too, so it's never colour alone.
+ * The answer first, in one sentence (UI/UX Pro Max content-priority):
+ * which day to wait for, or that today is as good as it gets.
  */
-function DayRangeRow({
-  day,
-  dir,
-  scale,
-  todayAvg,
-  isBest,
-  first,
-  language,
-}: {
-  day: OutlookDay;
-  dir: Direction;
-  scale: { min: number; max: number };
-  todayAvg: number | null;
-  isBest: boolean;
-  first: boolean;
-  language: SupportedLanguage;
-}) {
+function Answer({ days, todayAvg, language }: { days: OutlookDay[]; todayAvg: number; language: SupportedLanguage }) {
   const { t } = useTranslation();
+  const best = bestDay(days, todayAvg);
+  let dir: Direction;
+  let headline: string;
+  let sub: string;
+  if (best) {
+    dir = 'cheaper';
+    headline = t('outlook.answerCheapest', { day: weekday(best.date, language) });
+    sub = t('outlook.answerCheapestSub', { ore: ore(best.mid), today: ore(todayAvg) });
+  } else if (days.some((d) => directionOf(d.mid, todayAvg) === 'dearer')) {
+    dir = 'dearer';
+    headline = t('outlook.answerToday');
+    sub = t('outlook.answerTodaySub');
+  } else {
+    dir = 'same';
+    headline = t('outlook.answerFlat');
+    sub = t('outlook.answerFlatSub');
+  }
   const { Icon, color } = DIRECTION_STYLE[dir];
-  const span = scale.max - scale.min || 1;
-  const pos = (v: number) => `${Math.max(0, Math.min(100, ((v - scale.min) / span) * 100))}%` as const;
-  const barLeft = (day.low - scale.min) / span;
-  const barWidth = Math.max(0.04, (day.high - day.low) / span);
-  const range = t('outlook.range', { low: ore(day.low), high: ore(day.high) });
+  // Plain text in the card, no tinted box (a box inside a card reads as a
+  // nested card); the coloured arrow is the only accent.
   return (
-    <View
-      style={[styles.row, !first && !isBest && styles.divider, isBest && styles.bestRow]}
-      accessible
-      accessibilityLabel={`${dayLabel(day.date, language, 'long')}, ${t(`outlook.dir.${dir}`)}, ${range}${isBest ? `, ${t('outlook.bestTag')}` : ''}${day.uncertain ? `, ${t('outlook.uncertain')}` : ''}`}
-    >
-      <View style={styles.dayCol}>
-        <Text style={[styles.day, day.uncertain && styles.dimmedText]}>{shortDay(day.date, language)}</Text>
-        {isBest ? (
-          <Text style={styles.bestTag}>{t('outlook.bestTag')}</Text>
-        ) : day.uncertain ? (
-          <Text style={styles.uncertain}>{t('outlook.uncertain')}</Text>
-        ) : null}
+    <View style={styles.answer} accessible accessibilityLabel={`${headline}. ${sub}`}>
+      <Icon size={22} color={color} style={styles.answerIcon} />
+      <View style={styles.answerText}>
+        <Text style={styles.answerHeadline}>{headline}</Text>
+        <Text style={styles.answerSub}>{sub}</Text>
       </View>
-      <Icon size={18} color={color} style={day.uncertain ? styles.dimmedBox : undefined} />
-      <Text style={[styles.rangeNum, styles.rangeLow, day.uncertain && styles.dimmedText]}>{ore(day.low)}</Text>
-      <View style={styles.track}>
-        <View
-          style={[
-            styles.trackBar,
-            { left: `${barLeft * 100}%`, width: `${Math.min(barWidth, 1 - barLeft) * 100}%`, backgroundColor: color },
-            day.uncertain && styles.trackBarUncertain,
-          ]}
-        />
-        {todayAvg !== null && <View style={[styles.todayTick, { left: pos(todayAvg) }]} />}
-      </View>
-      <Text style={[styles.rangeNum, styles.rangeHigh, day.uncertain && styles.dimmedText]}>{ore(day.high)}</Text>
     </View>
   );
 }
 
 /**
- * "Kommande dagar" (Pro), the decision card: summary tile, one range-bar row
- * per day (best day highlighted), the AI label, and the trust details folded
- * under "Om prognosen" (UI/UX Pro Max content-priority, progressive-disclosure).
+ * One day compared with today, as a diverging bar (UI/UX Pro Max + dataviz:
+ * difference from a reference = diverging bar from a centre line). The
+ * centre line is today; a teal bar to the left = cheaper, an amber bar to the
+ * right = dearer, length = how much. The price and the difference are written
+ * out on the right, so colour and direction are never the only cue.
+ */
+function DayDiffRow({
+  label,
+  tag,
+  tagColor,
+  value,
+  diff,
+  maxDiff,
+  dir,
+  highlight,
+  dimmed,
+  a11y,
+}: {
+  label: string;
+  tag: string | null;
+  tagColor: string;
+  value: number;
+  diff: number;
+  maxDiff: number;
+  dir: Direction;
+  highlight?: boolean;
+  dimmed?: boolean;
+  a11y: string;
+}) {
+  const { t } = useTranslation();
+  const share = Math.min(1, Math.abs(diff) / maxDiff);
+  const barColor = DIRECTION_STYLE[dir].color;
+  const diffOre = Math.round(Math.abs(diff) * 100);
+  const diffText = dir === 'same' ? t('outlook.diffSame') : `${diff < 0 ? '−' : '+'}${diffOre}`;
+  return (
+    <View style={[styles.dayRow, highlight && styles.bestRow]} accessible accessibilityLabel={a11y}>
+      <View style={styles.dayCol}>
+        <Text style={[styles.day, dimmed && styles.dimmedText]}>{label}</Text>
+        {tag && <Text style={[styles.dayWord, { color: tagColor }]}>{tag}</Text>}
+      </View>
+      <View style={styles.divTrack}>
+        <View style={styles.divHalf}>
+          {diff < 0 && dir !== 'same' && (
+            <View style={[styles.divBar, styles.divBarLeft, { width: `${Math.max(6, share * 100)}%`, backgroundColor: barColor }, dimmed && styles.barDimmed]} />
+          )}
+        </View>
+        <View style={styles.divCentre} />
+        <View style={styles.divHalf}>
+          {diff > 0 && dir !== 'same' && (
+            <View style={[styles.divBar, styles.divBarRight, { width: `${Math.max(6, share * 100)}%`, backgroundColor: barColor }, dimmed && styles.barDimmed]} />
+          )}
+        </View>
+      </View>
+      <View style={styles.valueCol}>
+        <Text style={[styles.dayValue, dimmed && styles.dimmedText]}>{ore(value)}</Text>
+        <Text style={[styles.diffText, { color: DIR_TEXT[dir] }, dimmed && styles.dimmedText]}>{diffText}</Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * "Kommande dagar" (Pro). Redesigned 2026-11-18 (tester feedback: range bars
+ * with a "today" tick were hard to read): one sentence answer, then today and
+ * each coming day as a simple price bar with a plain word, the AI label, and
+ * ranges / accuracy folded under "Om prognosen" (UI/UX Pro Max
+ * content-priority, progressive-disclosure; Humanizer for the copy).
  */
 export function OutlookDaysCard({ outlook, todayAvg, zone }: { outlook: Outlook; todayAvg: number | null; zone: string }) {
   const { t, i18n } = useTranslation();
@@ -186,49 +193,66 @@ export function OutlookDaysCard({ outlook, todayAvg, zone }: { outlook: Outlook;
 
   const outOfTen = Math.round(outlook.hitRate * 10);
   const best = bestDay(outlook.days, todayAvg);
-  const values = outlook.days.flatMap((d) => [d.low, d.high]).concat(todayAvg !== null ? [todayAvg] : []);
-  const scale = { min: Math.max(0, Math.min(...values)), max: Math.max(...values) };
+  const max = Math.max(...outlook.days.map((d) => d.mid), todayAvg ?? 0, 0.01);
 
   return (
     <Card style={styles.card}>
-      <View style={styles.header}>
-        <Text style={styles.title} accessibilityRole="header">
-          {t('outlook.daysTitle')}
-        </Text>
-        <Chip label={t('outlook.forecastTag')} variant="neutral" />
-      </View>
+      <Text style={styles.title} accessibilityRole="header">
+        {t('outlook.daysTitle')}
+      </Text>
 
-      {todayAvg !== null && <SummaryTile days={outlook.days} todayAvg={todayAvg} language={language} />}
+      {todayAvg !== null && <Answer days={outlook.days} todayAvg={todayAvg} language={language} />}
 
-      {/* Scale caption: what the numbers and the white tick are. */}
-      <View style={styles.caption} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        <Text style={styles.captionText}>{t('outlook.rowsCaption')}</Text>
-        {todayAvg !== null && (
-          <View style={styles.captionToday}>
-            <View style={styles.captionTick} />
-            <Text style={styles.captionText}>{t('outlook.todayTick', { ore: ore(todayAvg) })}</Text>
+      {todayAvg !== null && (
+        <>
+          <Text style={styles.rowsCaption}>{t('outlook.comparedToday', { ore: ore(todayAvg) })}</Text>
+          {/* Axis header: what the centre line and the two sides mean. */}
+          <View style={styles.axisHead} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+            <View style={styles.dayCol} />
+            <View style={styles.axisMid}>
+              <Text style={[styles.axisSide, { color: DIR_TEXT.cheaper }]}>← {t('outlook.axisCheaper')}</Text>
+              <Text style={[styles.axisSide, { color: DIR_TEXT.dearer }]}>{t('outlook.axisDearer')} →</Text>
+            </View>
+            <View style={styles.valueCol} />
           </View>
-        )}
-      </View>
-      <View>
-        {outlook.days.map((day, i) => (
-          <DayRangeRow
-            key={day.date}
-            day={day}
-            dir={todayAvg !== null ? directionOf(day.mid, todayAvg) : 'same'}
-            scale={scale}
-            todayAvg={todayAvg}
-            isBest={best?.date === day.date}
-            first={i === 0}
-            language={language}
-          />
-        ))}
-      </View>
+          {outlook.days.map((day) => {
+            const dir: Direction = directionOf(day.mid, todayAvg);
+            const isBest = best?.date === day.date;
+            const diff = day.mid - todayAvg;
+            const tag = isBest ? t('outlook.bestTag') : day.uncertain ? t('outlook.uncertainLong') : null;
+            const diffWords =
+              dir === 'same'
+                ? t('outlook.diffSameA11y')
+                : t(diff < 0 ? 'outlook.diffCheaperA11y' : 'outlook.diffDearerA11y', { ore: Math.round(Math.abs(diff) * 100) });
+            return (
+              <DayDiffRow
+                key={day.date}
+                label={shortDay(day.date, language)}
+                tag={tag}
+                tagColor={isBest ? DIR_TEXT.cheaper : theme.colors.textSecondary}
+                value={day.mid}
+                diff={diff}
+                maxDiff={Math.max(...outlook.days.map((d) => Math.abs(d.mid - todayAvg)), 0.01)}
+                dir={dir}
+                highlight={isBest}
+                dimmed={day.uncertain && !isBest}
+                a11y={`${dayLabel(day.date, language, 'long')}, ${t('outlook.oreA11y', { ore: ore(day.mid) })}, ${diffWords}${tag ? `, ${tag}` : ''}`}
+              />
+            );
+          })}
+        </>
+      )}
 
       <AiNote kind="forecast" />
 
       <Disclosure label={t('outlook.aboutToggle')} hint={t('outlook.aboutHint', { count: outOfTen })}>
         {outlook.text && <Text style={styles.aiText}>{outlook.text}</Text>}
+        <Text style={styles.note}>{t('outlook.rangesIntro')}</Text>
+        {outlook.days.map((day) => (
+          <Text key={day.date} style={styles.rangeLine}>
+            {shortDay(day.date, language)}: {t('outlook.range', { low: ore(day.low), high: ore(day.high) })}
+          </Text>
+        ))}
         <Text style={styles.note}>{t('outlook.hitRate', { count: outOfTen })}</Text>
         <Text style={styles.note}>{t('outlook.disclaimer')}</Text>
       </Disclosure>
@@ -338,35 +362,49 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.lg, color: theme.colors.textPrimary },
 
-  tile: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 12, marginTop: 12 },
-  tileIcon: { width: 36, height: 36, borderRadius: 18, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  tileText: { flex: 1, marginLeft: 12 },
-  tileLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tileValue: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.lg, color: theme.colors.textPrimary, marginTop: 2 },
-  tileDetail: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, fontVariant: ['tabular-nums'], marginLeft: 8 },
-
+  answer: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 10 },
+  answerIcon: { marginTop: 2 },
+  answerText: { flex: 1, gap: 4 },
+  answerHeadline: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.lg, lineHeight: 24, color: theme.colors.textPrimary },
+  answerSub: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
   chart: { marginTop: 12 },
   subtitle: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 2 },
+  rowsCaption: {
+    fontFamily: theme.typography.body,
+    fontSize: theme.type.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderMuted,
+  },
+  axisHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 10,
+  },
+  axisMid: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
+  axisSide: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs },
+  divTrack: { flex: 1, flexDirection: 'row', alignItems: 'center', height: 24 },
+  divHalf: { flex: 1, height: 12, justifyContent: 'center' },
+  divCentre: { width: 2, height: 24, borderRadius: 1, backgroundColor: theme.colors.textPrimary, opacity: 0.6 },
+  divBar: { position: 'absolute', height: 12, top: 0 },
+  divBarLeft: { right: 2, borderTopLeftRadius: 6, borderBottomLeftRadius: 6 },
+  divBarRight: { left: 2, borderTopRightRadius: 6, borderBottomRightRadius: 6 },
+  valueCol: { width: 48, alignItems: 'flex-end' },
+  diffText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, fontVariant: ['tabular-nums'], marginTop: 1 },
+  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingVertical: 6 },
   bestRow: { backgroundColor: theme.colors.positiveTealSoft, borderRadius: 12, marginHorizontal: -8, paddingHorizontal: 8 },
-  bestTag: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.positiveTealDeep, marginTop: 1 },
-  caption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 2 },
-  captionText: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary },
-  captionToday: { flexDirection: 'row', alignItems: 'center' },
-  captionTick: { width: 2, height: 12, borderRadius: 1, backgroundColor: theme.colors.textPrimary, marginRight: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, minHeight: 48 },
-  rangeNum: { width: 32, fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, fontVariant: ['tabular-nums'] },
-  rangeLow: { textAlign: 'right', marginLeft: 6 },
-  rangeHigh: { textAlign: 'left' },
-  track: { flex: 1, height: 6, borderRadius: 3, backgroundColor: theme.colors.surfaceElevated, marginHorizontal: 8, justifyContent: 'center' },
-  trackBar: { position: 'absolute', top: 0, bottom: 0, borderRadius: 3 },
-  trackBarUncertain: { opacity: 0.55 },
-  todayTick: { position: 'absolute', width: 2, height: 14, marginLeft: -1, borderRadius: 1, backgroundColor: theme.colors.textPrimary },
-  divider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
-  dayCol: { width: 84 },
+  dayCol: { width: 96 },
   day: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
-  uncertain: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary, marginTop: 1 },
+  dayWord: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, marginTop: 2 },
+  barTrack: { flex: 1, height: 10, borderRadius: 5, backgroundColor: theme.colors.surfaceElevated, overflow: 'hidden' },
+  barFill: { height: '100%', borderRadius: 5 },
+  barDimmed: { opacity: 0.55 },
+  dayValue: { textAlign: 'right', fontFamily: theme.typography.bodySemibold, fontSize: theme.type.md, color: theme.colors.textPrimary, fontVariant: ['tabular-nums'] },
   dimmedText: { color: theme.colors.textSecondary },
-  dimmedBox: { opacity: 0.75 },
+  rangeLine: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, fontVariant: ['tabular-nums'] },
 
   disclosure: { marginTop: 4, borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
   disclosureRow: { flexDirection: 'row', alignItems: 'center', minHeight: 48, paddingTop: 4 },

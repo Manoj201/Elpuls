@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { IconSparkles } from '@tabler/icons-react-native';
 import { theme } from '../theme';
+import { AuroraBorder } from './AuroraBorder';
 
 interface AiNoteProps {
   /**
@@ -23,10 +24,13 @@ export function AiNote({ kind }: AiNoteProps) {
 
   return (
     <View style={styles.row} accessible accessibilityLabel={`${t('ai.badge')}. ${text}`}>
-      <View style={styles.badge}>
-        <IconSparkles size={12} color={theme.colors.accentPurpleDeep} />
-        <Text style={styles.badgeText}>{t('ai.badge')}</Text>
-      </View>
+      {/* Aurora ring = the app's "made with AI" signature. */}
+      <AuroraBorder radius={theme.radius.pill}>
+        <View style={styles.badge}>
+          <IconSparkles size={13} color={theme.colors.accentPurpleDeep} />
+          <Text style={styles.badgeText}>{t('ai.badge')}</Text>
+        </View>
+      </AuroraBorder>
       <Text style={styles.text}>{text}</Text>
     </View>
   );
@@ -38,13 +42,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: theme.colors.accentPurpleSoft,
-    borderColor: `${theme.colors.accentPurple}55`,
-    borderWidth: 1,
-    borderRadius: theme.radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  badgeText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.accentPurpleDeep },
+  badgeText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.xs, color: theme.colors.accentPurpleDeep },
   text: { flex: 1, fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
 });

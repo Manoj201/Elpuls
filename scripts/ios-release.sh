@@ -14,14 +14,15 @@
 #   2. App Store Connect → Users and Access → Integrations → App Store Connect
 #      API → generate a key with "App Manager" access, download the .p8
 #      (only downloadable once). Keep it outside the repo, e.g. ~/.appstoreconnect/
-#   3. Create .env.release.local in the repo root (gitignored):
+#   3. Create ~/.config/elpuls/release.env (outside the repo, so Metro never
+#      sees it; set ELPULS_RELEASE_ENV to use another path):
 #        ASC_KEY_ID=XXXXXXXXXX
 #        ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 #        ASC_KEY_PATH=/Users/you/.appstoreconnect/AuthKey_XXXXXXXXXX.p8
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-ENV_FILE=".env.release.local"
+ENV_FILE="${ELPULS_RELEASE_ENV:-$HOME/.config/elpuls/release.env}"
 if [ ! -f "$ENV_FILE" ]; then
   echo "Missing $ENV_FILE. See the setup steps at the top of scripts/ios-release.sh." >&2
   exit 1

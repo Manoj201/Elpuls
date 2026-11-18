@@ -276,9 +276,19 @@ export function StatsScreen({ onOpenBillScan }: StatsScreenProps) {
               <ActivityIndicator color={theme.colors.accentPurple} />
             ) : (
               (zoneAverages ?? []).map((z, i) => (
-                <View key={z.zone} style={i > 0 ? styles.zoneRowDivider : undefined}>
-                  <View style={styles.zoneRow}>
-                    <Chip label={z.zone} variant={z.zone === zone ? 'amber' : 'neutral'} selected={z.zone === zone} />
+                <View key={z.zone} style={i > 0 && z.zone !== zone && (zoneAverages ?? [])[i - 1]?.zone !== zone ? styles.zoneRowDivider : undefined}>
+                  {/* Zone code + area name as plain text (a chip looked tappable but did nothing); own zone highlighted and tagged. */}
+                  <View
+                    style={[styles.zoneRow, z.zone === zone && styles.zoneRowOwn]}
+                    accessible
+                    accessibilityLabel={`${z.zone}, ${t(`onboarding.zoneName.${z.zone}`)}${z.zone === zone ? `, ${t('stats.yourZone')}` : ''}, ${formatOre(z.avgPrice, language)} öre/kWh`}
+                  >
+                    <View style={styles.zoneNameCol}>
+                      <Text style={styles.zoneCode}>
+                        {z.zone} <Text style={styles.zoneArea}>{t(`onboarding.zoneName.${z.zone}`)}</Text>
+                      </Text>
+                      {z.zone === zone && <Text style={styles.zoneOwnTag}>{t('stats.yourZone')}</Text>}
+                    </View>
                     <Text style={styles.zonePrice}>{formatOre(z.avgPrice, language)} öre/kWh</Text>
                   </View>
                 </View>
@@ -376,7 +386,12 @@ const styles = StyleSheet.create({
   whatIfStepperLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginBottom: 10 },
   whatIfStepperRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 20 },
   whatIfBasis: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
-  zoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  zoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, minHeight: 52, gap: 12 },
+  zoneRowOwn: { backgroundColor: theme.colors.accentPurpleSoft, borderRadius: 12, marginHorizontal: -8, paddingHorizontal: 8 },
+  zoneNameCol: { flex: 1 },
+  zoneCode: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  zoneArea: { fontFamily: theme.typography.body, color: theme.colors.textSecondary },
+  zoneOwnTag: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.accentPurpleDeep, marginTop: 2 },
   zoneRowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
-  zonePrice: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
+  zonePrice: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, fontVariant: ['tabular-nums'] },
 });
