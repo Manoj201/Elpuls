@@ -1,7 +1,7 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { findCheapestWindow, type PriceHour } from './priceUtils';
-import { APPLIANCE_PRESETS, NIGHT_FRIENDLY_PRESETS } from './appliances';
+import { APPLIANCE_PRESETS, NIGHT_FRIENDLY_PRESETS, dishwasherHour } from './appliances';
 import { findHeatingPlan } from './heatingPlan';
 import { assessPriceRisk, type WeatherHour } from './priceRisk';
 
@@ -94,7 +94,9 @@ export function buildPlanWindows(hours: PriceHour[]): PlanWindow[] {
   for (const id of PLAN_ACTIVITIES) {
     const preset = APPLIANCE_PRESETS.find((p) => p.id === id);
     if (!preset || !preset.shiftable) continue;
-    const pool = NIGHT_FRIENDLY_PRESETS.has(id) ? sorted : awake;
+    const base = NIGHT_FRIENDLY_PRESETS.has(id) ? sorted : awake;
+    // Dishwasher: evening/night only (21:00–07:00), when households run it.
+    const pool = id === 'dishwasher' ? base.filter((h) => dishwasherHour(localHour(h.hour))) : base;
     // The dryer goes after the laundry is washed, never at the same time.
     const washer = windows.find((w) => w.activity === 'washing_machine');
     const notBefore = id === 'dryer' && washer ? new Date(washer.end) : new Date(0);

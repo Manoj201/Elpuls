@@ -5,14 +5,38 @@ export function resolveServerLanguage(value: unknown): ServerLanguage {
   return value === 'en' ? 'en' : 'sv';
 }
 
+/**
+ * Area names instead of zone codes in pushes: testers found "SE3" confusing.
+ * Same names as the app (onboarding.zoneName). Swedish uses "i …".
+ */
+const ZONE_AREA: Record<ServerLanguage, Record<string, string>> = {
+  sv: { SE1: 'Norra Norrland', SE2: 'Södra Norrland', SE3: 'Mellansverige', SE4: 'Södra Sverige' },
+  en: { SE1: 'Northern Norrland', SE2: 'Southern Norrland', SE3: 'Central Sweden', SE4: 'Southern Sweden' },
+};
+
+export function zoneArea(language: ServerLanguage, zone: string): string {
+  const code = zone.replace(/^SE-/, '');
+  return ZONE_AREA[language][code] ?? code;
+}
+
+/** "torsdag 19 november" / "Thursday 19 November" from a YYYY-MM-DD key. */
+function dayName(language: ServerLanguage, dateKey: string): string {
+  return new Date(`${dateKey}T12:00:00Z`).toLocaleDateString(language === 'sv' ? 'sv-SE' : 'en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Europe/Stockholm',
+  });
+}
+
 export const PRICE_PUBLISHED_COPY: Record<ServerLanguage, (zone: string, dateKey: string) => { title: string; body: string }> = {
   en: (zone, dateKey) => ({
     title: "Tomorrow's electricity prices are here",
-    body: `Prices for ${zone} on ${dateKey} are now available.`,
+    body: `Prices for ${zoneArea('en', zone)} on ${dayName('en', dateKey)} are now in the app.`,
   }),
   sv: (zone, dateKey) => ({
     title: 'Morgondagens elpriser är här',
-    body: `Priserna för ${zone} den ${dateKey} är nu tillgängliga.`,
+    body: `Elpriserna i ${zoneArea('sv', zone)} för ${dayName('sv', dateKey)} finns nu i appen.`,
   }),
 };
 
@@ -37,43 +61,43 @@ export type WeatherPrepCopyKey = 'coldSnapEv' | 'coldSnapGeneric' | 'dryingWindo
 
 export const WEATHER_TIP_COPY: Record<ServerLanguage, Record<WeatherPrepCopyKey, string>> = {
   en: {
-    coldSnapEv: 'Cold snap tomorrow morning — preheat your EV before you leave.',
-    coldSnapGeneric: 'Cold snap tomorrow morning — dress warm.',
-    dryingWindow: 'Windy and clear this afternoon — good laundry-drying window.',
+    coldSnapEv: 'Cold tomorrow morning. Preheat the car while it is still plugged in.',
+    coldSnapGeneric: 'Cold tomorrow morning, so heating will use more power than usual.',
+    dryingWindow: 'Windy and clear this afternoon, good weather for drying laundry outside.',
   },
   sv: {
-    coldSnapEv: 'Kallt imorgon bitti — förvärm elbilen innan du åker.',
-    coldSnapGeneric: 'Kallt imorgon bitti — klä varmt.',
-    dryingWindow: 'Blåsigt och klart i eftermiddag — bra tvättorkningsväder.',
+    coldSnapEv: 'Kallt imorgon bitti. Förvärm bilen medan den är inkopplad.',
+    coldSnapGeneric: 'Kallt imorgon bitti, så uppvärmningen drar mer el än vanligt.',
+    dryingWindow: 'Blåsigt och klart i eftermiddag, bra väder att torka tvätt ute.',
   },
 };
 
 export const HEATING_PLAN_COPY: Record<ServerLanguage, (bankStart: string, bankEnd: string, coastStart: string, coastEnd: string) => string> = {
   en: (bankStart, bankEnd, coastStart, coastEnd) =>
-    `Bank heat ${bankStart}-${bankEnd}, let it drift ${coastStart}-${coastEnd} during the evening peak.`,
+    `Heat the house ${bankStart}–${bankEnd} and turn it down a little ${coastStart}–${coastEnd}, when power is dearest.`,
   sv: (bankStart, bankEnd, coastStart, coastEnd) =>
-    `Lagra värme ${bankStart}-${bankEnd}, låt den sjunka ${coastStart}-${coastEnd} under kvällstoppen.`,
+    `Värm upp huset ${bankStart}–${bankEnd} och sänk lite ${coastStart}–${coastEnd}, när elen är som dyrast.`,
 };
 
 export const PRICE_ALERT_HIGH_COPY: Record<ServerLanguage, (zone: string, peakOre: number, peakHourLabel: string) => { title: string; body: string }> = {
   en: (zone, peakOre, peakHourLabel) => ({
     title: 'Price spike tomorrow',
-    body: `${zone} peaks at ${peakOre} öre/kWh tomorrow at ${peakHourLabel} — above your alert threshold.`,
+    body: `In ${zoneArea('en', zone)} the price reaches ${peakOre} öre/kWh tomorrow at ${peakHourLabel}, above your alert limit.`,
   }),
   sv: (zone, peakOre, peakHourLabel) => ({
     title: 'Pristopp imorgon',
-    body: `${zone} toppar på ${peakOre} öre/kWh imorgon kl ${peakHourLabel} — över din varningsgräns.`,
+    body: `I ${zoneArea('sv', zone)} går priset upp till ${peakOre} öre/kWh imorgon kl ${peakHourLabel}, över din gräns.`,
   }),
 };
 
 export const PRICE_ALERT_LOW_COPY: Record<ServerLanguage, (zone: string, cheapestHourLabel: string) => { title: string; body: string }> = {
   en: (zone, cheapestHourLabel) => ({
     title: 'Super-cheap prices tomorrow',
-    body: `${zone} has a negative or very low price tomorrow around ${cheapestHourLabel} — a great time to use electricity.`,
+    body: `In ${zoneArea('en', zone)} the price is very low or below zero tomorrow around ${cheapestHourLabel}. A good time to use electricity.`,
   }),
   sv: (zone, cheapestHourLabel) => ({
     title: 'Superlåga priser imorgon',
-    body: `${zone} har ett negativt eller mycket lågt pris imorgon kring kl ${cheapestHourLabel} — ett bra läge att använda el.`,
+    body: `I ${zoneArea('sv', zone)} är priset mycket lågt eller under noll imorgon runt kl ${cheapestHourLabel}. Ett bra läge att använda el.`,
   }),
 };
 
@@ -122,19 +146,23 @@ export function joinNames(language: ServerLanguage, names: string[]): string {
 }
 
 interface SmartPushCopy {
-  applianceNow: (names: string, saving: string) => { title: string; body: string };
+  applianceNow: (names: string, until: string, saving: string) => { title: string; body: string };
   applianceTonight: (names: string, clock: string, saving: string) => { title: string; body: string };
   evTonight: (clock: string, saving: string) => { title: string; body: string };
   evAndAppliancesTonight: (names: string, clock: string, saving: string) => { title: string; body: string };
   heatAhead: (bankEnd: string, coastStart: string, coastEnd: string) => { title: string; body: string };
   cheapNow: (ore: string) => { title: string; body: string };
+  /** One line in the 19:00 "Kvällens plan" list, e.g. "Diskmaskinen 03:30–05:30". */
+  tonightItem: (name: string, start: string, end: string) => string;
+  /** The 19:00 push: one line per slot, then the car, then the saving. */
+  tonight: (lines: string[], evClock: string | null, saving: string) => { title: string; body: string };
 }
 
 export const SMART_PUSH_COPY: Record<ServerLanguage, SmartPushCopy> = {
   sv: {
-    applianceNow: (names, saving) => ({
+    applianceNow: (names, until, saving) => ({
       title: 'Bra läge nu',
-      body: `Hej! Starta ${names} nu. Du sparar ungefär ${saving} kr jämfört med i kväll.`,
+      body: `Hej! Starta ${names} nu, elen är billig fram till kl ${until}. Du sparar ungefär ${saving} kr jämfört med i kväll.`,
     }),
     applianceTonight: (names, clock, saving) => ({
       title: 'Billigt i natt',
@@ -152,15 +180,26 @@ export const SMART_PUSH_COPY: Record<ServerLanguage, SmartPushCopy> = {
       title: 'Värm upp huset nu',
       body: `Elen är billig fram till kl ${bankEnd}. Värm upp nu och sänk lite kl ${coastStart} till ${coastEnd}, då blir det dyrt.`,
     }),
+    tonightItem: (name, start, end) => `${name} ${start}–${end}`,
+    tonight: (lines, evClock, saving) => ({
+      title: 'Kvällens plan',
+      body: [
+        lines.length ? `Billigast i natt, ställ in fördröjd start:\n${lines.map((l) => `• ${l}`).join('\n')}` : null,
+        evClock ? `${lines.length ? '• ' : ''}Ladda bilen från kl ${evClock}` : null,
+        `Du sparar ungefär ${saving} kr.`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    }),
     cheapNow: (ore) => ({
       title: 'Billig el just nu',
       body: `Spotpriset är bara ${ore} öre/kWh just nu, långt under dagens snitt. Bra läge för tvätt, disk eller laddning.`,
     }),
   },
   en: {
-    applianceNow: (names, saving) => ({
+    applianceNow: (names, until, saving) => ({
       title: 'Good time now',
-      body: `Hi! Start ${names} now. You save about ${saving} kr compared with this evening.`,
+      body: `Hi! Start ${names} now, power is cheap until ${until}. You save about ${saving} kr compared with this evening.`,
     }),
     applianceTonight: (names, clock, saving) => ({
       title: 'Cheap tonight',
@@ -177,6 +216,17 @@ export const SMART_PUSH_COPY: Record<ServerLanguage, SmartPushCopy> = {
     heatAhead: (bankEnd, coastStart, coastEnd) => ({
       title: 'Heat the house now',
       body: `Power is cheap until ${bankEnd}. Heat up now and turn down a little from ${coastStart} to ${coastEnd}, when it gets expensive.`,
+    }),
+    tonightItem: (name, start, end) => `${name} ${start}–${end}`,
+    tonight: (lines, evClock, saving) => ({
+      title: "Tonight's plan",
+      body: [
+        lines.length ? `Cheapest tonight, set delayed start:\n${lines.map((l) => `• ${l}`).join('\n')}` : null,
+        evClock ? `${lines.length ? '• ' : ''}Charge the car from ${evClock}` : null,
+        `You save about ${saving} kr.`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
     }),
     cheapNow: (ore) => ({
       title: 'Cheap power right now',

@@ -32,6 +32,18 @@ const FALLBACK_DURATION_HOURS = 1.5;
  */
 export const NIGHT_FRIENDLY_PRESETS = new Set(['ev', 'dishwasher', 'washing_machine', 'dryer', 'pool_heater']);
 
+/**
+ * Most households run the dishwasher after dinner or overnight, not in the
+ * middle of the day (tester feedback 2026-11-18). Its window must lie within
+ * 21:00–07:00, so it starts between 21:00 and about 05:00. Same rule in Din
+ * plan (dailyPlan.ts) and the app's savings estimate (src/lib/savings.ts).
+ */
+export const DISHWASHER_FROM_HOUR = 21;
+export const DISHWASHER_TO_HOUR = 7;
+export function dishwasherHour(hour: number): boolean {
+  return hour >= DISHWASHER_FROM_HOUR || hour < DISHWASHER_TO_HOUR;
+}
+
 const PRESET_KEYWORDS: { id: string; words: string[] }[] = [
   { id: 'dishwasher', words: ['disk', 'dishwasher'] },
   { id: 'dryer', words: ['tork', 'dryer'] },

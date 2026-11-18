@@ -21,42 +21,83 @@ function stockholmSlotOf(date: Date): number {
 }
 
 /**
- * Runs every 15 minutes all day (unlike fetchPrices's narrow 12:00-15:00
- * window) since a smart push planned by smartPushes.ts can fall on any
- * quarter-hour. Fires any pending notification whose hour has arrived, then
- * deletes it — deletion is the idempotency guard here, simpler than
- * sendPriceNotifications.ts's `.create()` marker pattern since there's
- * nothing worth re-deriving once a reminder has gone out.
+ * How late a push may still go out: up to 2 quarter-hours (30 min) after its
+ * slot. Covers a skipped or failed run (and a send that failed, which is
+ * retried) without telling people "start now" long after the window opened.
+ */
+export const CATCH_UP_SLOTS = 2;
+
+/**
+ * What to do with a pending push now. Exported for tests.
+ *  send: its slot has come (or was missed by at most CATCH_UP_SLOTS)
+ *  drop: too late (an earlier day, or more than 30 minutes ago)
+ *  wait: later today or a later day
+ */
+export function dueAction(docDateKey: string, docSlot: number, todayKey: string, nowSlot: number): 'send' | 'drop' | 'wait' {
+  if (docDateKey < todayKey) return 'drop';
+  if (docDateKey > todayKey || docSlot > nowSlot) return 'wait';
+  return nowSlot - docSlot <= CATCH_UP_SLOTS ? 'send' : 'drop';
+}
+
+/**
+ * Runs every 15 minutes all day, since a smart push (smartPushes.ts) can fall
+ * on any quarter-hour. Sends every pending push whose time has come, then
+ * deletes it (deletion is the idempotency guard). A push whose send failed is
+ * kept and retried on the next run, within the catch-up window; one that's
+ * too late is deleted. One failing push never stops the others.
  */
 export const fireDueApplianceNotifications = onSchedule(
   { schedule: '*/15 * * * *', timeZone: 'Europe/Stockholm' },
   async () => {
     const db = getFirestore();
     const now = new Date();
-    const dateKey = stockholmDateFormatter.format(now);
-    // Runs every 15 minutes, so this is the quarter-hour that just started.
-    const slot = stockholmSlotOf(now);
+    const todayKey = stockholmDateFormatter.format(now);
+    const nowSlot = stockholmSlotOf(now);
 
-    const due = await db
-      .collection('pendingApplianceNotifications')
-      .where('dateKey', '==', dateKey)
-      .where('windowStartSlot', '==', slot)
-      .get();
+    // Today's and older records (single-field range, no composite index needed).
+    const pending = await db.collection('pendingApplianceNotifications').where('dateKey', '<=', todayKey).get();
 
-    for (const doc of due.docs) {
-      const data = doc.data() as { uid: string; applianceLabel?: string | null; language?: string; title?: string; body?: string; kind?: string };
-      // Smart pushes (smartPushes.ts) are written with their text ready;
-      // older records only have the appliance label.
-      const { title, body } =
-        data.title && data.body
-          ? { title: data.title, body: data.body }
-          : APPLIANCE_WINDOW_COPY[resolveServerLanguage(data.language)](data.applianceLabel ?? '');
-      await sendExpoPushToUid(db, data.uid, title, body, { kind: data.kind ?? 'appliance' });
-      await doc.ref.delete();
+    let sent = 0;
+    let dropped = 0;
+    for (const doc of pending.docs) {
+      const data = doc.data() as {
+        uid: string;
+        dateKey: string;
+        windowStartSlot: number;
+        applianceLabel?: string | null;
+        language?: string;
+        title?: string;
+        body?: string;
+        kind?: string;
+      };
+      const action = dueAction(data.dateKey, Number(data.windowStartSlot), todayKey, nowSlot);
+      if (action === 'wait') continue;
+      if (action === 'drop') {
+        logger.warn(`Dropping missed push ${doc.id} (${data.dateKey} slot ${data.windowStartSlot}).`);
+        await doc.ref.delete();
+        dropped++;
+        continue;
+      }
+      try {
+        // Smart pushes are written with their text ready; older records only have the appliance label.
+        const { title, body } =
+          data.title && data.body
+            ? { title: data.title, body: data.body }
+            : APPLIANCE_WINDOW_COPY[resolveServerLanguage(data.language)](data.applianceLabel ?? '');
+        const ok = await sendExpoPushToUid(db, data.uid, title, body, { kind: data.kind ?? 'appliance' });
+        if (ok) {
+          await doc.ref.delete();
+          sent++;
+        } else {
+          logger.warn(`Send failed for ${doc.id}; will retry on the next run.`);
+        }
+      } catch (err) {
+        logger.error(`Push ${doc.id} failed: ${err}; will retry on the next run.`);
+      }
     }
 
-    if (due.size > 0) {
-      logger.info(`Fired ${due.size} smart push(es) for ${dateKey} slot ${slot}.`);
+    if (sent > 0 || dropped > 0) {
+      logger.info(`Fired ${sent} smart push(es), dropped ${dropped} missed, for ${todayKey} slot ${nowSlot}.`);
     }
   },
 );

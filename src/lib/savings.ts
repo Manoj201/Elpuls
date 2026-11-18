@@ -81,7 +81,10 @@ export function estimateDaySaving(prices: HourlyPrice[], household: AppliancePre
   for (const a of household) {
     if (!a.shiftable) continue;
     const kind = kindOf(a);
-    const pool = NIGHT_FRIENDLY.has(kind) ? prices : awake;
+    const base = NIGHT_FRIENDLY.has(kind) ? prices : awake;
+    // Dishwasher: evening/night only (21:00–07:00), same rule as the server
+    // (functions/src/appliances.ts DISHWASHER_*).
+    const pool = kind === 'dishwasher' ? base.filter((p) => { const h = hourOf(p.hour); return h >= 21 || h < 7; }) : base;
     const window = findCheapestWindow(pool, a.typicalDurationHours, new Date(0));
     if (!window) continue;
     const kwh = (a.watts / 1000) * a.typicalDurationHours;

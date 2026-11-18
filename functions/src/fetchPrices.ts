@@ -80,9 +80,11 @@ export const fetchPrices = onSchedule(
 
       logger.info(`Stored ${entries.length} price entries for ${zone} on ${dateKey}`);
 
-      await notifyZonePricesPublished(db, zone, dateKey);
-      await scheduleSmartPushes(db, zone, dateKey, hours);
-      await notifyZonePriceAlerts(db, zone, dateKey, hours);
+      // Each step on its own: prices are already stored, so this zone won't be
+      // processed again; one failing step must not skip the others.
+      await notifyZonePricesPublished(db, zone, dateKey).catch((err) => logger.error(`Prices-published push failed for ${zone}: ${err}`));
+      await scheduleSmartPushes(db, zone, dateKey, hours).catch((err) => logger.error(`Smart push planning failed for ${zone}: ${err}`));
+      await notifyZonePriceAlerts(db, zone, dateKey, hours).catch((err) => logger.error(`Price alerts failed for ${zone}: ${err}`));
       // Once per zone and day (idempotent); never blocks the price fetch.
       await generateDailyPlan(db, zone, dateKey, hours).catch((err) => logger.error(`Daily plan failed for ${zone}: ${err}`));
     }

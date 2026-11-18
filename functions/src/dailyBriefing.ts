@@ -3,10 +3,9 @@ import { getFirestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { findExtremeHours, type PriceHour } from './priceUtils';
 import { findWeatherPrepTip, type WeatherHour } from './weatherPrep';
-import { findHeatingPlan } from './heatingPlan';
 import { sendExpoPushToUid } from './sendPriceNotifications';
 import { isProUser } from './proStatus';
-import { localClock, type PlanWindow } from './dailyPlan';
+import { buildPlanWindows, localClock, type PlanWindow } from './dailyPlan';
 import {
   APPLIANCE_NOTE_COPY,
   applianceName,
@@ -64,7 +63,10 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
     const factors = (explainerSnap.data()?.factors as string[] | undefined) ?? [];
     const weatherHours = (weatherSnap.data()?.hours as WeatherHour[] | undefined) ?? [];
     const tipType = findWeatherPrepTip(weatherHours, todayDateKey, tomorrowDateKey);
-    const heatingPlan = findHeatingPlan(hours);
+    // Same heat-up / let-it-cool windows as Din plan (not the old fixed 06–09).
+    const planWins = buildPlanWindows(hours);
+    const bankWin = planWins.find((w) => w.activity === 'heatBank');
+    const coastWin = planWins.find((w) => w.activity === 'heatCoast');
 
     if (!cheapest || !priciest) {
       logger.info(`No usable price hours for ${zone} on ${todayDateKey}, skipping briefing.`);
@@ -75,6 +77,7 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
 
     for (const sub of subscriptions.docs) {
       const uid = sub.id;
+      try {
       const userSnap = await db.collection('users').doc(uid).get();
       const user = userSnap.data();
       if (!user || !isProUser(user)) continue;
@@ -92,7 +95,8 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
         const next = (plan?.windows ?? [])
           .filter((w) => mine.includes(w.activity) && new Date(w.start).getTime() > Date.now())
           .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
-        const windowLine = next ? ` ${applianceName(language, next.activity)} ${localClock(next.start)}–${localClock(next.end)}.` : '';
+        const name = next ? applianceName(language, next.activity) : '';
+        const windowLine = next ? ` ${name.charAt(0).toUpperCase()}${name.slice(1)}: ${localClock(next.start)}–${localClock(next.end)}.` : '';
         await sendExpoPushToUid(db, uid, DAILY_PLAN_TITLE[language], `${planText}${windowLine}`, { zone, dateKey: todayDateKey });
         continue;
       }
@@ -113,25 +117,25 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
       if (appliancePending) {
         const pending = appliancePending;
         clauses.push(APPLIANCE_NOTE_COPY[language](pending.applianceLabel as string, pending.windowStartClock as string | undefined));
-      } else if (heatingApplies && heatingPlan) {
+      } else if (heatingApplies && bankWin && coastWin) {
         clauses.push(
-          HEATING_PLAN_COPY[language](
-            `${pad(heatingPlan.bankStartHour)}:00`,
-            `${pad(heatingPlan.bankEndHour)}:00`,
-            `${pad(heatingPlan.coastStartHour)}:00`,
-            `${pad(heatingPlan.coastEndHour)}:00`,
-          ),
+          HEATING_PLAN_COPY[language](localClock(bankWin.start), localClock(bankWin.end), localClock(coastWin.start), localClock(coastWin.end)),
         );
       } else if (tipType) {
         const copyKey = tipType === 'coldSnap' ? (user?.hasEv ? 'coldSnapEv' : 'coldSnapGeneric') : 'dryingWindow';
         clauses.push(WEATHER_TIP_COPY[language][copyKey]);
-      } else if (factors.length > 0) {
+      } else if (factors.length > 0 && language === 'en') {
+        // The factor words are English-only; Swedish users just get the recap.
         // factors are deterministic, English-only literals — not translated
         // yet, a known/deferred gap (see CLAUDE.md).
         clauses.push(factors.join(' · '));
       }
 
       await sendExpoPushToUid(db, uid, DAILY_BRIEFING_TITLE[language], clauses.join(' '), { zone, dateKey: todayDateKey });
+      } catch (err) {
+        // One broken profile must not stop everyone else's briefing.
+        logger.error(`Daily briefing failed for uid ${uid}: ${err}`);
+      }
     }
   }
 });

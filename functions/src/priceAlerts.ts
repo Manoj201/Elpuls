@@ -49,6 +49,7 @@ export async function notifyZonePriceAlerts(db: Firestore, zone: string, dateKey
 
   for (const sub of subscriptions.docs) {
     const uid = sub.id;
+    try {
     const userSnap = await db.collection('users').doc(uid).get();
     const user = userSnap.data();
     const language = resolveServerLanguage(user?.language);
@@ -62,6 +63,10 @@ export async function notifyZonePriceAlerts(db: Firestore, zone: string, dateKey
     } else if (lowEnabled && hasLowPriceHour) {
       const { title, body } = PRICE_ALERT_LOW_COPY[language](zone, hourLabel(cheapest.hour));
       await sendExpoPushToUid(db, uid, title, body, { zone, dateKey });
+    }
+    } catch (err) {
+      // One broken profile must not stop everyone else's alert.
+      logger.error(`Price alert failed for uid ${uid}: ${err}`);
     }
   }
 }

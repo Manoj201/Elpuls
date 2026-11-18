@@ -25,7 +25,7 @@ async function sendExpoPushBatch(
   title: string,
   body: string,
   data: Record<string, string>,
-): Promise<void> {
+): Promise<boolean> {
   const messages = tokens.map((to) => ({ to, sound: 'default', title, body, data }));
 
   const response = await fetch(EXPO_PUSH_URL, {
@@ -36,11 +36,12 @@ async function sendExpoPushBatch(
 
   if (!response.ok) {
     logger.error(`Expo push API request failed: ${response.status}`);
-    return;
+    return false;
   }
 
   const responseBody = await response.json();
   logger.info(`Expo push API response: ${JSON.stringify(responseBody)}`);
+  return true;
 }
 
 /**
@@ -99,17 +100,19 @@ export async function sendExpoPushToUid(
   title: string,
   body: string,
   data: Record<string, string>,
-): Promise<void> {
+): Promise<boolean> {
   const sub = await db.collection('pushSubscriptions').doc(uid).get();
   const token = (sub.data() as PushSubscription | undefined)?.expoPushToken;
 
   if (!token) {
     logger.info(`No push subscription for uid ${uid}, nothing to send.`);
-    return;
+    // Nothing to retry: there's no device to send to.
+    return true;
   }
 
-  await sendExpoPushBatch([token], title, body, data);
-  logger.info(`Sent "${title}" to uid ${uid}.`);
+  const ok = await sendExpoPushBatch([token], title, body, data);
+  if (ok) logger.info(`Sent "${title}" to uid ${uid}.`);
+  return ok;
 }
 
 /**
