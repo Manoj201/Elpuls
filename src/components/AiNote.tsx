@@ -9,8 +9,9 @@ interface AiNoteProps {
    * `explainer`: AI-written text. `scan`: values an AI read from a photo or PDF.
    * `forecast`: numbers from the outlook model (trained on past prices + weather).
    * `forecastShort`: the same, one short line (for a second card right below).
+   * `plan`: Din plan: times calculated from prices, only the short text is AI.
    */
-  kind: 'explainer' | 'scan' | 'forecast' | 'forecastShort';
+  kind: 'explainer' | 'scan' | 'forecast' | 'forecastShort' | 'plan';
 }
 
 /**

@@ -97,10 +97,18 @@ export function buildPlanWindows(hours: PriceHour[]): PlanWindow[] {
     const base = NIGHT_FRIENDLY_PRESETS.has(id) ? sorted : awake;
     // Dishwasher: evening/night only (21:00–07:00), when households run it.
     const pool = id === 'dishwasher' ? base.filter((h) => dishwasherHour(localHour(h.hour))) : base;
-    // The dryer goes after the laundry is washed, never at the same time.
-    const washer = windows.find((w) => w.activity === 'washing_machine');
-    const notBefore = id === 'dryer' && washer ? new Date(washer.end) : new Date(0);
-    const best = findCheapestWindow(pool, preset.typicalDurationHours, notBefore);
+    // Washing machine and tumble dryer share one window (both durations
+    // together), as in the smart pushes; the dryer gets the washer's range.
+    if (id === 'dryer') {
+      const washer = windows.find((w) => w.activity === 'washing_machine');
+      if (washer) {
+        windows.push({ ...washer, activity: 'dryer' });
+        continue;
+      }
+    }
+    const dryer = APPLIANCE_PRESETS.find((p) => p.id === 'dryer');
+    const duration = id === 'washing_machine' && dryer ? preset.typicalDurationHours + dryer.typicalDurationHours : preset.typicalDurationHours;
+    const best = findCheapestWindow(pool, duration, new Date(0));
     if (!best) continue;
     windows.push({
       activity: id as PlanActivity,
@@ -191,7 +199,11 @@ function buildPrompt(zone: string, dateKey: string, hours: PriceHour[], windows:
     ...lines,
     ...(isFlatDay(hours) ? ['Prices barely move this day, so say that timing matters little.'] : []),
     'Write at most 2 short sentences, plain text, no markdown, no emoji: why the day looks like this and the main thing to do or avoid.',
-    'Rules: only mention times that appear in the list above, exactly as written. Do not name specific appliances (the app lists them per household). No exclamation marks, no sales language.',
+    // The plan is per zone, but the app shows each home only its own rows, so
+    // a clock range built from appliance windows (e.g. a pool heater's) can
+    // match nothing on the card (seen 2026-11-18: "02:30–06:15"). Cheap times
+    // in words; only the shared "avoid" stretch may be given as a time.
+    'Rules: describe when power is cheap in words only (at night, in the morning, at midday, in the afternoon, in the evening), never as clock times. The only clock times you may write are the "avoid" stretch, exactly as written above. Do not name specific appliances (the app lists them per household). No exclamation marks, no sales language.',
     'Report the same summary in Swedish (natural, everyday Swedish) and English using the tool.',
   ].join('\n');
 }

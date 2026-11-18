@@ -563,6 +563,7 @@
     "exampleMonthlyKwh": "e.g. 1200"
   },
   "ai": {
+    "planNote": "The times are worked out from the prices. AI writes the short text above, and it can be wrong.",
     "badge": "AI",
     "explainerNote": "Written by AI from today's prices and weather. It can be wrong, so treat it as a guide.",
     "scanNote": "Read by AI from your photo or PDF. Check the numbers against your bill before you save.",
@@ -676,6 +677,7 @@
     "viewHourly": "Per hour",
     "viewQuarter": "Per 15 min",
     "bestTimesTitle": "Best times for your appliances",
+    "bestTimesPair": "{{first}} and {{second}}",
     "bestTimesLegend": "Shaded in the chart",
     "bestNow": "Best time is now",
     "saveKr": "Save {{kr}} kr",
@@ -757,6 +759,9 @@
     "replayHint": "Three short pages about what Elpuls does."
   },
   "plan": {
+    "tomorrowLater": "Tomorrow's plan comes after 13:00, when the new prices are out.",
+    "tomorrowReady": "Tomorrow's plan is ready.",
+    "next": "Next",
     "title": "Your plan",
     "today": "Today",
     "tomorrow": "Tomorrow",
@@ -765,6 +770,10 @@
     "statusNow": "Now",
     "statusSoon": "Soon",
     "statusPast": "Passed",
+    "allPassed": "Today's times have passed.",
+    "seeTomorrow": "Show tomorrow's plan",
+    "showPassed": "Show earlier times ({{count}})",
+    "hidePassed": "Hide earlier times",
     "statusIn_one": "In {{count}} hr",
     "statusIn_other": "In {{count}} hrs",
     "nightHint": "Set a delayed start in the evening.",

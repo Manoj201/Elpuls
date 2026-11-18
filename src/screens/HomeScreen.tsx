@@ -243,26 +243,46 @@ export function HomeScreen({
     // Preset id for each appliance (registered ones by name), for icons and ordering.
     const kindOf = (a: (typeof household)[number]) => (a.householdDefault || a.id === 'ev' ? a.id : matchPresetId(a.label) ?? a.id);
 
-    // The dryer needs the washed laundry, so plan the washing machine first
-    // and only look for dryer windows after it has finished.
-    const ordered = [...household].sort((a, b) => Number(kindOf(a) === 'dryer') - Number(kindOf(b) === 'dryer'));
-    let washerEnd: Date | null = null;
+    // Same rules as the pushes (functions/src/smartPushes.ts): the washing
+    // machine and the tumble dryer share one window (both durations together,
+    // shown as one row), and the dishwasher only gets evening/night times
+    // (21:00-07:00, functions/src/appliances.ts DISHWASHER_*).
+    const washer = household.find((a) => kindOf(a) === 'washing_machine');
+    const dryer = household.find((a) => kindOf(a) === 'dryer');
+    const groups: { members: typeof household; kind: string; label: string }[] = [];
+    if (washer && dryer) {
+      groups.push({
+        members: [washer, dryer],
+        kind: 'washing_machine',
+        label: t('chart.bestTimesPair', {
+          first: resolveApplianceLabel(washer, t),
+          second: resolveApplianceLabel(dryer, t).toLocaleLowerCase(),
+        }),
+      });
+    }
+    for (const a of household) {
+      if (washer && dryer && (a === washer || a === dryer)) continue;
+      groups.push({ members: [a], kind: kindOf(a), label: resolveApplianceLabel(a, t) });
+    }
+    const nightSlots = slots.filter((p) => {
+      const h = p.hour.getHours();
+      return h >= 21 || h < 7;
+    });
 
     const result: BestTime[] = [];
-    for (const a of ordered) {
-      const kind = kindOf(a);
-      const notBefore = kind === 'dryer' && washerEnd ? washerEnd : now;
-      const window = findCheapestWindow(slots, a.typicalDurationHours, notBefore);
+    for (const g of groups) {
+      const hours = g.members.reduce((s, a) => s + a.typicalDurationHours, 0);
+      const pool = g.kind === 'dishwasher' ? nightSlots : slots;
+      const window = findCheapestWindow(pool, hours, now);
       if (!window) continue;
-      if (kind === 'washing_machine') washerEnd = window.end;
 
-      const kwh = (a.watts / 1000) * a.typicalDurationHours;
+      const kwh = g.members.reduce((s, a) => s + (a.watts / 1000) * a.typicalDurationHours, 0);
       // Spot difference × VAT: grid fee, tax and markup are the same per kWh whenever you run it.
       const saving = nowSlot ? kwh * (nowSlot.price - window.averagePrice) * 1.25 : null;
       result.push({
-        id: a.id,
-        kind,
-        label: resolveApplianceLabel(a, t),
+        id: g.members.map((a) => a.id).join('+'),
+        kind: g.kind,
+        label: g.label,
         start: window.start.hour,
         end: window.end,
         saving,

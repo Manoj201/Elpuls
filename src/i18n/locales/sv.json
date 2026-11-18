@@ -563,6 +563,7 @@
     "exampleMonthlyKwh": "t.ex. 1200"
   },
   "ai": {
+    "planNote": "Tiderna räknas fram från elpriserna. Den korta texten ovan skrivs av AI och kan ha fel.",
     "badge": "AI",
     "explainerNote": "Skriven av AI utifrån dagens priser och väder. Den kan ha fel, så se den som en vägledning.",
     "scanNote": "Avläst av AI från din bild eller PDF. Jämför siffrorna med fakturan innan du sparar.",
@@ -676,6 +677,7 @@
     "viewHourly": "Per timme",
     "viewQuarter": "Per 15 min",
     "bestTimesTitle": "Bästa tider för dina apparater",
+    "bestTimesPair": "{{first}} och {{second}}",
     "bestTimesLegend": "Skuggat i grafen",
     "bestNow": "Bästa tiden är nu",
     "saveKr": "Spara {{kr}} kr",
@@ -757,6 +759,9 @@
     "replayHint": "Tre korta sidor om vad Elpuls gör."
   },
   "plan": {
+    "tomorrowLater": "Planen för imorgon kommer efter kl 13, när de nya priserna är ute.",
+    "tomorrowReady": "Planen för imorgon är klar.",
+    "next": "Nästa",
     "title": "Din plan",
     "today": "Idag",
     "tomorrow": "Imorgon",
@@ -765,6 +770,10 @@
     "statusNow": "Nu",
     "statusSoon": "Snart",
     "statusPast": "Har varit",
+    "allPassed": "Dagens tider har varit.",
+    "seeTomorrow": "Visa planen för imorgon",
+    "showPassed": "Visa tidigare tider ({{count}})",
+    "hidePassed": "Dölj tidigare tider",
     "statusIn_one": "Om {{count}} tim",
     "statusIn_other": "Om {{count}} tim",
     "nightHint": "Sätt fördröjd start på kvällen.",
