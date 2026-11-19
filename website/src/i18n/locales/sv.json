@@ -1,97 +1,310 @@
 {
   "nav": {
     "features": "Funktioner",
-    "pro": "Pro",
-    "privacy": "Integritet"
+    "pro": "Pris",
+    "faq": "Frågor",
+    "privacy": "Integritet",
+    "download": "Ladda ner",
+    "skip": "Hoppa till innehållet",
+    "label": "Huvudmeny",
+    "openMenu": "Öppna menyn",
+    "closeMenu": "Stäng menyn",
+    "language": "Språk"
   },
   "hero": {
-    "titlePre": "Vet när elen är",
-    "titleHighlight": "billig",
-    "subtitle": "Elpuls visar vad elen faktiskt kostar dig, inte bara spotpriset. Appen förklarar varför priserna ändras med hjälp av väderdata och säger till när du ska köra diskmaskinen, ladda bilen eller värma huset. Ingen hårdvara, inget byte av elbolag.",
-    "ctaPrimary": "Se hur det fungerar",
-    "ctaSecondary": "Elpuls Pro",
-    "ctaDownload": "Ladda ner i App Store"
+    "eyebrow": "Nytt: Din plan och priser per kvart",
+    "titlePre": "Se vad elen faktiskt kostar dig.",
+    "titleHighlight": "Och när den är billig.",
+    "subtitle": "Elpuls räknar ut ditt riktiga elpris från din egen elräkning och visar när det lönar sig att tvätta, diska, ladda bilen eller värma huset. Du behåller ditt elavtal och behöver ingen ny utrustning.",
+    "ctaDownload": "Ladda ner i App Store",
+    "ctaSecondary": "Så fungerar det",
+    "trust": [
+      "Gratis att ladda ner",
+      "Inget nytt elavtal",
+      "Ingen hårdvara"
+    ],
+    "floatPriceLabel": "Billigast i natt",
+    "floatSaving": "Spara ca 10 kr i natt",
+    "floatNotifTitle": "Kvällens plan",
+    "floatNotifBody": "Tvätt och tork 00:00–02:30",
+    "phoneAlt": "Skärmbilder från Elpuls",
+    "floatPriceValue": "00:00",
+    "floatPriceSub": "Tvätt, disk och elbil"
   },
-  "howItWorks": {
-    "heading": "Så fungerar det",
-    "subtitle": "Pris- och väderdata strömmar in, Claude förklarar det, du agerar på det.",
+  "realPrice": {
+    "eyebrow": "Ditt riktiga elpris",
+    "heading": "Spotpriset är bara början",
+    "body": "Priset i nyheterna är bara en del av räkningen. Ovanpå kommer nätavgift, energiskatt, elbolagets påslag och moms. Fotografera din elräkning så räknar Elpuls ut vad du verkligen betalar per kWh.",
+    "points": [
+      "Läser både elhandels- och elnätsfakturan",
+      "Du kan också skriva in siffrorna själv",
+      "Bilden sparas aldrig, bara siffrorna du godkänner"
+    ],
+    "exampleTag": "Exempel",
+    "exampleIntro": "Om spotpriset är 100 öre/kWh och nätavgiften 25 öre/kWh:",
+    "parts": [
+      {
+        "label": "Spotpris",
+        "value": 100
+      },
+      {
+        "label": "Nätavgift",
+        "value": 25
+      },
+      {
+        "label": "Energiskatt",
+        "value": 36
+      },
+      {
+        "label": "Elcertifikat",
+        "value": 1
+      },
+      {
+        "label": "Moms 25 %",
+        "value": 41
+      }
+    ],
+    "totalLabel": "Det du betalar",
+    "unit": "öre/kWh",
+    "spotLabel": "Spotpriset",
+    "note": "Påhittade siffror. I appen ser du ditt eget pris, för varje kvart."
+  },
+  "how": {
+    "heading": "Igång på några minuter",
+    "subtitle": "Tre steg. Sedan sköter Elpuls räknandet.",
     "steps": [
       {
-        "title": "Live spotpris",
-        "body": "elprisetjustnu.se (Nord Pool) för priser, SMHI för väder — hämtas automatiskt för ditt elområde."
+        "title": "Berätta om ditt hem",
+        "body": "Välj elområde och uppvärmning, och om du har elbil eller solpaneler."
       },
       {
-        "title": "AI förklarar det",
-        "body": "Claude läser priset och vädret tillsammans och skriver en lättbegriplig förklaring till varför dagen ser ut som den gör."
+        "title": "Fotografera elräkningen",
+        "body": "Elpuls läser av avgifterna och visar ditt riktiga pris. Du kontrollerar siffrorna innan något sparas."
       },
       {
+        "title": "Använd elen när den är billig",
+        "body": "Se dagens och morgondagens priser, få tips i rätt stund och bestäm själv vad du gör."
+      }
+    ]
+  },
+  "showcase": {
+    "heading": "Allt du behöver för att betala mindre",
+    "subtitle": "Tydliga siffror, lugna färger och inget krångel. Byggt för svenska hushåll.",
+    "free": "Gratis",
+    "pro": "Pro",
+    "ai": "AI",
+    "items": [
+      {
+        "key": "overview",
+        "tier": "free",
+        "title": "Priset just nu, i klartext",
+        "body": "En mätare visar om elen är billig eller dyr jämfört med resten av dagen. Du ser vad du betalar, inte bara spotpriset, och när nästa billiga stund kommer.",
+        "bullets": [
+          "Pris för varje kvart",
+          "Billigast och dyrast härnäst",
+          "Hur vädret påverkar priset idag"
+        ]
+      },
+      {
+        "key": "chart",
+        "tier": "free",
+        "title": "Idag och imorgon i ett diagram",
+        "body": "Morgondagens priser kommer vid lunchtid. Billiga och dyra stunder märks ut med färg och ord, så det är lätt att planera.",
+        "bullets": [
+          "Per timme eller per kvart",
+          "Prisvarning när elen blir dyr",
+          "Bästa tider för dina apparater (Pro)"
+        ]
+      },
+      {
+        "key": "plan",
+        "tier": "pro",
+        "title": "Din plan för dagen",
+        "body": "Elpuls räknar fram dagens bästa tider för tvätt, disk, elbil och uppvärmning, och säger när du ska undvika att använda mycket el. Tiderna kommer från elpriset, inte från en gissning.",
+        "bullets": [
+          "Nästa sak att göra överst",
+          "Fördröjd start på natten",
+          "Värm upp före kvällens dyra timmar"
+        ]
+      },
+      {
+        "key": "coming-days",
+        "tier": "pro",
+        "ai": true,
+        "title": "Hur blir priset nästa vecka?",
+        "body": "Kommande dagar visar vilken dag som troligen blir billigast, med ett troligt spann. Prognosen kommer från en AI-modell som har lärt sig av tidigare elpriser och väder.",
+        "bullets": [
+          "7 dagar framåt",
+          "Visar hur ofta prognosen haft rätt",
+          "Kommande månader jämfört med nu"
+        ]
+      },
+      {
+        "key": "forecast",
+        "tier": "pro",
+        "ai": true,
+        "title": "AI-prognos: snittpris per dag",
+        "body": "Diagrammet visar de senaste dagarnas priser och var priset troligen hamnar framåt. Spannet blir bredare ju längre fram du tittar, precis som en väderprognos. Kommande månader visar hur priset brukar ändras jämfört med nu.",
+        "bullets": [
+          "Visas bara där prognosen haft rätt minst 65 % av gångerna",
+          "Ett troligt spann i stället för en exakt gissning",
+          "Kommande månader utifrån flera års elpriser"
+        ]
+      },
+      {
+        "key": "explainer",
+        "tier": "pro",
+        "ai": true,
+        "title": "Varför är elen dyr idag?",
+        "body": "Varje morgon skriver AI en kort förklaring utifrån dagens priser och väder, till exempel svag vind, kyla eller mycket sol. Du får också vädertips och de bästa timmarna för dina solpaneler.",
+        "bullets": [
+          "Ny förklaring varje morgon",
+          "Vädertips för ditt hem",
+          "Bästa soltimmarna för solpaneler"
+        ]
+      },
+      {
+        "key": "stats",
+        "tier": "pro",
+        "title": "Förstå din elräkning",
+        "body": "Se vad varje del av priset kostar, vad ett avtal utan påslag hade gett och hur räkningen ändras om du flyttar en del av elanvändningen.",
+        "bullets": [
+          "Kostnadsspecifikation",
+          "Avtalskoll",
+          "Jämför elområdena"
+        ]
+      }
+    ]
+  },
+  "notifications": {
+    "eyebrow": "Smarta notiser",
+    "heading": "Elpuls säger till när det lönar sig",
+    "body": "Du behöver inte hålla koll på priset. Elpuls skickar ett förslag när det är billigt att köra något, och varje kväll kl 19 en plan för natten, så du hinner ställa in fördröjd start innan du lägger dig.",
+    "points": [
+      "Tysta timmar och högst så många notiser du vill",
+      "Inga tips de dagar priset knappt rör sig",
+      "Notisen om morgondagens priser är gratis"
+    ],
+    "tag": "Exempel på notiser",
+    "now": "nu",
+    "items": [
+      {
+        "time": "19:00",
+        "title": "Kvällens plan",
+        "body": "Billigast i natt, ställ in fördröjd start: tvätt och tork 00:00–02:30, disk 00:00–02:00. Du sparar ungefär 10 kr."
+      },
+      {
+        "time": "12:15",
+        "title": "Värm upp huset nu",
+        "body": "Elen är billig fram till kl 15:15. Värm upp nu och sänk lite kl 17 till 20, då blir det dyrt."
+      },
+      {
+        "time": "13:05",
+        "title": "Morgondagens elpriser är här",
+        "body": "Elpriserna i Mellansverige för fredag 20 november finns nu i appen."
+      }
+    ]
+  },
+  "trust": {
+    "heading": "Råd, inte styrning",
+    "subtitle": "Elpuls hjälper dig att välja. Resten bestämmer du.",
+    "items": [
+      {
+        "icon": "hand",
         "title": "Du bestämmer",
-        "body": "Du ser priset, anledningen och det bästa tillfället — och agerar själv. Elpuls styr aldrig något."
+        "body": "Elpuls styr aldrig dina apparater och byter aldrig ditt elavtal."
+      },
+      {
+        "icon": "plug",
+        "title": "Ingen hårdvara",
+        "body": "Fungerar med det elavtal och de apparater du redan har."
+      },
+      {
+        "icon": "cloud",
+        "title": "Öppna källor",
+        "body": "Spotpriser från Nord Pool via elprisetjustnu.se och väder från SMHI."
+      },
+      {
+        "icon": "shield",
+        "title": "Din data är din",
+        "body": "Bilden på elräkningen sparas aldrig, och du kan radera ditt konto direkt i appen."
       }
     ]
   },
-  "benefits": {
-    "heading": "Varför Elpuls",
-    "subtitle": "Alla andra prisappar visar en siffra. Elpuls gör den till pengar sparade.",
-    "items": [
-      {
-        "title": "Se vad du faktiskt betalar",
-        "body": "Spotpriset i nyheterna är bara en del av elräkningen. Skanna dina fakturor så lägger Elpuls till nätavgift, elbolagets påslag, energiskatt och moms, och du ser ditt riktiga pris per kWh."
-      },
-      {
-        "title": "Ingen hårdvara, inget byte",
-        "body": "Fungerar med vilket elavtal och vilken apparat du redan äger som helst. Inga smarta kontakter, inget nytt elbolag."
-      },
-      {
-        "title": "Förstå varför, inte bara vad",
-        "body": "En lättbegriplig förklaring bakom varje prissvängning, kopplad till verkligt väder — inte bara en rå siffra."
-      },
-      {
-        "title": "Varningar på dina villkor",
-        "body": "Ställ in din egen pristoppgräns och få en notis om de priser som faktiskt spelar roll för dig."
-      }
-    ]
-  },
-  "features": {
-    "heading": "Pris, väder och en anledning varför",
-    "subtitle": "Alla andra prisappar visar bara en siffra. Elpuls förklarar den, och säger vad du ska göra åt det.",
-    "items": [
-      {
-        "title": "Livepriser",
-        "body": "Dagens och morgondagens priser för ditt elområde (SE1–SE4) från Nord Pool, per timme eller per kvart, med dygnets billiga och dyra delar markerade."
-      },
-      {
-        "title": "AI-prisförklaring",
-        "body": "En lättbegriplig anledning till varför dagens priser ser ut som de gör, kopplad till faktiska väderförhållanden i ditt område."
-      },
-      {
-        "title": "Kostnadskoll innan du startar",
-        "body": "Se kostnaden för att köra en apparat nu jämfört med att vänta på nästa billiga tillfälle, innan du startar den."
-      },
-      {
-        "title": "Varningar du själv ställer in",
-        "body": "Få en notis när morgondagens priser publiceras, när ett pristopp passerar din gräns, eller när priserna blir negativa."
-      }
-    ]
+  "pricing": {
+    "heading": "Gratis att börja. Pro när du vill spara mer.",
+    "subtitle": "Alla får sitt riktiga elpris gratis. Pro planerar dagen åt dig.",
+    "free": {
+      "name": "Gratis",
+      "price": "0 kr",
+      "unit": "för alltid",
+      "features": [
+        "Ditt riktiga elpris från elräkningen",
+        "Priser per kvart, idag och imorgon",
+        "Kostnadskoll innan du startar en apparat",
+        "Prisvarningar och notis när morgondagens priser kommer",
+        "Möjlig besparing i månaden",
+        "Mätare för elbilsladdning"
+      ]
+    },
+    "proName": "Elpuls Pro",
+    "proPrice": "39 kr",
+    "proUnit": "/ månad",
+    "proBadge": "14 dagar gratis",
+    "proTrial": "14 dagar gratis, sedan 39 kr i månaden. Avsluta när du vill i App Store.",
+    "cta": "Ladda ner gratis"
   },
   "pro": {
     "heading": "Elpuls Pro",
     "intro": "För hushåll som vill spara aktivt, inte bara kasta ett öga på en siffra.",
-    "list": [
-      "En notis i rätt stund: när det är bra läge att starta tvätten, ladda bilen eller värma huset",
-      "AI-prisförklaring, varje dag",
-      "Bästa soltimmarna för dina egna paneler",
-      "Apparattips för allt du äger",
-      "Värmeplan: när du ska värma upp och när huset kan svalna lite",
-      "Månatlig kostnadsspecifikation och elområdesjämförelse"
-    ],
     "priceUnit": "/ månad",
     "priceTrial": "14 dagar gratis, sedan 39 kr i månaden. Avsluta när du vill.",
-    "screenshotLabel": "Översikt"
+    "screenshotLabel": "Din plan",
+    "list": [
+      "Din plan: varje dag de bästa tiderna för dina apparater och för uppvärmning",
+      "Smarta notiser, och varje kväll kl 19 en plan för natten",
+      "Kommande dagar: priset 7 dagar framåt, med ett troligt spann (AI)",
+      "Kommande månader: hur priset brukar ändras",
+      "AI-prisförklaring, varje dag",
+      "Tips om värme, väder och solel, plus kostnadsspecifikation, avtalskoll och jämförelse av elområden"
+    ]
+  },
+  "faq": {
+    "heading": "Vanliga frågor",
+    "items": [
+      {
+        "q": "Varför stämmer inte andra elprisappar med min räkning?",
+        "a": "De flesta visar bara spotpriset. Din räkning innehåller också nätavgift, energiskatt, elbolagets påslag och moms, som tillsammans ofta är mer än själva spotpriset. Elpuls räknar med allt det."
+      },
+      {
+        "q": "Måste jag byta elavtal?",
+        "a": "Nej. Elpuls fungerar med det avtal du har. Med rörligt pris eller kvartspris sparar du på att flytta elanvändningen till billiga tider. Med fast pris får du mest koll på vad elen kostar."
+      },
+      {
+        "q": "Styr Elpuls mina apparater?",
+        "a": "Nej. Elpuls ger bara råd. Du startar tvättmaskinen, ställer in fördröjd start eller laddar bilen själv."
+      },
+      {
+        "q": "Vad händer med bilden på min elräkning?",
+        "a": "Bilden används en gång för att läsa av avgifterna och sparas aldrig. Bara siffrorna du godkänner sparas i ditt konto."
+      },
+      {
+        "q": "Vilka elområden finns med?",
+        "a": "Alla fyra: SE1 Norra Norrland, SE2 Södra Norrland, SE3 Mellansverige och SE4 Södra Sverige."
+      },
+      {
+        "q": "Vad kostar Elpuls?",
+        "a": "Appen är gratis. Elpuls Pro kostar 39 kr i månaden efter 14 dagars gratis provperiod, och du avslutar när du vill i App Store."
+      },
+      {
+        "q": "Finns Elpuls för Android?",
+        "a": "Inte än. Elpuls finns för iPhone just nu. Android kommer senare."
+      }
+    ]
   },
   "cta": {
-    "heading": "Finns nu i App Store",
-    "subtitle": "Gratis att ladda ner till iPhone. Android kommer senare.",
+    "heading": "Börja se ditt riktiga elpris idag",
+    "subtitle": "Gratis att ladda ner för iPhone. Android kommer senare.",
     "appStore": "Ladda ner i App Store",
     "googlePlay": "Google Play: kommer snart"
   },
@@ -333,5 +546,41 @@
       "heading": "Kontakt",
       "body": "Elpuls utvecklas och drivs av en privatperson, inte ett registrerat företag. {{name}}, som driver verksamheten under namnet Elpuls, kan nås på manoj.gam201@gmail.com för frågor om dessa villkor."
     }
+  },
+  "pipeline": {
+    "eyebrow": "Bakom kulisserna",
+    "heading": "Från elbörsen till din telefon",
+    "subtitle": "Allt räknas fram på vår egen server. Därför visar appen, planen och notiserna alltid samma siffror.",
+    "nodes": [
+      {
+        "icon": "bolt",
+        "tag": "Data",
+        "title": "Nord Pool och SMHI",
+        "body": "Elbörsen Nord Pool sätter morgondagens priser varje dag vid lunch. Väderprognosen kommer från SMHI.",
+        "detail": "Pris för varje kvart i alla fyra elområden"
+      },
+      {
+        "icon": "server",
+        "tag": "Var 15:e minut",
+        "title": "Elpuls server",
+        "body": "Vår server hämtar nya priser och väder, sparar dem och kontrollerar att inget saknas.",
+        "detail": "Här byggs din plan och dina notiser"
+      },
+      {
+        "icon": "sparkles",
+        "tag": "Varje dag",
+        "title": "AI",
+        "body": "En prognosmodell som har lärt sig av elpriser och väder sedan 2022 räknar fram kommande dagar. Claude från Anthropic skriver korta förklaringar.",
+        "detail": "Tider räknas alltid fram, AI gissar dem aldrig"
+      },
+      {
+        "icon": "phone",
+        "tag": "Direkt",
+        "title": "Din app",
+        "body": "Appen lägger till dina egna avgifter, visar ditt riktiga pris och dagens plan. Notiserna kommer i rätt stund.",
+        "detail": "Notiser även när appen är stängd"
+      }
+    ],
+    "note": "Appen hämtar allt från vår egen server, aldrig direkt från andra tjänster. Bilden på din elräkning läses en gång och sparas aldrig."
   }
 }

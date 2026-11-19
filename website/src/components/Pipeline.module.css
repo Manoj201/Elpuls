@@ -1,0 +1,331 @@
+.section {
+  position: relative;
+  padding: 96px 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(79, 123, 255, 0.12), transparent 65%);
+}
+
+.kicker {
+  text-align: center;
+  color: var(--teal);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.heading {
+  text-align: center;
+  font-size: 40px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+  text-wrap: balance;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 18px;
+  max-width: 620px;
+  margin: 0 auto 56px;
+}
+
+.row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ---- Step cards ---- */
+
+.node {
+  flex: 1 1 0;
+  min-width: 0;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--enter);
+}
+
+.running .node {
+  opacity: 1;
+  transform: none;
+}
+
+.card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 24px 20px;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border-muted);
+  animation: glow var(--cycle) ease-in-out infinite;
+  animation-delay: var(--d);
+  animation-play-state: paused;
+}
+
+.running .card {
+  animation-play-state: running;
+}
+
+/* The card brightens when the data pulse arrives. */
+@keyframes glow {
+  0%,
+  22%,
+  100% {
+    border-color: var(--border-muted);
+    box-shadow: none;
+  }
+  6% {
+    border-color: rgba(124, 92, 255, 0.7);
+    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.12), 0 20px 40px -20px rgba(124, 92, 255, 0.8);
+  }
+}
+
+/* AI step: the app's aurora ring (same as the in-app AI badge). */
+.nodeAi .card {
+  background: linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(var(--angle, 135deg), #7c5cff, #4f7bff, #2dd4bf, #c084fc) border-box;
+  border: 1.5px solid transparent;
+}
+
+.iconWrap {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d6ccff;
+  background: linear-gradient(145deg, #2a2160, #15132a);
+  border: 1px solid rgba(124, 92, 255, 0.45);
+}
+
+.nodeAi .iconWrap {
+  color: var(--teal);
+}
+
+.ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 20px;
+  border: 2px solid rgba(45, 212, 191, 0.7);
+  opacity: 0;
+  animation: ping var(--cycle) ease-out infinite;
+  animation-delay: var(--d);
+  animation-play-state: paused;
+}
+
+.running .ring {
+  animation-play-state: running;
+}
+
+@keyframes ping {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.9);
+  }
+  18% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.tag {
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.title {
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.body {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+  flex: 1;
+}
+
+.detail {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  padding-top: 10px;
+  border-top: 1px solid var(--border-muted);
+  width: 100%;
+}
+
+.detail svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--teal);
+}
+
+/* ---- Connectors with a travelling pulse ---- */
+
+.link {
+  position: relative;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+}
+
+.line {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, rgba(167, 159, 196, 0.45) 0 6px, transparent 6px 11px);
+}
+
+.pulse {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 12px 3px rgba(45, 212, 191, 0.75);
+  opacity: 0;
+  animation: travelX var(--cycle) linear infinite;
+  animation-delay: var(--d);
+  animation-play-state: paused;
+}
+
+.running .pulse {
+  animation-play-state: running;
+}
+
+@keyframes travelX {
+  0% {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  3% {
+    opacity: 1;
+  }
+  14% {
+    opacity: 1;
+    transform: translateX(38px);
+  }
+  17%,
+  100% {
+    opacity: 0;
+    transform: translateX(38px);
+  }
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  max-width: 720px;
+  margin: 36px auto 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.note svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--teal);
+}
+
+/* ---- Tablet: 2 × 2 is too cramped for the flow; go vertical earlier ---- */
+
+@media (max-width: 960px) {
+  .row {
+    flex-direction: column;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .link {
+    flex: 0 0 40px;
+    justify-content: center;
+  }
+
+  .line {
+    width: 2px;
+    height: 100%;
+    background: repeating-linear-gradient(180deg, rgba(167, 159, 196, 0.45) 0 6px, transparent 6px 11px);
+  }
+
+  .pulse {
+    left: 50%;
+    top: 0;
+    margin: 0 0 0 -6px;
+    animation-name: travelY;
+  }
+
+  @keyframes travelY {
+    0% {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    3% {
+      opacity: 1;
+    }
+    14% {
+      opacity: 1;
+      transform: translateY(34px);
+    }
+    17%,
+    100% {
+      opacity: 0;
+      transform: translateY(34px);
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 72px 0;
+  }
+
+  .heading {
+    font-size: 30px;
+  }
+
+  .subtitle {
+    font-size: 17px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .card,
+  .ring,
+  .pulse {
+    animation: none;
+  }
+}

@@ -1,6 +1,7 @@
 .switcher {
   display: flex;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 999px;
   padding: 3px;
   gap: 2px;
@@ -14,9 +15,16 @@
   background: transparent;
   border: none;
   border-radius: 999px;
-  padding: 5px 11px;
+  padding: 0 12px;
+  min-height: 34px;
+  min-width: 40px;
   cursor: pointer;
   line-height: 1;
+}
+
+.option:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 1px;
 }
 
 .option:hover {

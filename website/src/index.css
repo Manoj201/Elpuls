@@ -86,3 +86,55 @@ button,
   color: var(--text-primary);
   border: 1px solid var(--border);
 }
+
+/* Scroll reveal (components/motion.tsx): fade + lift once in view. */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+a:focus-visible,
+button:focus-visible,
+.button:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 3px;
+}
+
+.button-primary {
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.button-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.button-secondary:hover {
+  border-color: var(--purple);
+}
