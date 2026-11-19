@@ -11,7 +11,8 @@ import {
   IconTemperatureMinus,
 } from '@tabler/icons-react-native';
 import { formatClock } from '../lib/formatNumber';
-import { APPLIANCE_ICONS, householdDefaultIds, matchPresetId } from '../lib/applianceDisplay';
+import { APPLIANCE_ICONS } from '../lib/applianceDisplay';
+import { householdActivities, planRows, sharesWithDryer } from '../lib/planRows';
 import type { DailyPlan, PlanActivity, PlanWindow } from '../hooks/useDailyPlan';
 import type { SupportedLanguage } from '../i18n';
 import type { HeatingType } from '../stores/useUserStore';
@@ -45,20 +46,6 @@ const ICONS: Record<PlanActivity, IconType> = {
   avoid: IconHandStop,
 };
 
-const NOT_APPLIANCE: PlanActivity[] = ['heatBank', 'heatCoast', 'avoid'];
-
-/** Only rows that fit this home; the washer + dryer share one window (as in the pushes), shown once. */
-function rowsFor(plan: DailyPlan | null, mine: Set<PlanActivity>): PlanWindow[] {
-  const windows = (plan?.windows ?? []).filter((w) => mine.has(w.activity));
-  return windows
-    .filter(
-      (w) =>
-        w.activity !== 'dryer' ||
-        !windows.some((o) => o.activity === 'washing_machine' && o.start.getTime() === w.start.getTime()),
-    )
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
-}
-
 /**
  * "Din plan" (Pro): today's and tomorrow's calculated windows for this
  * household, plus the day's short AI summary. The times come from the
@@ -74,25 +61,17 @@ export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabl
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
 
-  const mine = useMemo(() => {
-    const set = new Set<PlanActivity>(['avoid']);
-    for (const id of householdDefaultIds(hasEv)) if (!disabledDefaults.includes(id)) set.add(id as PlanActivity);
-    for (const label of registeredLabels) {
-      const id = matchPresetId(label);
-      if (id) set.add(id as PlanActivity);
-    }
-    if (heatingType === 'electric' || heatingType === 'heat_pump') {
-      set.add('heatBank');
-      set.add('heatCoast');
-    }
-    return set;
-  }, [hasEv, disabledDefaults, registeredLabels, heatingType]);
+  const mine = useMemo(
+    () => householdActivities({ hasEv, heatingType, disabledDefaults, registeredLabels }),
+    [hasEv, disabledDefaults, registeredLabels, heatingType],
+  );
 
-  const todayRows = useMemo(() => rowsFor(today, mine), [today, mine]);
-  const tomorrowRows = useMemo(() => rowsFor(tomorrow, mine), [tomorrow, mine]);
-  // Judged on this home's rows only: a window for an appliance the home
-  // doesn't have (shown nowhere) must not keep "today" open.
-  const todayOver = today !== null && (todayRows.length === 0 ? false : todayRows.every((w) => now >= w.end));
+  const todayParts = useMemo(() => planRows(today, mine), [today, mine]);
+  const tomorrowParts = useMemo(() => planRows(tomorrow, mine), [tomorrow, mine]);
+  // A plan day runs 06:00 → 06:00, so today is only over once tonight's
+  // part exists and has passed too. Judged on this home's rows only.
+  const todayAll = [...todayParts.day, ...todayParts.night];
+  const todayOver = today !== null && todayParts.nightReady && todayAll.length > 0 && todayAll.every((w) => now >= w.end);
 
   const [day, setDay] = useState<'today' | 'tomorrow'>(() => ((!today || todayOver) && tomorrow ? 'tomorrow' : 'today'));
   // Plans load after the card first shows, and evening comes while it's open:
@@ -112,21 +91,30 @@ export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabl
 
   const isTomorrow = day === 'tomorrow' && tomorrow !== null;
   const plan = isTomorrow ? tomorrow : today;
-  const rows = isTomorrow ? tomorrowRows : todayRows;
-  const upcoming = isTomorrow ? rows : rows.filter((w) => now < w.end);
-  const passed = isTomorrow ? [] : rows.filter((w) => now >= w.end);
-  // The next thing to do (not "avoid", which is a warning, not a task).
-  const next = isTomorrow ? null : upcoming.find((w) => w.activity !== 'avoid') ?? null;
-  const rest = upcoming.filter((w) => w !== next);
+  const parts = isTomorrow ? tomorrowParts : todayParts;
+  const rows = [...parts.day, ...parts.night];
+  // "Avoid" is a warning, not a task: shown as one amber line above the
+  // tasks (while it's running or still ahead), never as a row with a "Now"
+  // pill next to a task's "Now" (UI/UX Pro Max: one primary status per card).
+  const avoid = rows.find((w) => w.activity === 'avoid') ?? null;
+  const showAvoid = avoid !== null && (isTomorrow || now < avoid.end);
+  const avoidLive = avoid !== null && !isTomorrow && now >= avoid.start && now < avoid.end;
+  const tasks = rows.filter((w) => w.activity !== 'avoid');
+  const isUpcoming = (w: PlanWindow) => isTomorrow || now < w.end;
+  const upcoming = tasks.filter(isUpcoming).sort((a, b) => a.start.getTime() - b.start.getTime());
+  const passed = isTomorrow ? [] : tasks.filter((w) => !isUpcoming(w));
+  const next = isTomorrow ? null : upcoming[0] ?? null;
+  const dayRest = parts.day.filter((w) => w.activity !== 'avoid' && isUpcoming(w) && w !== next);
+  const nightRest = parts.night.filter((w) => isUpcoming(w) && w !== next);
+  const nightIds = new Set(parts.night);
   const showEvening = !isTomorrow && today !== null && !today.flatDay && todayOver;
 
   const ore = (sekPerKwh: number) => Math.round(sekPerKwh * 100).toLocaleString(language === 'sv' ? 'sv-SE' : 'en-US');
 
   const labelOf = (w: PlanWindow): string => {
     const own = t(`plan.activity.${w.activity}`);
-    if (w.activity !== 'washing_machine') return own;
-    const dryer = plan?.windows.find((o) => o.activity === 'dryer');
-    if (!mine.has('dryer') || !dryer || dryer.start.getTime() !== w.start.getTime()) return own;
+    const all = [...(plan?.windows ?? []), ...(plan?.nightWindows ?? [])];
+    if (!sharesWithDryer(w, all, mine)) return own;
     return t('chart.bestTimesPair', { first: own, second: t('plan.activity.dryer').toLocaleLowerCase() });
   };
 
@@ -143,7 +131,8 @@ export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabl
     const s = status(w);
     const range = `${formatClock(w.start)}–${formatClock(w.end)}`;
     const isAvoid = w.activity === 'avoid';
-    const night = !opts.past && w.start.getHours() < 6 && !NOT_APPLIANCE.includes(w.activity);
+    // Tonight's rows: say to set a delayed start in the evening.
+    const night = !opts.past && nightIds.has(w);
     return (
       <View
         key={`${w.activity}${w.start.toISOString()}`}
@@ -218,8 +207,41 @@ export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabl
         <View>
           {/* The day in one glance first; the rows are the details. */}
           {plan.text && <Text style={styles.summaryText}>{plan.text}</Text>}
+          {showAvoid && avoid && (
+            <View
+              style={[styles.avoid, avoidLive && styles.avoidLive]}
+              accessible
+              accessibilityLabel={`${avoidLive ? t('plan.avoidNow', { end: formatClock(avoid.end) }) : t('plan.avoidAt', { start: formatClock(avoid.start), end: formatClock(avoid.end) })}. ${t('plan.avoidPrice', { price: ore(avoid.averagePrice) })}. ${t('plan.avoidHint')}`}
+            >
+              <View style={styles.avoidIcon}>
+                <IconHandStop size={18} color={theme.colors.accentAmberDeep} />
+              </View>
+              <View style={styles.text}>
+                <Text style={styles.avoidTitle}>
+                  {avoidLive
+                    ? t('plan.avoidNow', { end: formatClock(avoid.end) })
+                    : t('plan.avoidAt', { start: formatClock(avoid.start), end: formatClock(avoid.end) })}
+                </Text>
+                <Text style={styles.avoidText}>
+                  {t('plan.avoidPrice', { price: ore(avoid.averagePrice) })} · {t('plan.avoidHint')}
+                </Text>
+              </View>
+            </View>
+          )}
           {next && renderRow(next, { first: true, hero: true })}
-          {rest.map((w, i) => renderRow(w, { first: i === 0 && !next && !plan.text }))}
+          {dayRest.map((w, i) => renderRow(w, { first: i === 0 && !next && !plan.text }))}
+
+          {/* Tonight (21:00 → 06:00): its own heading, so night times are never mistaken for today's. */}
+          {(nightRest.length > 0 || !parts.nightReady || (parts.night.length === 0 && parts.nightReady)) && (
+            <Text style={styles.nightHeading} accessibilityRole="header">
+              {t(isTomorrow ? 'plan.nightHeadingTomorrow' : 'plan.nightHeading')}
+            </Text>
+          )}
+          {nightRest.map((w, i) => renderRow(w, { first: i === 0 }))}
+          {!parts.nightReady && (
+            <Text style={styles.nightPending}>{t(isTomorrow ? 'plan.nightPendingTomorrow' : 'plan.nightPending')}</Text>
+          )}
+          {parts.nightReady && parts.night.length === 0 && <Text style={styles.nightPending}>{t('plan.nightFlat')}</Text>}
         </View>
       )}
 
@@ -263,6 +285,16 @@ const styles = StyleSheet.create({
   dayRow: { flexDirection: 'row', gap: 6 },
   empty: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 22, color: theme.colors.textSecondary, marginTop: 4 },
   flat: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 22, color: theme.colors.textSecondary, marginVertical: 8 },
+  nightHeading: {
+    marginTop: 14,
+    marginBottom: 2,
+    fontFamily: theme.typography.bodySemibold,
+    fontSize: theme.type.sm,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: theme.colors.accentPurpleDeep,
+  },
+  nightPending: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 6 },
   summaryText: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 23, color: theme.colors.textPrimary, marginBottom: 12 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   heroRow: {
@@ -294,6 +326,28 @@ const styles = StyleSheet.create({
   statusLive: { borderColor: theme.colors.accentPurple, backgroundColor: theme.colors.accentPurpleSoft },
   statusText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.textSecondary },
   statusTextLive: { color: theme.colors.textPrimary },
+  avoid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.accentAmberSoft,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  avoidLive: { borderColor: theme.colors.accentAmber },
+  avoidIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+  },
+  avoidTitle: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.md, color: theme.colors.accentAmberDeep },
+  avoidText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 2 },
   evening: { alignItems: 'center', paddingVertical: 12, gap: 6 },
   eveningIcon: {
     width: 44,

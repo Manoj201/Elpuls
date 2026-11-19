@@ -22,6 +22,7 @@ import { GuideScreen } from './src/screens/GuideScreen';
 import { NotificationSettingsScreen } from './src/screens/NotificationSettingsScreen';
 import { ScreenBackground } from './src/components/ScreenBackground';
 import { usePushRegistration } from './src/hooks/usePushRegistration';
+import { usePushTaps } from './src/hooks/usePushTaps';
 import { DataAutoRefresh } from './src/components/DataAutoRefresh';
 import { ensureAnonymousSignIn, signOutUser } from './src/lib/auth';
 import { clearLocalAppStorage } from './src/lib/devTools';
@@ -171,6 +172,7 @@ function useKeyboardVisible(): boolean {
 
 export default function App() {
   usePushRegistration();
+  usePushTaps();
   const { t } = useTranslation();
   const setUid = useUserStore((s) => s.setUid);
   const isPaywallVisible = useUiStore((s) => s.isPaywallVisible);
@@ -187,6 +189,14 @@ export default function App() {
   const [initAttempt, setInitAttempt] = useState(0);
   const [i18nReady, setI18nReady] = useState(false);
   const priceZone = useCountryStore((s) => s.zone);
+  const planFocusPending = useUiStore((s) => s.planFocusPending);
+
+  // A tapped plan push: go to Översikt (Home scrolls to Din plan and clears the flag).
+  useEffect(() => {
+    if (!planFocusPending || appState !== 'main') return;
+    setStackScreen(null);
+    setTab('overview');
+  }, [planFocusPending, appState]);
 
   const [spaceGroteskLoaded] = useSpaceGrotesk({ SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold });
   const [interLoaded] = useInter({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold });

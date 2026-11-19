@@ -42,10 +42,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   art: { ...StyleSheet.absoluteFillObject, opacity: 0.5 },
   keyboardAvoiding: { flex: 1 },
+  // Bottom right, just above the tab bar: never over a title or the status bar.
   devBadge: {
     position: 'absolute',
-    top: 54,
-    left: 10,
+    bottom: 100,
+    right: 10,
+    opacity: 0.9,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,

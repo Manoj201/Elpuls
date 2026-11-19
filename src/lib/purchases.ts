@@ -7,7 +7,7 @@ import Purchases, {
   type PurchasesPackage,
 } from 'react-native-purchases';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from './firebase';
+import { functions, isDevProject } from './firebase';
 import { useUserStore } from '../stores/useUserStore';
 
 /** RevenueCat entitlement identifier — whatever product/offering is configured in the dashboard just needs to grant this. */
@@ -59,6 +59,15 @@ function syncProStatus(info: CustomerInfo): void {
  * Never throws — a misconfigured/placeholder key must not block app boot.
  */
 export async function configurePurchases(uid: string): Promise<void> {
+  // Dev only: Pro on in the Simulator against the dev project (elpuls-dev),
+  // where nothing can be bought. Needs all three: a development build, the dev
+  // Firebase project and EXPO_PUBLIC_DEV_FORCE_PRO=1 (.env.development.local),
+  // so it can never reach TestFlight or the App Store.
+  if (__DEV__ && isDevProject && process.env.EXPO_PUBLIC_DEV_FORCE_PRO === '1') {
+    console.log('DEV: Pro forced on (EXPO_PUBLIC_DEV_FORCE_PRO).');
+    useUserStore.getState().setProStatus({ isProSubscriber: true, periodType: 'NORMAL', expirationMillis: null });
+    return;
+  }
   const apiKey = apiKeyForPlatform();
   if (!apiKey) {
     console.log('RevenueCat: no API key configured for this platform, skipping (free tier only).');

@@ -679,6 +679,7 @@
     "bestTimesTitle": "Best times for your appliances",
     "bestTimesPair": "{{first}} and {{second}}",
     "bestTimesLegend": "Shaded in the chart",
+    "nightPricesPending": "Tonight's prices arrive around 13:00. The night times may change then.",
     "bestNow": "Best time is now",
     "saveKr": "Save {{kr}} kr",
     "when": {
@@ -693,10 +694,11 @@
       "normal": "Normal",
       "dear": "Expensive",
       "peak": "Most expensive",
-      "best": "Best times"
+      "best": "Your plan"
     },
     "colCheapest": "Cheapest",
-    "colDearest": "Priciest"
+    "colDearest": "Priciest",
+    "planHint": "The shaded times come from Your plan further down."
   },
   "realPrice": {
     "spotLabel": "Spot price",
@@ -779,6 +781,14 @@
     "nightHint": "Set a delayed start in the evening.",
     "coastHint": "Turn the heat down a little; the house stays warm for a while.",
     "avoidPrice": "about {{price}} öre/kWh",
+    "nightHeading": "Tonight",
+    "nightHeadingTomorrow": "Tomorrow night",
+    "nightPending": "Tonight's times come around 13:00, when tomorrow's prices are out.",
+    "nightPendingTomorrow": "The night times come tomorrow around 13:00.",
+    "nightFlat": "Prices are even tonight, so timing barely matters.",
+    "avoidNow": "Expensive now, until {{end}}",
+    "avoidAt": "Expensive {{start}}–{{end}}",
+    "avoidHint": "avoid using a lot of power then",
     "timesNote": "The times are worked out from the electricity prices.",
     "activity": {
       "washing_machine": "Laundry",

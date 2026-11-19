@@ -15,6 +15,7 @@ import { Chip } from './Chip';
 import { PriceAreaChart } from './PriceAreaChart';
 import { PriceBar } from './PriceBar';
 
+/** One row of "Best times for your appliances": a Din plan window with its saving. */
 export interface BestTime {
   id: string;
   /** Preset kind (e.g. 'dishwasher') for the icon. */
@@ -34,16 +35,27 @@ interface PriceChartProps {
   /** Raw 15-minute prices (already converted to "what you pay" if that view is on), today + tomorrow. */
   slots: HourlyPrice[];
   now: Date;
-  /** Pro: best window per household appliance, shaded on the chart and listed below it. */
+  /**
+   * Pro: this home's appliance times from Din plan, shaded on the chart. The
+   * times themselves are listed only in Din plan (one place for times, so the
+   * chart, the plan and the pushes never disagree).
+   */
+  highlights?: ChartRange[];
+  /**
+   * Pro: the same Din plan times as a list with the kronor saved vs. now
+   * (read from the plan, so the list, the plan and the pushes always agree).
+   */
   bestTimes?: BestTime[];
+  /** True while tonight's part of Din plan isn't out yet (before ~13:00). */
+  nightPricesPending?: boolean;
 }
 
 /**
  * The price chart with a "Per timme / Per 15 min" switch (remembered per
  * phone), a one-line summary in words for each day (cheapest and dearest
- * slot), and the Pro "best times" for the user's appliances.
+ * slot), and (Pro) this home's Din plan times shaded on the chart.
  */
-export function PriceChart({ slots, now, bestTimes }: PriceChartProps) {
+export function PriceChart({ slots, now, highlights, bestTimes, nightPricesPending = false }: PriceChartProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
   const view = useUserStore((s) => s.chartView);
@@ -53,7 +65,7 @@ export function PriceChart({ slots, now, bestTimes }: PriceChartProps) {
   const sorted = useMemo(() => [...slots].sort((a, b) => a.hour.getTime() - b.hour.getTime()), [slots]);
   const hourly = useMemo(() => groupPricesByHour(sorted), [sorted]);
   const currentHour = useMemo(() => findCurrentPrice(hourly, now)?.hour ?? null, [hourly, now]);
-  const ranges: ChartRange[] = useMemo(() => (bestTimes ?? []).map((b) => ({ start: b.start, end: b.end })), [bestTimes]);
+  const ranges: ChartRange[] = highlights ?? [];
 
   // Per day: cheapest and dearest quarter-hour, shown as ↓ / ↑ rows.
   const days = useMemo(() => {
@@ -92,7 +104,7 @@ export function PriceChart({ slots, now, bestTimes }: PriceChartProps) {
             <Text style={styles.legendLabel}>{t(`chart.legend.${band}`)}</Text>
           </View>
         ))}
-        {bestTimes && bestTimes.length > 0 && (
+        {ranges.length > 0 && (
           <View style={styles.legendItem}>
             <View style={[styles.legendBlock, { backgroundColor: `${HIGHLIGHT_COLOR}55` }]} />
             <Text style={styles.legendLabel}>{t('chart.legend.best')}</Text>
@@ -141,7 +153,7 @@ export function PriceChart({ slots, now, bestTimes }: PriceChartProps) {
         ))}
       </View>
 
-      {bestTimes && bestTimes.length > 0 && (
+      {bestTimes && bestTimes.length > 0 ? (
         <View style={styles.bestTimes}>
           <Text style={styles.bestTitle} accessibilityRole="header">
             {t('chart.bestTimesTitle')}
@@ -183,31 +195,16 @@ export function PriceChart({ slots, now, bestTimes }: PriceChartProps) {
               </View>
             );
           })}
+          {nightPricesPending && <Text style={styles.pendingNote}>{t('chart.nightPricesPending')}</Text>}
         </View>
+      ) : (
+        ranges.length > 0 && <Text style={styles.planHint}>{t('chart.planHint')}</Text>
       )}
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  switchRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 6, marginTop: 10 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendBlock: { width: 14, height: 10, borderRadius: 2 },
-  legendLabel: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary },
-  summary: { marginTop: 16 },
-  summaryRow: { flexDirection: 'row', alignItems: 'center' },
-  dayCol: { flex: 1.1 },
-  valueCol: { flex: 1 },
-  headCell: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingBottom: 6 },
-  headText: { flexShrink: 1, fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.textSecondary },
-  dayRow: { paddingVertical: 10 },
-  dayRowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
-  dayLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
-  timeText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
-  priceText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 2 },
   bestTimes: {
     marginTop: 16,
     paddingHorizontal: 14,
@@ -234,4 +231,33 @@ const styles = StyleSheet.create({
   bestText: { flex: 1, gap: 2 },
   bestLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   bestTime: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  pendingNote: {
+    marginTop: 4,
+    marginBottom: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderMuted,
+    fontFamily: theme.typography.body,
+    fontSize: theme.type.sm,
+    lineHeight: 20,
+    color: theme.colors.textSecondary,
+  },
+  planHint: { marginTop: 12, fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary },
+  switchRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 6, marginTop: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendBlock: { width: 14, height: 10, borderRadius: 2 },
+  legendLabel: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary },
+  summary: { marginTop: 16 },
+  summaryRow: { flexDirection: 'row', alignItems: 'center' },
+  dayCol: { flex: 1.1 },
+  valueCol: { flex: 1 },
+  headCell: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingBottom: 6 },
+  headText: { flexShrink: 1, fontFamily: theme.typography.bodyMedium, fontSize: theme.type.xs, color: theme.colors.textSecondary },
+  dayRow: { paddingVertical: 10 },
+  dayRowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
+  dayLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  timeText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
+  priceText: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary, marginTop: 2 },
 });

@@ -1,5 +1,6 @@
 import type { AppliancePreset } from '../config/appliances';
 import type { HourlyPrice } from '../providers/types';
+import { matchPresetId } from './applianceDisplay';
 
 /**
  * elprisetjustnu.se publishes prices in 15-minute intervals; averages them
@@ -132,7 +133,16 @@ export function compareApplianceCost(
     ? (appliance.watts / 1000) * appliance.typicalDurationHours * currentPrice.price
     : null;
 
-  const cheapestWindow = appliance.shiftable ? findCheapestWindow(hourlyPrices, appliance.typicalDurationHours, now) : null;
+  // The dishwasher only gets evening/night times (21:00–06:00), like Din plan
+  // and the pushes (functions/src/appliances.ts DISHWASHER_*).
+  const isDishwasher = appliance.id === 'dishwasher' || matchPresetId(appliance.label) === 'dishwasher';
+  const pool = isDishwasher
+    ? hourlyPrices.filter((p) => {
+        const h = p.hour.getHours();
+        return h >= 21 || h < 6;
+      })
+    : hourlyPrices;
+  const cheapestWindow = appliance.shiftable ? findCheapestWindow(pool, appliance.typicalDurationHours, now) : null;
   const costAtWindow = cheapestWindow
     ? (appliance.watts / 1000) * appliance.typicalDurationHours * cheapestWindow.averagePrice
     : null;

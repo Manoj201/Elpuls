@@ -1,7 +1,7 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { findCheapestWindow, type PriceHour } from './priceUtils';
-import { APPLIANCE_PRESETS, NIGHT_FRIENDLY_PRESETS, dishwasherHour } from './appliances';
+import { APPLIANCE_PRESETS } from './appliances';
 import { findHeatingPlan } from './heatingPlan';
 import { assessPriceRisk, type WeatherHour } from './priceRisk';
 
@@ -20,13 +20,22 @@ const REPORT_TOOL_NAME = 'report_daily_plan';
 /** Same rule as the app's price bands (src/lib/priceBands.ts): ≥ 115 % of the day average is dear. */
 const DEAR_RATIO = 1.15;
 /** Laundry and drying that aren't night-friendly stay within these hours. */
-const AWAKE_START_HOUR = 7;
-const AWAKE_END_HOUR = 22;
-const PLAN_ACTIVITIES = ['washing_machine', 'dishwasher', 'dryer', 'ev', 'pool_heater'];
 /** Below this spread ((max − min) / average) the day is flat: timing barely matters. */
 const FLAT_DAY_SPREAD = 0.25;
 const HEAT_BANK_HOURS = 3;
 const HEAT_LOOKBACK_HOURS = 8;
+const VAT = 1.25;
+/** Daytime suggestions: from here until the evening peak, like the daytime pushes. */
+const DAY_START_HOUR = 7;
+const EVENING_PEAK_START_HOUR = 17;
+const EVENING_PEAK_END_HOUR = 20;
+/** A daytime suggestion must save at least this much (kr incl. VAT) for a preset run, like the pushes. */
+const DAY_MIN_KR = 2;
+/** "Tonight" = 21:00 until 06:00, when the next electricity day starts (same as the 19:00 push). */
+const NIGHT_FROM_HOUR = 21;
+const NIGHT_TO_HOUR = 6;
+/** Heat up only when that time costs at most 85 % of the evening (and of the avoid stretch). */
+const HEAT_BANK_MAX_RATIO = 0.85;
 
 export type PlanActivity = 'washing_machine' | 'dishwasher' | 'dryer' | 'ev' | 'pool_heater' | 'heatBank' | 'heatCoast' | 'avoid';
 
@@ -76,9 +85,83 @@ export function isFlatDay(hours: PriceHour[]): boolean {
   return (Math.max(...prices) - Math.min(...prices)) / avg < FLAT_DAY_SPREAD;
 }
 
+function averageOf(hours: PriceHour[]): number | null {
+  return hours.length ? hours.reduce((s, h) => s + h.price, 0) / hours.length : null;
+}
+
+type ApplianceGroup = { activities: PlanActivity[]; hours: number; kwh: number };
+
+/** A preset's run: duration and energy. The washer + dryer share one window (both together), like the pushes. */
+function group(ids: PlanActivity[]): ApplianceGroup | null {
+  const presets = ids.map((id) => APPLIANCE_PRESETS.find((p) => p.id === id));
+  if (presets.some((p) => !p || !p.shiftable)) return null;
+  return {
+    activities: ids,
+    hours: presets.reduce((s, p) => s + (p?.typicalDurationHours ?? 0), 0),
+    kwh: presets.reduce((s, p) => s + ((p?.watts ?? 0) / 1000) * (p?.typicalDurationHours ?? 0), 0),
+  };
+}
+
+const DAY_GROUPS = [group(['washing_machine', 'dryer']), group(['pool_heater'])].filter((g): g is ApplianceGroup => g !== null);
+const NIGHT_GROUPS = [group(['washing_machine', 'dryer']), group(['dishwasher']), group(['ev']), group(['pool_heater'])].filter(
+  (g): g is ApplianceGroup => g !== null,
+);
+
 /**
- * The day's windows, all calculated from the prices: the cheapest stretch per
- * appliance, the heating plan, and the stretch to avoid. Exported for tests.
+ * Night part of day D's plan: each night appliance's cheapest window between
+ * 21:00 on D and 06:00 on D+1 (needs D+1's prices, so it's added when they
+ * arrive, about 13:00 on D). Same rule as the 19:00 push. Kept only when it's
+ * cheaper than D's evening (17-20); otherwise timing barely matters tonight.
+ * Exported for tests.
+ */
+export function buildNightWindows(dayHours: PriceHour[], nextHours: PriceHour[]): PlanWindow[] {
+  const night = [
+    ...dayHours.filter((h) => localHour(h.hour) >= NIGHT_FROM_HOUR),
+    ...nextHours.filter((h) => localHour(h.hour) < NIGHT_TO_HOUR),
+  ].sort((a, b) => new Date(a.hour).getTime() - new Date(b.hour).getTime());
+  const evening = averageOf(dayHours.filter((h) => {
+    const hour = localHour(h.hour);
+    return hour >= EVENING_PEAK_START_HOUR && hour < EVENING_PEAK_END_HOUR;
+  }));
+  if (night.length === 0 || evening === null) return [];
+  const windows: PlanWindow[] = [];
+  for (const g of NIGHT_GROUPS) {
+    const best = findCheapestWindow(night, g.hours, new Date(0));
+    if (!best || best.averagePrice >= evening) continue;
+    for (const activity of g.activities) {
+      windows.push({ activity, start: best.start.hour, end: best.end.toISOString(), averagePrice: best.averagePrice });
+    }
+  }
+  return windows;
+}
+
+/**
+ * Adds the night part to day D's plan once D+1's prices are stored. Runs on
+ * every fetchPrices pass; does nothing once the night part is there or when
+ * D's plan doesn't exist yet. Returns true when it wrote the night part.
+ */
+export async function addNightPlan(
+  db: Firestore,
+  zone: string,
+  dateKey: string,
+  dayHours: PriceHour[],
+  nextHours: PriceHour[],
+): Promise<boolean> {
+  const ref = db.collection('plans').doc(`SE-${zone}-${dateKey}`);
+  const snap = await ref.get();
+  const data = snap.data();
+  if (!snap.exists || !data || data.status === 'pending' || data.nightReady === true) return false;
+  const nightWindows = buildNightWindows(dayHours, nextHours);
+  await ref.update({ nightWindows, nightReady: true, nightGeneratedAt: FieldValue.serverTimestamp() });
+  logger.info(`Stored tonight's plan for ${zone} ${dateKey}: ${nightWindows.length} windows.`);
+  return true;
+}
+
+/**
+ * Day part of day D's plan, from D's prices (stored about 13:00 on D-1):
+ * daytime appliance suggestions, the heating plan and the stretch to avoid.
+ * The night part (21:00 on D → 06:00 on D+1) is added later by addNightPlan.
+ * Exported for tests (and used by the heat-ahead push).
  */
 export function buildPlanWindows(hours: PriceHour[]): PlanWindow[] {
   const sorted = [...hours].sort((a, b) => new Date(a.hour).getTime() - new Date(b.hour).getTime());
@@ -86,66 +169,28 @@ export function buildPlanWindows(hours: PriceHour[]): PlanWindow[] {
   const step = slotMs(sorted);
   const windows: PlanWindow[] = [];
 
-  const awake = sorted.filter((h) => {
+  // Day part: the same daytime suggestions as the smart pushes
+  // (smartPushes.ts): 07:00-17:00, only appliances people run while awake
+  // (laundry with drying, pool), and only when it's worth it versus the
+  // evening (>= DAY_MIN_KR for a preset run) and the day isn't flat. The
+  // dishwasher and the car belong to the night part (buildNightWindows).
+  const eveningAverage = averageOf(sorted.filter((h) => {
     const hour = localHour(h.hour);
-    return hour >= AWAKE_START_HOUR && hour < AWAKE_END_HOUR;
+    return hour >= EVENING_PEAK_START_HOUR && hour < EVENING_PEAK_END_HOUR;
+  }));
+  const daytime = sorted.filter((h) => {
+    const hour = localHour(h.hour);
+    return hour >= DAY_START_HOUR && hour < EVENING_PEAK_START_HOUR;
   });
-
-  for (const id of PLAN_ACTIVITIES) {
-    const preset = APPLIANCE_PRESETS.find((p) => p.id === id);
-    if (!preset || !preset.shiftable) continue;
-    const base = NIGHT_FRIENDLY_PRESETS.has(id) ? sorted : awake;
-    // Dishwasher: evening/night only (21:00–07:00), when households run it.
-    const pool = id === 'dishwasher' ? base.filter((h) => dishwasherHour(localHour(h.hour))) : base;
-    // Washing machine and tumble dryer share one window (both durations
-    // together), as in the smart pushes; the dryer gets the washer's range.
-    if (id === 'dryer') {
-      const washer = windows.find((w) => w.activity === 'washing_machine');
-      if (washer) {
-        windows.push({ ...washer, activity: 'dryer' });
-        continue;
+  if (!isFlatDay(sorted) && eveningAverage !== null) {
+    for (const group of DAY_GROUPS) {
+      const best = findCheapestWindow(daytime, group.hours, new Date(0));
+      if (!best) continue;
+      const saving = group.kwh * (eveningAverage - best.averagePrice) * VAT;
+      if (saving < DAY_MIN_KR) continue;
+      for (const activity of group.activities) {
+        windows.push({ activity, start: best.start.hour, end: best.end.toISOString(), averagePrice: best.averagePrice });
       }
-    }
-    const dryer = APPLIANCE_PRESETS.find((p) => p.id === 'dryer');
-    const duration = id === 'washing_machine' && dryer ? preset.typicalDurationHours + dryer.typicalDurationHours : preset.typicalDurationHours;
-    const best = findCheapestWindow(pool, duration, new Date(0));
-    if (!best) continue;
-    windows.push({
-      activity: id as PlanActivity,
-      start: best.start.hour,
-      end: best.end.toISOString(),
-      averagePrice: best.averagePrice,
-    });
-  }
-
-  // Heating: only when the evening is clearly dear (findHeatingPlan's rule).
-  // Heat up in the cheapest 3 hours of the 8 hours before the evening
-  // stretch (not a fixed 06–09, which is often the morning peak), then let
-  // the house drift through the evening.
-  const heating = findHeatingPlan(sorted);
-  if (heating) {
-    const coastStart = boundaryOf(sorted, heating.coastStartHour);
-    const coastEnd = boundaryOf(sorted, heating.coastEndHour);
-    if (coastStart && coastEnd) {
-      const coastStartMs = new Date(coastStart).getTime();
-      const beforeEvening = sorted.filter((h) => {
-        const t = new Date(h.hour).getTime();
-        return t >= coastStartMs - HEAT_LOOKBACK_HOURS * 3600000 && t < coastStartMs;
-      });
-      const bank = findCheapestWindow(beforeEvening, HEAT_BANK_HOURS);
-      if (bank) {
-        windows.push({ activity: 'heatBank', start: bank.start.hour, end: bank.end.toISOString(), averagePrice: bank.averagePrice });
-      }
-      const coast = sorted.filter((h) => {
-        const t = new Date(h.hour).getTime();
-        return t >= coastStartMs && t < new Date(coastEnd).getTime();
-      });
-      windows.push({
-        activity: 'heatCoast',
-        start: coastStart,
-        end: coastEnd,
-        averagePrice: coast.length ? coast.reduce((s, h) => s + h.price, 0) / coast.length : 0,
-      });
     }
   }
 
@@ -155,18 +200,60 @@ export function buildPlanWindows(hours: PriceHour[]): PlanWindow[] {
   sorted.forEach((h, i) => {
     if (h.price > sorted[peak].price) peak = i;
   });
+  let avoid: { startMs: number; endMs: number; average: number } | null = null;
   if (avg > 0 && sorted[peak].price >= avg * DEAR_RATIO) {
     let from = peak;
     let to = peak;
     while (from > 0 && sorted[from - 1].price >= avg * DEAR_RATIO) from--;
     while (to < sorted.length - 1 && sorted[to + 1].price >= avg * DEAR_RATIO) to++;
     const slice = sorted.slice(from, to + 1);
+    const average = slice.reduce((s, h) => s + h.price, 0) / slice.length;
+    const endMs = new Date(sorted[to].hour).getTime() + step;
+    avoid = { startMs: new Date(sorted[from].hour).getTime(), endMs, average };
     windows.push({
       activity: 'avoid',
       start: sorted[from].hour,
-      end: new Date(new Date(sorted[to].hour).getTime() + step).toISOString(),
-      averagePrice: slice.reduce((s, h) => s + h.price, 0) / slice.length,
+      end: new Date(endMs).toISOString(),
+      averagePrice: average,
     });
+  }
+
+
+  const heating = findHeatingPlan(sorted);
+  if (heating) {
+    const coastStart = boundaryOf(sorted, heating.coastStartHour);
+    const coastEnd = boundaryOf(sorted, heating.coastEndHour);
+    if (coastStart && coastEnd) {
+      const coastStartMs = new Date(coastStart).getTime();
+      const coast = sorted.filter((h) => {
+        const t = new Date(h.hour).getTime();
+        return t >= coastStartMs && t < new Date(coastEnd).getTime();
+      });
+      const coastAverage = coast.length ? coast.reduce((s, h) => s + h.price, 0) / coast.length : 0;
+      // Never inside the "avoid" stretch (seen 2026-11-19: "heat the house
+      // 12:15-15:15" inside "avoid 07:30-16:45"), and only when it's clearly
+      // cheaper than both the evening it prepares for and the avoid stretch.
+      // Otherwise there's no good moment to heat up: only "let it cool" remains.
+      const beforeEvening = sorted.filter((h) => {
+        const t = new Date(h.hour).getTime();
+        const inAvoid = avoid !== null && t >= avoid.startMs && t < avoid.endMs;
+        return t >= coastStartMs - HEAT_LOOKBACK_HOURS * 3600000 && t < coastStartMs && !inAvoid;
+      });
+      const bank = findCheapestWindow(beforeEvening, HEAT_BANK_HOURS);
+      const clearlyCheaper =
+        bank !== null &&
+        bank.averagePrice <= coastAverage * HEAT_BANK_MAX_RATIO &&
+        (avoid === null || bank.averagePrice <= avoid.average * HEAT_BANK_MAX_RATIO);
+      if (bank && clearlyCheaper) {
+        windows.push({ activity: 'heatBank', start: bank.start.hour, end: bank.end.toISOString(), averagePrice: bank.averagePrice });
+      }
+      windows.push({
+        activity: 'heatCoast',
+        start: coastStart,
+        end: coastEnd,
+        averagePrice: coastAverage,
+      });
+    }
   }
 
   return windows;
@@ -274,6 +361,9 @@ export async function generateDailyPlan(
     zone,
     date: dateKey,
     windows,
+    // Night part (21:00 → 06:00) comes when the next day's prices arrive.
+    nightWindows: [],
+    nightReady: false,
     flatDay: isFlatDay(hours),
     text_sv: textSv,
     text_en: textEn,

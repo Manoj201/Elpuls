@@ -679,6 +679,7 @@
     "bestTimesTitle": "Bästa tider för dina apparater",
     "bestTimesPair": "{{first}} och {{second}}",
     "bestTimesLegend": "Skuggat i grafen",
+    "nightPricesPending": "Nattens priser kommer runt kl 13. Då kan tiderna för natten ändras.",
     "bestNow": "Bästa tiden är nu",
     "saveKr": "Spara {{kr}} kr",
     "when": {
@@ -693,10 +694,11 @@
       "normal": "Normalt",
       "dear": "Dyrt",
       "peak": "Dyrast",
-      "best": "Bästa tider"
+      "best": "Din plan"
     },
     "colCheapest": "Billigast",
-    "colDearest": "Dyrast"
+    "colDearest": "Dyrast",
+    "planHint": "De skuggade tiderna är från Din plan längre ner."
   },
   "realPrice": {
     "spotLabel": "Spotpriset",
@@ -779,6 +781,14 @@
     "nightHint": "Sätt fördröjd start på kvällen.",
     "coastHint": "Sänk värmen lite, huset håller värmen ett tag.",
     "avoidPrice": "ca {{price}} öre/kWh",
+    "nightHeading": "I natt",
+    "nightHeadingTomorrow": "Imorgon natt",
+    "nightPending": "Tiderna för i natt kommer runt kl 13, när morgondagens priser är klara.",
+    "nightPendingTomorrow": "Tiderna för natten kommer imorgon runt kl 13.",
+    "nightFlat": "Priset är jämnt i natt, så tiden spelar liten roll.",
+    "avoidNow": "Dyrt just nu, fram till {{end}}",
+    "avoidAt": "Dyrt {{start}}–{{end}}",
+    "avoidHint": "undvik att använda mycket el då",
     "timesNote": "Tiderna räknas ut från elpriserna.",
     "activity": {
       "washing_machine": "Tvätt",

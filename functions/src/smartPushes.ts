@@ -15,7 +15,7 @@ import { SMART_PUSH_COPY, applianceName, joinNames, resolveServerLanguage, type 
  *
  * Kinds, most valuable first (the daily cap keeps the top ones):
  *  - tonight: every evening at 19:00, "Kvällens plan": each appliance's
- *    cheapest start time tonight (21:00–07:00) for delayed start, plus the
+ *    cheapest start time tonight (21:00–06:00) for delayed start, plus the
  *    car. Most households run these while they sleep.
  *  - appliance: a daytime push at the start of the day's cheapest window
  *    (washer with the dryer after it, pool, sauna…; not dishwasher or car).
@@ -179,10 +179,11 @@ function toSlots(apps: HouseholdAppliance[]): Slot[] {
   return slots;
 }
 
-/** The evening push "Kvällens plan" goes out at this hour; "tonight" is 21:00–07:00. */
+/** The evening push "Kvällens plan" goes out at this hour; "tonight" is 21:00–06:00. */
 const TONIGHT_HOUR = 19;
 const NIGHT_FROM_HOUR = 21;
-const NIGHT_TO_HOUR = 7;
+/** The night ends at 06:00, the start of the next "electricity day" (same as Din plan and the app). */
+const NIGHT_TO_HOUR = 6;
 /** Below this total saving (kr) the evening plan isn't sent (flat evening/night). */
 const MIN_TONIGHT_KR = 3;
 /** A daytime appliance push needs at least this saving (kr); "about 1 kr" isn't worth interrupting. */
@@ -265,7 +266,7 @@ export function planForUser(
     // look for its window after the washing machine's chosen window ends.
     const household = householdAppliances(language, user, registered, prefs);
 
-    // "Tonight" = this evening 21:00 → tomorrow 07:00: today's evening prices
+    // "Tonight" = this evening 21:00 → tomorrow 06:00: today's evening prices
     // plus the start of the day being planned. Most households set things to
     // run while they sleep, so every evening at 19:00 one push lists each
     // appliance's cheapest time tonight (tester feedback 2026-11-18).
@@ -279,7 +280,7 @@ export function planForUser(
     // Each day stands on its own; these are suggestions, the user picks.
     // Daytime: the planned day's cheapest window per slot (not the dishwasher
     // or the car, which households run at night). Tonight (19:00 push): every
-    // night-friendly slot, cheapest window between 21:00 and 07:00. Only
+    // night-friendly slot, cheapest window between 21:00 and 06:00. Only
     // published prices are used, never forecasts.
     const slots = toSlots(household);
     const pick = (pool: PriceHour[], list: Slot[]) =>
@@ -488,7 +489,16 @@ export function render(language: ServerLanguage, c: Candidate): { title: string;
   }
 }
 
-export async function scheduleSmartPushes(db: Firestore, zone: string, dateKey: string, hours: PriceHour[]): Promise<void> {
+/** Pro users who get tonight's plan at 19:00 today: they get "Din plan för i natt är klar" at publish time (publishPushes.ts). */
+export type PlanReadyInfo = { kinds: string[] };
+
+export async function scheduleSmartPushes(
+  db: Firestore,
+  zone: string,
+  dateKey: string,
+  hours: PriceHour[],
+): Promise<Map<string, PlanReadyInfo>> {
+  const planReady = new Map<string, PlanReadyInfo>();
   const subscriptions = await db.collection('pushSubscriptions').where('zone', '==', zone).get();
   let scheduled = 0;
   // Today's prices: their evening (21:00–24:00) is the first part of "tonight".
@@ -521,6 +531,17 @@ export async function scheduleSmartPushes(db: Firestore, zone: string, dateKey: 
     const plan = planForUser(hours, language, user, registered, prefs, todayHours);
 
     for (const c of plan) {
+      // On time (the usual ~13:00 publish, before 19:00 and outside quiet
+      // hours): announce tonight's plan now. When prices are late, the 19:00
+      // plan itself is the only push (it moves to the next quarter-hour).
+      if (
+        c.kind === 'tonight' &&
+        c.fireDateKey === nowLocal.dateKey &&
+        c.slot > nowSlot &&
+        !isQuiet(nowLocal.hour, prefs)
+      ) {
+        planReady.set(uid, { kinds: c.kinds ?? [] });
+      }
       if (c.kind === 'tonight' && c.fireDateKey === nowLocal.dateKey && c.slot <= nowSlot) {
         // Late: send at the next quarter-hour, unless quiet hours have started.
         if (nowSlot + 1 >= prefs.quietStartHour * 4) continue;
@@ -551,5 +572,6 @@ export async function scheduleSmartPushes(db: Firestore, zone: string, dateKey: 
     }
   }
 
-  logger.info(`Scheduled ${scheduled} smart push(es) for ${zone} ${dateKey}.`);
+  logger.info(`Scheduled ${scheduled} smart push(es) for ${zone} ${dateKey}; ${planReady.size} plan-ready.`);
+  return planReady;
 }

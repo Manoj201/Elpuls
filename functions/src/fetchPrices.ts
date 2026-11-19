@@ -1,10 +1,9 @@
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
-import { notifyZonePricesPublished } from './sendPriceNotifications';
 import { scheduleSmartPushes } from './smartPushes';
-import { notifyZonePriceAlerts } from './priceAlerts';
-import { generateDailyPlan } from './dailyPlan';
+import { sendPublishPushes } from './publishPushes';
+import { addNightPlan, generateDailyPlan } from './dailyPlan';
 
 const SWEDISH_ZONES = ['SE1', 'SE2', 'SE3', 'SE4'];
 
@@ -39,11 +38,20 @@ export const fetchPrices = onSchedule(
     // Today's "Din plan" if it's missing (e.g. the feature was deployed after
     // yesterday's publish, or yesterday's run failed). Idempotent, cheap when it exists.
     const todayKey = stockholmDateKey(new Date());
+    type PriceHourDoc = { hour: string; price: number };
     for (const zone of SWEDISH_ZONES) {
       const todaySnap = await db.collection('prices').doc(`SE-${zone}-${todayKey}`).get();
-      const todayHours = todaySnap.data()?.hours as { hour: string; price: number }[] | undefined;
+      const todayHours = todaySnap.data()?.hours as PriceHourDoc[] | undefined;
       if (todayHours?.length) {
         await generateDailyPlan(db, zone, todayKey, todayHours).catch((err) => logger.error(`Today's plan failed for ${zone}: ${err}`));
+        // Tonight's part, if tomorrow's prices are already stored but it's
+        // missing (a failed step on the run that stored them). No-op otherwise.
+        const nextHours = (await db.collection('prices').doc(`SE-${zone}-${stockholmDateKey(tomorrow)}`).get()).data()?.hours as
+          | PriceHourDoc[]
+          | undefined;
+        if (nextHours?.length) {
+          await addNightPlan(db, zone, todayKey, todayHours, nextHours).catch((err) => logger.error(`Tonight's plan failed for ${zone}: ${err}`));
+        }
       }
     }
 
@@ -81,12 +89,19 @@ export const fetchPrices = onSchedule(
       logger.info(`Stored ${entries.length} price entries for ${zone} on ${dateKey}`);
 
       // Each step on its own: prices are already stored, so this zone won't be
-      // processed again; one failing step must not skip the others.
-      await notifyZonePricesPublished(db, zone, dateKey).catch((err) => logger.error(`Prices-published push failed for ${zone}: ${err}`));
-      await scheduleSmartPushes(db, zone, dateKey, hours).catch((err) => logger.error(`Smart push planning failed for ${zone}: ${err}`));
-      await notifyZonePriceAlerts(db, zone, dateKey, hours).catch((err) => logger.error(`Price alerts failed for ${zone}: ${err}`));
-      // Once per zone and day (idempotent); never blocks the price fetch.
+      // processed again; one failing step must not skip the others. Order
+      // matters: tomorrow's plan and tonight's plan are stored before the
+      // pushes that point to them ("Din plan för i natt är klar").
       await generateDailyPlan(db, zone, dateKey, hours).catch((err) => logger.error(`Daily plan failed for ${zone}: ${err}`));
+      const todayForNight = (await db.collection('prices').doc(`SE-${zone}-${todayKey}`).get()).data()?.hours as PriceHourDoc[] | undefined;
+      if (todayForNight?.length) {
+        await addNightPlan(db, zone, todayKey, todayForNight, hours).catch((err) => logger.error(`Tonight's plan failed for ${zone}: ${err}`));
+      }
+      const planReady = await scheduleSmartPushes(db, zone, dateKey, hours).catch((err) => {
+        logger.error(`Smart push planning failed for ${zone}: ${err}`);
+        return new Map();
+      });
+      await sendPublishPushes(db, zone, dateKey, hours, planReady).catch((err) => logger.error(`Publish pushes failed for ${zone}: ${err}`));
     }
   },
 );

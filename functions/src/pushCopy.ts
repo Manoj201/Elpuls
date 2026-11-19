@@ -145,6 +145,43 @@ export function joinNames(language: ServerLanguage, names: string[]): string {
   return `${names.slice(0, -1).join(', ')}${and}${names[names.length - 1]}`;
 }
 
+/** Short nouns for "see the cheapest times tonight for …" (tvätt, disk, bilen). */
+const PLAN_READY_NOUNS: Record<ServerLanguage, Record<string, string>> = {
+  sv: { laundry: 'tvätt', dishwasher: 'disk', ev: 'bilen', pool_heater: 'poolen' },
+  en: { laundry: 'laundry', dishwasher: 'dishes', ev: 'the car', pool_heater: 'the pool' },
+};
+
+/**
+ * The publish-time push for Pro users who get tonight's plan at 19:00 (about
+ * 13:00, when tomorrow's prices arrive). `kinds` are the night slots, e.g.
+ * ['washing_machine+dryer', 'dishwasher', 'ev']. Unknown kinds (registered
+ * appliances that match no preset) are left out of the list.
+ */
+export function planReadyCopy(language: ServerLanguage, kinds: string[]): { title: string; body: string } {
+  const nouns: string[] = [];
+  for (const kind of kinds) {
+    const parts = kind.split('+');
+    const key = parts.some((p) => p === 'washing_machine' || p === 'dryer') ? 'laundry' : parts[0];
+    const noun = PLAN_READY_NOUNS[language][key];
+    if (noun && !nouns.includes(noun)) nouns.push(noun);
+  }
+  const list = joinNames(language, nouns);
+  if (language === 'sv') {
+    return {
+      title: 'Din plan för i natt är klar',
+      body: list
+        ? `Morgondagens elpriser är här. Se de billigaste tiderna i natt för ${list}.`
+        : 'Morgondagens elpriser är här. Se de billigaste tiderna i natt i appen.',
+    };
+  }
+  return {
+    title: "Tonight's plan is ready",
+    body: list
+      ? `Tomorrow's prices are here. See the cheapest times tonight for ${list}.`
+      : "Tomorrow's prices are here. See the cheapest times tonight in the app.",
+  };
+}
+
 interface SmartPushCopy {
   applianceNow: (names: string, until: string, saving: string) => { title: string; body: string };
   applianceTonight: (names: string, clock: string, saving: string) => { title: string; body: string };

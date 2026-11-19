@@ -26,9 +26,10 @@ import * as Sharing from 'expo-sharing';
 import { useCountryStore } from '../stores/useCountryStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { useWeatherStore } from '../stores/useWeatherStore';
+import { useUiStore } from '../stores/useUiStore';
 import { useUserStore } from '../stores/useUserStore';
 import { useApplianceStore } from '../stores/useApplianceStore';
-import { findCheapestWindow, findCurrentPrice, findExtremeHours, groupPricesByHour } from '../lib/priceUtils';
+import { findCurrentPrice, findExtremeHours, groupPricesByHour } from '../lib/priceUtils';
 import { getHouseholdAppliances, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
 import { assessPriceRisk, type PriceRiskFactor } from '../lib/priceRisk';
 import { findWeatherPrepTip } from '../lib/weatherPrep';
@@ -57,6 +58,8 @@ import { PriceDial } from '../components/PriceDial';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { whenOf } from '../lib/whenLabel';
 import { PriceChart, type BestTime } from '../components/PriceChart';
+import { APPLIANCE_PRESETS, type AppliancePreset } from '../config/appliances';
+import { applianceRanges, householdActivities, planRows, sharesWithDryer } from '../lib/planRows';
 import { ComparisonCard } from '../components/ComparisonCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ProUpsellCard } from '../components/ProUpsellCard';
@@ -236,61 +239,71 @@ export function HomeScreen({
     [hasEv, disabledDefaults, appliances],
   );
   const savings = useMonthlySavings(zone, savingsHousehold, todayPrices, now, onboardedAt);
+  // Pro: this home's appliance times from Din plan (today's and tomorrow's),
+  // shaded on the chart. The times themselves are listed only in Din plan.
+  const planMine = useMemo(
+    () => householdActivities({ hasEv, heatingType, disabledDefaults, registeredLabels: appliances.map((a) => a.label) }),
+    [hasEv, heatingType, disabledDefaults, appliances],
+  );
+  // "Best times for your appliances": the same rows as Din plan (today 06:00
+  // → 06:00, day + tonight), plus what each saves vs. running it right now.
+  // Read from the plan, so the list, the plan and the pushes always agree.
+  const todayPlanParts = useMemo(() => planRows(dailyPlan.today, planMine), [dailyPlan.today, planMine]);
   const bestTimes: BestTime[] = useMemo(() => {
-    const slots = [...todayPrices, ...tomorrowPrices];
-    const nowSlot = findCurrentPrice(slots, now);
-    const household = getHouseholdAppliances({ hasEv, disabledDefaults, registered: appliances }).filter((a) => a.shiftable);
-    // Preset id for each appliance (registered ones by name), for icons and ordering.
-    const kindOf = (a: (typeof household)[number]) => (a.householdDefault || a.id === 'ev' ? a.id : matchPresetId(a.label) ?? a.id);
+    if (!isProSubscriber) return [];
+    const household = getHouseholdAppliances({ hasEv, disabledDefaults, registered: appliances });
+    const kindOfAppliance = (a: (typeof household)[number]) => (a.householdDefault || a.id === 'ev' ? a.id : matchPresetId(a.label) ?? a.id);
+    const find = (kind: string) => household.find((a) => kindOfAppliance(a) === kind) ?? APPLIANCE_PRESETS.find((p) => p.id === kind);
+    const kwhOf = (a: AppliancePreset | undefined) => (a ? (a.watts / 1000) * a.typicalDurationHours : 0);
+    const nowSlot = findCurrentPrice([...todayPrices, ...tomorrowPrices], now);
+    const all = [...todayPlanParts.day, ...todayPlanParts.night];
+    return all
+      .filter((w) => ['washing_machine', 'dishwasher', 'ev', 'pool_heater'].includes(w.activity) && w.end.getTime() > now.getTime())
+      .map((w) => {
+        const main = find(w.activity);
+        const pair = sharesWithDryer(w, [...(dailyPlan.today?.windows ?? []), ...(dailyPlan.today?.nightWindows ?? [])], planMine);
+        const dryer = pair ? find('dryer') : undefined;
+        const label =
+          pair && main && dryer
+            ? t('chart.bestTimesPair', { first: resolveApplianceLabel(main, t), second: resolveApplianceLabel(dryer, t).toLocaleLowerCase() })
+            : main
+              ? resolveApplianceLabel(main, t)
+              : t(`plan.activity.${w.activity}`);
+        const kwh = kwhOf(main) + kwhOf(dryer);
+        // Spot difference × VAT: grid fee, tax and markup are the same per kWh whenever you run it.
+        const saving = nowSlot ? kwh * (nowSlot.price - w.averagePrice) * 1.25 : null;
+        return {
+          id: `${w.activity}-${w.start.toISOString()}`,
+          kind: w.activity,
+          label,
+          start: w.start,
+          end: w.end,
+          saving,
+          startsNow: w.start.getTime() <= now.getTime(),
+        };
+      })
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+  }, [isProSubscriber, hasEv, disabledDefaults, appliances, todayPrices, tomorrowPrices, now, todayPlanParts, dailyPlan.today, planMine, t]);
 
-    // Same rules as the pushes (functions/src/smartPushes.ts): the washing
-    // machine and the tumble dryer share one window (both durations together,
-    // shown as one row), and the dishwasher only gets evening/night times
-    // (21:00-07:00, functions/src/appliances.ts DISHWASHER_*).
-    const washer = household.find((a) => kindOf(a) === 'washing_machine');
-    const dryer = household.find((a) => kindOf(a) === 'dryer');
-    const groups: { members: typeof household; kind: string; label: string }[] = [];
-    if (washer && dryer) {
-      groups.push({
-        members: [washer, dryer],
-        kind: 'washing_machine',
-        label: t('chart.bestTimesPair', {
-          first: resolveApplianceLabel(washer, t),
-          second: resolveApplianceLabel(dryer, t).toLocaleLowerCase(),
-        }),
-      });
+  // A tapped plan push (usePushTaps): scroll to Din plan once it's laid out.
+  const scrollRef = useRef<ScrollView>(null);
+  const [planY, setPlanY] = useState<number | null>(null);
+  const planFocusPending = useUiStore((st) => st.planFocusPending);
+  const clearPlanFocus = useUiStore((st) => st.clearPlanFocus);
+  useEffect(() => {
+    if (!planFocusPending) return;
+    if (!isProSubscriber) {
+      clearPlanFocus();
+      return;
     }
-    for (const a of household) {
-      if (washer && dryer && (a === washer || a === dryer)) continue;
-      groups.push({ members: [a], kind: kindOf(a), label: resolveApplianceLabel(a, t) });
-    }
-    const nightSlots = slots.filter((p) => {
-      const h = p.hour.getHours();
-      return h >= 21 || h < 7;
-    });
-
-    const result: BestTime[] = [];
-    for (const g of groups) {
-      const hours = g.members.reduce((s, a) => s + a.typicalDurationHours, 0);
-      const pool = g.kind === 'dishwasher' ? nightSlots : slots;
-      const window = findCheapestWindow(pool, hours, now);
-      if (!window) continue;
-
-      const kwh = g.members.reduce((s, a) => s + (a.watts / 1000) * a.typicalDurationHours, 0);
-      // Spot difference × VAT: grid fee, tax and markup are the same per kWh whenever you run it.
-      const saving = nowSlot ? kwh * (nowSlot.price - window.averagePrice) * 1.25 : null;
-      result.push({
-        id: g.members.map((a) => a.id).join('+'),
-        kind: g.kind,
-        label: g.label,
-        start: window.start.hour,
-        end: window.end,
-        saving,
-        startsNow: window.start.hour.getTime() <= now.getTime(),
-      });
-    }
-    return result.sort((x, y) => x.start.getTime() - y.start.getTime());
-  }, [todayPrices, tomorrowPrices, hasEv, disabledDefaults, appliances, t, now]);
+    if (planY === null) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, planY - 56), animated: true });
+    clearPlanFocus();
+  }, [planFocusPending, planY, isProSubscriber, clearPlanFocus]);
+  const planHighlights = useMemo(
+    () => (isProSubscriber ? [...applianceRanges(dailyPlan.today, planMine, now), ...applianceRanges(dailyPlan.tomorrow, planMine, now)] : []),
+    [isProSubscriber, dailyPlan.today, dailyPlan.tomorrow, planMine, now],
+  );
   // Spot average for the share card: compareToOtherZones fetches other zones' raw spot prices, so the
   // comparison must stay spot-vs-spot regardless of what's displayed.
   const spotAveragePrice = useMemo(
@@ -432,7 +445,7 @@ export function HomeScreen({
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
       {/* Header: wordmark, the zone you're looking at (tap to switch), share. */}
       <View style={styles.header}>
         <Text style={styles.wordmark} accessibilityRole="header">
@@ -688,7 +701,9 @@ export function HomeScreen({
           <PriceChart
             slots={chartSlots}
             now={now}
-            bestTimes={isProSubscriber ? bestTimes : undefined}
+            highlights={planHighlights}
+            bestTimes={bestTimes}
+            nightPricesPending={isProSubscriber && dailyPlan.today !== null && !todayPlanParts.nightReady}
           />
 
           <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -701,6 +716,7 @@ export function HomeScreen({
               <Text style={styles.sectionTitle} accessibilityRole="header">
                 {t('home.proTipsTitle')}
               </Text>
+              <View onLayout={(e) => setPlanY(e.nativeEvent.layout.y)}>
               <DailyPlanCard
                 today={dailyPlan.today}
                 tomorrow={dailyPlan.tomorrow}
@@ -710,6 +726,7 @@ export function HomeScreen({
                 disabledDefaults={disabledDefaults}
                 registeredLabels={appliances.map((a) => a.label)}
               />
+              </View>
               {/* The plan's own heat rows replace this card when today's plan exists (no two answers). */}
               {heatsWithElectricity && !dailyPlan.today && (
                 <Card style={styles.sectionCard}>

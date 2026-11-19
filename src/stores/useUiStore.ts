@@ -29,12 +29,19 @@ interface UiState {
   hidePaywall: () => void;
   startTicker: (watts: number, label: string) => void;
   stopTicker: () => void;
+  /** Set when a tapped push should open Din plan; App switches to Översikt, Home scrolls and clears it. */
+  planFocusPending: boolean;
+  requestPlanFocus: () => void;
+  clearPlanFocus: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
   isPaywallVisible: false,
   paywallSource: 'generic',
   ticker: null,
+  planFocusPending: false,
+  requestPlanFocus: () => set({ planFocusPending: true }),
+  clearPlanFocus: () => set({ planFocusPending: false }),
   showPaywall: (source = 'generic') => set({ isPaywallVisible: true, paywallSource: source }),
   hidePaywall: () => set({ isPaywallVisible: false }),
   startTicker: (watts, label) => set({ ticker: { watts, label, startedAt: Date.now() } }),

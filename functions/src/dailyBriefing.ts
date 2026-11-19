@@ -17,6 +17,7 @@ import {
 } from './pushCopy';
 
 const DAILY_PLAN_TITLE = { sv: 'Din plan idag', en: 'Your plan today' } as const;
+const TONIGHT_LATER_COPY = { sv: 'Tiderna för i natt kommer runt kl 13.', en: "Tonight's times come around 13:00." } as const;
 
 const SWEDISH_ZONES = ['SE1', 'SE2', 'SE3', 'SE4'];
 
@@ -51,7 +52,9 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
       db.collection('weather').doc(`SE-${zone}`).get(),
       db.collection('plans').doc(`SE-${zone}-${todayDateKey}`).get(),
     ]);
-    const plan = planSnap.data() as { windows?: PlanWindow[]; text_sv?: string | null; text_en?: string | null } | undefined;
+    const plan = planSnap.data() as
+      | { windows?: PlanWindow[]; nightReady?: boolean; text_sv?: string | null; text_en?: string | null }
+      | undefined;
 
     if (!priceSnap.exists) {
       logger.info(`No prices cached for ${zone} on ${todayDateKey}, skipping briefing.`);
@@ -97,7 +100,13 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
           .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
         const name = next ? applianceName(language, next.activity) : '';
         const windowLine = next ? ` ${name.charAt(0).toUpperCase()}${name.slice(1)}: ${localClock(next.start)}–${localClock(next.end)}.` : '';
-        await sendExpoPushToUid(db, uid, DAILY_PLAN_TITLE[language], `${planText}${windowLine}`, { zone, dateKey: todayDateKey });
+        // Tonight's times arrive with tomorrow's prices (~13:00), after this push.
+        const tonightLine = plan?.nightReady === true ? '' : ` ${TONIGHT_LATER_COPY[language]}`;
+        await sendExpoPushToUid(db, uid, DAILY_PLAN_TITLE[language], `${planText}${windowLine}${tonightLine}`, {
+          kind: 'dailyPlan',
+          zone,
+          dateKey: todayDateKey,
+        });
         continue;
       }
 
