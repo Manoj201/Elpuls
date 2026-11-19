@@ -25,6 +25,13 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
+/**
+ * True when the app talks to anything but the production project (elpuls),
+ * i.e. the dev project used by the Simulator / Expo dev. Shows a "DEV" label
+ * (ScreenBackground) so test data is never mistaken for the real thing.
+ */
+export const isDevProject = firebaseConfig.projectId !== 'elpuls';
+
 const isFirstInit = getApps().length === 0;
 export const firebaseApp = isFirstInit ? initializeApp(firebaseConfig) : getApp();
 

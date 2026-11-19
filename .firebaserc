@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "elpuls"
+    "default": "elpuls-dev",
+    "prod": "elpuls",
+    "dev": "elpuls-dev"
   }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copies Cloud Functions secrets from GitHub Actions secrets into Firebase
-# (Google Secret Manager) before a deploy. Used by deploy-firebase.yml and
+# (Google Secret Manager) before a deploy. Used by firebase-prod.yml and
 # deploy-production.yml.
 #
 # For each NAME below: if the env var NAME is set (from a GitHub secret) and
@@ -11,7 +11,8 @@ set -euo pipefail
 
 SECRETS=(REVENUECAT_SECRET_KEY REVENUECAT_WEBHOOK_AUTH)
 FIREBASE="npx --yes firebase-tools@latest"
-PROJECT="elpuls"
+# Target project; production unless the workflow says otherwise.
+PROJECT="${FIREBASE_PROJECT:-elpuls}"
 
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT

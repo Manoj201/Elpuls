@@ -1,6 +1,6 @@
-name: Deploy Firebase
+name: Firebase-Prod
 
-# Manual Firebase-only deploy — no tag, no GitHub Release, no iOS build.
+# Manual Firebase-only deploy to PRODUCTION (elpuls) — no tag, no GitHub Release, no iOS build.
 # Use it for backend fixes (Cloud Functions, Firestore rules/indexes) that
 # shouldn't wait for an app release, or to retry a single function, e.g. a
 # first-time Eventarc/IAM failure. Full releases still go through
@@ -31,7 +31,7 @@ permissions:
 # Never run two Firebase deploys at once (also shared with nothing else, so
 # an iOS build in "Deploy to Production" doesn't block this).
 concurrency:
-  group: deploy-firebase
+  group: deploy-firebase-prod
   cancel-in-progress: false
 
 jobs:
@@ -87,6 +87,7 @@ jobs:
 
       - name: Sync Cloud Functions secrets from GitHub
         env:
+          FIREBASE_PROJECT: elpuls
           REVENUECAT_SECRET_KEY: ${{ secrets.REVENUECAT_SECRET_KEY }}
           REVENUECAT_WEBHOOK_AUTH: ${{ secrets.REVENUECAT_WEBHOOK_AUTH }}
         run: ./scripts/sync-function-secrets.sh
@@ -98,6 +99,6 @@ jobs:
 
       - name: Summary
         run: |
-          echo "### Firebase deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Firebase deployed to PRODUCTION (elpuls)" >> "$GITHUB_STEP_SUMMARY"
           echo "- Ref: \`${{ inputs.ref }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Target: \`--only ${{ steps.only.outputs.only }}\`" >> "$GITHUB_STEP_SUMMARY"

@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { Image, KeyboardAvoidingView, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { isDevProject } from '../lib/firebase';
 import { theme } from '../theme';
 
 interface ScreenBackgroundProps {
@@ -27,6 +28,12 @@ export function ScreenBackground({ children, style }: PropsWithChildren<ScreenBa
       <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         {children}
       </KeyboardAvoidingView>
+      {/* Connected to the dev Firebase project (elpuls-dev): never shown in TestFlight / App Store builds. */}
+      {isDevProject && (
+        <View pointerEvents="none" style={styles.devBadge} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Text style={styles.devText}>DEV</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -35,4 +42,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   art: { ...StyleSheet.absoluteFillObject, opacity: 0.5 },
   keyboardAvoiding: { flex: 1 },
+  devBadge: {
+    position: 'absolute',
+    top: 54,
+    left: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: theme.colors.dangerEmber,
+  },
+  devText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.xs, color: '#FFFFFF', letterSpacing: 1 },
 });
