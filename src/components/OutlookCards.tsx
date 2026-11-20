@@ -8,7 +8,10 @@ import { DIRECTION_STYLE, directionOf, type Direction } from '../lib/outlookDire
 import { theme } from '../theme';
 import { AiNote } from './AiNote';
 import { Card } from './Card';
+import { Chip } from './Chip';
 import { OutlookChart } from './OutlookChart';
+import { OutlookYearChart, yearColor, yearSeries } from './OutlookYearChart';
+import { IconChevronRight } from '@tabler/icons-react-native';
 
 const stockholmDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Stockholm' });
 
@@ -260,104 +263,204 @@ export function OutlookDaysCard({ outlook, todayAvg, zone }: { outlook: Outlook;
   );
 }
 
-/** "Snittpris per dag" (Pro): the trend chart on its own card. */
+export type OutlookRange = 'week' | 'month' | 'year';
+
+/** Which of Week / Month / Year this outlook has data for. */
+export function availableRanges(outlook: Outlook): OutlookRange[] {
+  return [
+    'week',
+    ...(outlook.recent.length >= 10 ? (['month'] as const) : []),
+    ...(yearSeries(outlook.months).length >= 2 ? (['year'] as const) : []),
+  ];
+}
+
+/**
+ * "Elpriset över tid" (Pro): one chart card with Week / Month / Year (UI/UX
+ * Pro Max time-scale-clarity: name the time scale, let people switch). Week
+ * and Month are the AI forecast against real prices (with our earlier
+ * forecasts dotted in); Year is history only, so its subtitle says so and
+ * the AI note is hidden.
+ */
 export function OutlookChartCard({
   outlook,
   todayAvg,
   tomorrowAvg,
+  range,
+  onRangeChange,
 }: {
   outlook: Outlook;
   todayAvg: number | null;
   /** Tomorrow's real average when published (else the outlook's copy). */
   tomorrowAvg: number | null;
+  range: OutlookRange;
+  onRangeChange: (range: OutlookRange) => void;
 }) {
   const { t } = useTranslation();
   if (!outlook.show || todayAvg === null) return null;
+  const ranges = availableRanges(outlook);
+  const shown = ranges.includes(range) ? range : 'week';
   const now = new Date();
   const todayKey = stockholmDate.format(now);
   const tomorrowKey = stockholmDate.format(new Date(now.getTime() + 24 * 3600 * 1000));
   const tomorrowValue = tomorrowAvg ?? outlook.tomorrowAvg;
+  const label: Record<OutlookRange, string> = {
+    week: t('outlook.rangeWeek'),
+    month: t('outlook.rangeMonth'),
+    year: t('outlook.rangeYear'),
+  };
   return (
     <Card style={styles.card}>
       <Text style={styles.title} accessibilityRole="header">
         {t('outlook.chartTitle')}
       </Text>
-      <Text style={styles.subtitle}>{t('outlook.chartSubtitle')}</Text>
+      {ranges.length > 1 && (
+        <View style={styles.rangeRow}>
+          {ranges.map((r) => (
+            <Chip key={r} label={label[r]} selected={shown === r} onPress={() => onRangeChange(r)} />
+          ))}
+        </View>
+      )}
+      <Text style={styles.subtitle}>{shown === 'year' ? t('outlook.yearSubtitle') : t('outlook.chartSubtitle')}</Text>
       <View style={styles.chart}>
-        <OutlookChart
-          recent={outlook.recent}
-          today={{ date: todayKey, avg: todayAvg }}
-          tomorrow={tomorrowValue !== null ? { date: tomorrowKey, avg: tomorrowValue } : null}
-          days={outlook.days}
-        />
+        {shown === 'year' ? (
+          <OutlookYearChart months={outlook.months} />
+        ) : (
+          <OutlookChart
+            range={shown}
+            recent={outlook.recent}
+            today={{ date: todayKey, avg: todayAvg }}
+            tomorrow={tomorrowValue !== null ? { date: tomorrowKey, avg: tomorrowValue } : null}
+            days={outlook.days}
+            pastForecasts={outlook.pastForecasts}
+          />
+        )}
       </View>
-      <AiNote kind="forecastShort" />
+      {shown !== 'year' && <AiNote kind="forecastShort" />}
     </Card>
   );
 }
 
-const monthDirection = (change: number): Direction => (change <= -0.1 ? 'cheaper' : change >= 0.1 ? 'dearer' : 'same');
-const roundPct = (change: number) => Math.round(Math.abs(change) * 10) * 10; // nearest 10 %: it's a rough pattern
-
-/** The three month tiles (name, arrow, big %, word). */
-function MonthTiles({ seasonal }: { seasonal: Outlook['seasonal'] }) {
-  const { t, i18n } = useTranslation();
-  const locale = (i18n.language as SupportedLanguage) === 'sv' ? 'sv-SE' : 'en-GB';
-  const monthName = (key: string) => new Date(`${key}-15T12:00:00`).toLocaleDateString(locale, { month: 'long' });
-  const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  return (
-      <View style={styles.monthTiles}>
-        {seasonal.map((m) => {
-          const dir = monthDirection(m.change);
-          const { Icon, color, soft } = DIRECTION_STYLE[dir];
-          const name = capital(monthName(m.month));
-          const pct = roundPct(m.change);
-          const big = dir === 'same' ? t('outlook.monthTileSame') : `${dir === 'dearer' ? '+' : '−'}${pct} %`;
-          const word = t(`outlook.monthTileWord.${dir}`);
-          const a11y = dir === 'same' ? t('outlook.monthSame') : t(`outlook.month.${dir}`, { pct });
-          return (
-            <View key={m.month} style={[styles.monthTile, { backgroundColor: soft }]} accessible accessibilityLabel={`${name}, ${a11y}`}>
-              <Text style={styles.monthName} numberOfLines={1}>
-                {name}
-              </Text>
-              <Icon size={22} color={color} style={styles.monthIcon} />
-              <Text style={styles.monthBig} numberOfLines={1} adjustsFontSizeToFit>
-                {big}
-              </Text>
-              <Text style={styles.monthWord} numberOfLines={1}>
-                {word}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-  );
-}
-
 /**
- * "Kommande månader" (Pro): three month tiles (arrow + big % + word) instead
- * of sentences, and one line saying what they're compared with.
+ * "Samma tid tidigare år" (Pro): what the coming three months cost in the
+ * two latest years, as plain facts. Replaced the old % arrows (2026-11-20):
+ * a backtest on 2024–2026 showed the pattern got next month's direction right
+ * only about 1 time in 3, no better than a guess (CLAUDE.md §11).
  */
-export function SeasonalCard({ outlook }: { outlook: Outlook }) {
+export function SeasonalCard({ outlook, onShowInChart }: { outlook: Outlook; onShowInChart?: () => void }) {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
-  if (outlook.seasonal.length === 0) return null;
   const locale = language === 'sv' ? 'sv-SE' : 'en-GB';
-  const thisMonth = new Date().toLocaleDateString(locale, { month: 'long' });
-  const years = Math.max(...outlook.seasonal.map((m) => m.years));
+  const byMonth = new Map(outlook.months.filter((m) => !m.partial).map((m) => [m.month, m.avg]));
+  if (byMonth.size === 0) return null;
+  const newestYear = Number(outlook.months[outlook.months.length - 1].month.slice(0, 4));
+  // This month so far: what every past month is compared with (a fact, not a forecast).
+  const current = outlook.months.find((mm) => mm.partial) ?? null;
+  const now = new Date();
+  const [y, m] = stockholmDate.format(now).split('-').map(Number);
+  const monthName = (idx: number, style: 'long' = 'long') => {
+    const text = new Date(2000, idx, 15).toLocaleDateString(locale, { month: style });
+    return text;
+  };
+  // The next three months, each with the same month in the two latest years we have.
+  const tiles = [1, 2, 3].map((ahead) => {
+    const monthIdx = (m - 1 + ahead) % 12;
+    const name = monthName(monthIdx);
+    const years = [y + Math.floor((m - 1 + ahead) / 12) - 1, y + Math.floor((m - 1 + ahead) / 12) - 2]
+      .map((year) => ({ year, avg: byMonth.get(`${year}-${String(monthIdx + 1).padStart(2, '0')}`) }))
+      .filter((v): v is { year: number; avg: number } => v.avg !== undefined);
+    return { key: monthIdx, name: name.charAt(0).toUpperCase() + name.slice(1), years };
+  });
+  if (tiles.every((tile) => tile.years.length === 0)) return null;
+
+  const change = (avg: number) => (current && current.avg > 0.05 ? avg / current.avg - 1 : null);
+  const pctText = (c: number) => `${c < 0 ? '−' : '+'}${Math.round(Math.abs(c) * 100)} %`;
+  const spoken = (avg: number) => {
+    const c = change(avg);
+    if (c === null) return '';
+    const pct = Math.round(Math.abs(c) * 100);
+    return `, ${c < 0 ? t('outlook.pctCheaperThanNow', { pct }) : t('outlook.pctDearerThanNow', { pct })}`;
+  };
 
   return (
     <Card style={styles.card}>
       <Text style={styles.title} accessibilityRole="header">
-        {t('outlook.monthsTitle')}
+        {t('outlook.pastYearsTitle')}
       </Text>
-      <MonthTiles seasonal={outlook.seasonal} />
-      <Text style={styles.note}>{t('outlook.monthsBasis', { count: years, month: thisMonth })}</Text>
+      <View style={styles.monthTiles}>
+        {tiles.map((tile) => (
+          <View
+            key={tile.key}
+            style={[styles.monthTile, styles.pastTile]}
+            accessible
+            accessibilityLabel={`${tile.name}: ${tile.years
+              .map((v) => `${v.year} ${t('outlook.oreShort', { ore: ore(v.avg) })}${spoken(v.avg)}`)
+              .join('; ')}`}
+          >
+            <Text style={styles.monthName} numberOfLines={1}>
+              {tile.name}
+            </Text>
+            {tile.years.map((v, k) => {
+              const c = change(v.avg);
+              const dir = c === null ? null : c <= -0.1 ? 'cheaper' : c >= 0.1 ? 'dearer' : 'same';
+              const style = dir ? DIRECTION_STYLE[dir] : null;
+              return (
+                <View key={v.year} style={k > 0 ? styles.pastBlockOther : styles.pastBlock}>
+                  <View style={styles.pastYearRow}>
+                    <View style={[styles.yearDot, { backgroundColor: yearColor(v.year, newestYear) }]} />
+                    <Text style={styles.pastYear}>{v.year}</Text>
+                  </View>
+                  <Text style={k === 0 ? styles.pastMain : styles.pastOther} numberOfLines={1} adjustsFontSizeToFit>
+                    {t('outlook.oreShort', { ore: ore(v.avg) })}
+                  </Text>
+                  {dir && style && c !== null && (
+                    <View style={[styles.pctPill, { backgroundColor: style.soft }]}>
+                      <style.Icon size={14} color={style.color} />
+                      <Text style={[styles.pctText, { color: DIR_TEXT[dir] }]} numberOfLines={1}>
+                        {pctText(c)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+            {tile.years.length === 0 && <Text style={styles.pastOther}>–</Text>}
+          </View>
+        ))}
+      </View>
+      <Text style={styles.note}>
+        {current
+          ? t('outlook.pastYearsCompared', { month: monthName(m - 1), ore: ore(current.avg) })
+          : t('outlook.pastYearsNote')}
+      </Text>
+      {onShowInChart && (
+        <Pressable
+          onPress={onShowInChart}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Text style={styles.link}>{t('outlook.showInChart')}</Text>
+          <IconChevronRight size={18} color={theme.colors.accentPurpleDeep} />
+        </Pressable>
+      )}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  rangeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12, marginBottom: 8 },
+  pastTile: { backgroundColor: theme.colors.background, alignItems: 'flex-start' },
+  pastMain: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.lg, color: theme.colors.textPrimary, marginTop: 2, fontVariant: ['tabular-nums'] },
+  pastBlock: { marginTop: 10, alignSelf: 'stretch' },
+  pastBlockOther: { marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border, alignSelf: 'stretch' },
+  pastYearRow: { flexDirection: 'row', alignItems: 'center' },
+  yearDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+  pctPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, marginTop: 6, columnGap: 3 },
+  pctText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm, fontVariant: ['tabular-nums'] },
+  pastOther: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginTop: 2, fontVariant: ['tabular-nums'] },
+  pastYear: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary },
+  linkRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', minHeight: 44, marginTop: 4 },
+  link: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.md, color: theme.colors.accentPurpleDeep, marginRight: 2 },
   card: { marginBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.lg, color: theme.colors.textPrimary },
@@ -418,7 +521,4 @@ const styles = StyleSheet.create({
   monthTiles: { flexDirection: 'row', columnGap: 8, marginTop: 12 },
   monthTile: { flex: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center' },
   monthName: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary },
-  monthIcon: { marginTop: 8 },
-  monthBig: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.xl, color: theme.colors.textPrimary, marginTop: 4, fontVariant: ['tabular-nums'] },
-  monthWord: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary, marginTop: 2 },
 });

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
@@ -292,7 +293,11 @@ export function SettingsScreen({
   ).length;
   const applianceCount = activeDefaults + registeredAppliances.length;
   const languageValue = i18n.language === 'sv' ? 'Svenska' : 'English';
-  const appVersion = Constants.expoConfig?.version ?? '';
+  // The installed app's own version and build (e.g. 1.0.7 (22)), read from the
+  // binary, so it matches TestFlight / the App Store even after an OTA update.
+  const appVersion = Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '';
+  const buildNumber = Application.nativeBuildVersion ?? '';
+  const versionLabel = buildNumber ? `${appVersion} (${buildNumber})` : appVersion;
 
   const toastView = toast !== null && (
     <View style={[styles.toast, toast === 'error' && styles.toastError]} accessibilityLiveRegion="polite" pointerEvents="none">
@@ -670,9 +675,9 @@ export function SettingsScreen({
         <NavRow icon={IconHelpCircle} label={t('settings.guide')} onPress={onOpenGuide} />
         <NavRow divider icon={IconShieldLock} label={t('settings.privacy')} onPress={() => Linking.openURL(PRIVACY_URL)} external />
         <NavRow divider icon={IconFileText} label={t('settings.terms')} onPress={() => Linking.openURL(TERMS_URL)} external />
-        <NavRow divider icon={IconMail} label={t('settings.contact')} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Elpuls%20${appVersion}`)} external />
+        <NavRow divider icon={IconMail} label={t('settings.contact')} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Elpuls ${versionLabel}`)}`)} external />
       </Card>
-      <Text style={styles.versionText}>{t('settings.version', { version: appVersion })}</Text>
+      <Text style={styles.versionText}>{t('settings.version', { version: versionLabel })}</Text>
 
       <Card style={styles.deleteCard}>
         <InfoRow

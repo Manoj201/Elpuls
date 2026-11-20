@@ -77,7 +77,7 @@ export function PriceBar({ prices, highlightHour, highlightRanges = [] }: PriceB
                   band: t(`chart.band.${band}`),
                 })}
               >
-                <Text style={[styles.price, isCurrent && styles.priceCurrent]}>{formatOre(p.price, language)}</Text>
+                <Text style={[styles.price, isCurrent && styles.priceCurrent]}>{Math.round(p.price * 100)}</Text>
                 {isCurrent && <View style={styles.currentDot} />}
                 <View style={[styles.bar, { height: Math.max(height, 2), backgroundColor: BAND_COLOR[band] }]} />
                 <Text style={[styles.hour, isCurrent && styles.hourCurrent]}>{String(p.hour.getHours()).padStart(2, '0')}</Text>

@@ -20,12 +20,34 @@ export interface SeasonalMonth {
   years: number;
 }
 
+export interface PastForecast {
+  date: string;
+  /** What we forecast for this day, SEK/kWh excl. VAT. */
+  mid: number;
+  low: number;
+  high: number;
+  /** Days before the day the forecast was made. */
+  ahead: number;
+}
+
+export interface MonthAverage {
+  /** 'YYYY-MM' */
+  month: string;
+  avg: number;
+  /** The current month, only the days so far. */
+  partial: boolean;
+}
+
 export interface Outlook {
   /** The last days' real averages (SEK/kWh), oldest first; may be empty on older docs. */
   recent: { date: string; avg: number }[];
   /** Tomorrow's real average when the outlook was made. */
   tomorrowAvg: number | null;
   days: OutlookDay[];
+  /** Our own earlier forecasts for the recent days (empty on older docs). */
+  pastForecasts: PastForecast[];
+  /** Monthly averages, oldest first (empty on older docs). */
+  months: MonthAverage[];
   seasonal: SeasonalMonth[];
   show: boolean;
   hitRate: number;
@@ -85,6 +107,8 @@ export function useOutlook(zone: string, enabled: boolean): { outlook: Outlook |
             text: typeof text === 'string' && text.trim() ? text : null,
             days: ((data.days ?? []) as OutlookDay[]).filter((d) => d.date >= dayAfterTomorrow),
             seasonal: (data.seasonal ?? []) as SeasonalMonth[],
+            pastForecasts: Array.isArray(data.pastForecasts) ? (data.pastForecasts as PastForecast[]).filter((p) => p.date < today) : [],
+            months: Array.isArray(data.months) ? (data.months as MonthAverage[]) : [],
           },
         });
       } catch (err) {

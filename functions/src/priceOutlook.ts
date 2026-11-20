@@ -3,6 +3,13 @@ import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firesto
 import * as logger from 'firebase-functions/logger';
 import { addDays, loadHistory, RateLimitedError, updateHistory, type History } from './priceHistory';
 
+/** Past days stored on each outlook doc for the app's chart ("Månad" view). */
+const RECENT_HISTORY_DAYS = 30;
+/** Our own earlier forecast for a past day: preferably the one made 3 days before. */
+const PAST_FORECAST_AHEAD = [3, 2, 4, 5, 6, 7];
+/** Months of monthly averages for the "År" view and "Same time in past years". */
+const MONTH_HISTORY = 36;
+
 /**
  * 7-day and seasonal price outlook (Pro, Release 1.2 section H).
  *
@@ -409,11 +416,15 @@ async function buildZone(db: Firestore, zone: string, today: string): Promise<vo
   }
   const text = outlook.show ? await writeSummary(zone, outlook) : { sv: null, en: null };
 
-  // The last 5 days' real averages, so the app's chart can show where prices come from.
-  const recent = [5, 4, 3, 2, 1]
+  // The last 30 days' real averages, so the app's chart can show where prices
+  // come from (week view uses the last 5, month view all of them).
+  const recent = Array.from({ length: RECENT_HISTORY_DAYS }, (_, i) => RECENT_HISTORY_DAYS - i)
     .map((n) => addDays(today, -n))
     .filter((d) => history[d]?.p !== undefined)
     .map((d) => ({ date: d, avg: round(history[d].p as number) }));
+
+  const pastForecasts = await loadPastForecasts(db, zone, recent.map((r) => r.date));
+  const months = monthlyAverages(history, today);
 
   await db.collection('outlooks').doc(`SE-${zone}-${today}`).set({
     zone,
@@ -421,6 +432,8 @@ async function buildZone(db: Firestore, zone: string, today: string): Promise<vo
     todayAvg: round(todayAvg),
     tomorrowAvg: round(tomorrowAvg),
     recent,
+    pastForecasts,
+    months,
     ...outlook,
     text_sv: text.sv,
     text_en: text.en,
@@ -429,6 +442,92 @@ async function buildZone(db: Firestore, zone: string, today: string): Promise<vo
   logger.info(
     `Outlook ${zone}: hit rate ${Math.round(outlook.backtest.hitRate * 100)} % (${outlook.backtest.tested} tests), range coverage ${Math.round(outlook.backtest.coverage * 100)} %, show ${outlook.show}.`,
   );
+}
+
+export interface PastForecast {
+  date: string;
+  mid: number;
+  low: number;
+  high: number;
+  /** How many days before the day the forecast was made. */
+  ahead: number;
+}
+
+/**
+ * What we forecast for each of `dates` earlier, read from our own saved
+ * outlook docs (the one made 3 days before when it exists). Lets the app show
+ * our track record next to the real prices: live forecasts only, never the
+ * backtest (which used the real weather and looks better than live).
+ */
+export async function loadPastForecasts(db: Firestore, zone: string, dates: string[]): Promise<PastForecast[]> {
+  if (dates.length === 0) return [];
+  const made = new Set<string>();
+  for (const d of dates) for (const k of PAST_FORECAST_AHEAD) made.add(addDays(d, -k));
+  const refs = [...made].map((m) => db.collection('outlooks').doc(`SE-${zone}-${m}`));
+  const snaps = await db.getAll(...refs);
+  const byMade = new Map<string, { date: string; mid: number; low: number; high: number }[]>();
+  for (const snap of snaps) {
+    const data = snap.data();
+    if (!snap.exists || !data || !Array.isArray(data.days)) continue;
+    byMade.set(String(data.date), data.days);
+  }
+  return pastForecastsFrom(byMade, dates);
+}
+
+/** Pure part of loadPastForecasts: pick each date's forecast, preferring 3 days ahead. */
+export function pastForecastsFrom(
+  byMade: Map<string, { date: string; mid: number; low: number; high: number }[]>,
+  dates: string[],
+): PastForecast[] {
+  const out: PastForecast[] = [];
+  for (const d of dates) {
+    for (const k of PAST_FORECAST_AHEAD) {
+      const day = byMade.get(addDays(d, -k))?.find((x) => x.date === d);
+      if (day && typeof day.mid === 'number') {
+        out.push({ date: d, mid: round(day.mid), low: round(day.low), high: round(day.high), ahead: k });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+export interface MonthAverage {
+  /** 'YYYY-MM' */
+  month: string;
+  /** SEK/kWh excl. VAT, average of the month's daily averages. */
+  avg: number;
+  /** True for the current month (only the days so far). */
+  partial: boolean;
+}
+
+/**
+ * Monthly average spot price for the last MONTH_HISTORY months, oldest first.
+ * Full months need ≥ 20 days of prices; the current month is included from 5
+ * days on, marked partial.
+ */
+export function monthlyAverages(history: History, today: string): MonthAverage[] {
+  const thisMonth = today.slice(0, 7);
+  const byMonth = new Map<string, number[]>();
+  for (const [d, v] of Object.entries(history)) {
+    if (v.p === undefined || d >= today) continue;
+    const key = d.slice(0, 7);
+    const list = byMonth.get(key);
+    if (list) list.push(v.p);
+    else byMonth.set(key, [v.p]);
+  }
+  const [y, m] = thisMonth.split('-').map(Number);
+  const out: MonthAverage[] = [];
+  for (let i = MONTH_HISTORY - 1; i >= 0; i--) {
+    const t = new Date(Date.UTC(y, m - 1 - i, 1));
+    const key = `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}`;
+    const list = byMonth.get(key) ?? [];
+    const partial = key === thisMonth;
+    if (list.length >= (partial ? 5 : 20)) {
+      out.push({ month: key, avg: round(list.reduce((a, b) => a + b, 0) / list.length), partial });
+    }
+  }
+  return out;
 }
 
 /**

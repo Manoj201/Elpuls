@@ -1,19 +1,22 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useCountryStore } from '../stores/useCountryStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { groupPricesByHour } from '../lib/priceUtils';
 import { summarizePricePeriods } from '../lib/pricePeriods';
+import { DIRECTION_STYLE, directionOf, type Direction } from '../lib/outlookDirection';
 import { BAND_COLOR, type PriceBand } from '../lib/priceBands';
-import { formatClock, formatOre } from '../lib/formatNumber';
+import { formatClock } from '../lib/formatNumber';
 import type { SupportedLanguage } from '../i18n';
 import { theme } from '../theme';
 import { Card } from '../components/Card';
 import { PriceChart } from '../components/PriceChart';
 import {
   OutlookChartCard,
+  type OutlookRange,
   OutlookDaysCard,
+  availableRanges,
   SeasonalCard,
 } from '../components/OutlookCards';
 import { ProUpsellCard } from '../components/ProUpsellCard';
@@ -56,7 +59,10 @@ function DaySummary({
   language,
   emptyText,
   now,
+  compareWith,
 }: {
+  /** Today's average, to show "x % cheaper than today" on tomorrow's card. */
+  compareWith?: number | null;
   title: string;
   hourlyPrices: ReturnType<typeof groupPricesByHour>;
   language: SupportedLanguage;
@@ -66,6 +72,9 @@ function DaySummary({
   const { t } = useTranslation();
   const avgPrice = hourlyPrices.length > 0 ? hourlyPrices.reduce((s, p) => s + p.price, 0) / hourlyPrices.length : null;
   const periods = useMemo(() => summarizePricePeriods(hourlyPrices), [hourlyPrices]);
+  // Tomorrow vs today in one line on the card itself (it used to be a separate card).
+  const dir = avgPrice !== null && compareWith ? directionOf(avgPrice, compareWith) : null;
+  const pct = avgPrice !== null && compareWith ? Math.round(Math.abs(avgPrice / compareWith - 1) * 100) : 0;
 
   return (
     <Card style={styles.dayCard}>
@@ -76,8 +85,19 @@ function DaySummary({
       ) : (
         <>
           <Text style={styles.dayAverage}>
-            {formatOre(avgPrice, language)} <Text style={styles.dayAverageUnit}>{t('forecast.averageUnit')}</Text>
+            {Math.round(avgPrice * 100)} <Text style={styles.dayAverageUnit}>{t('forecast.averageUnit')}</Text>
           </Text>
+          {dir && (
+            <View style={[styles.comparePill, { backgroundColor: DIRECTION_STYLE[dir].soft }]}>
+              {(() => {
+                const Icon = DIRECTION_STYLE[dir].Icon;
+                return <Icon size={16} color={DIRECTION_STYLE[dir].color} />;
+              })()}
+              <Text style={[styles.compareText, { color: COMPARE_TEXT[dir] }]}>
+                {dir === 'same' ? t('forecast.vsTodaySame') : t(dir === 'cheaper' ? 'forecast.vsTodayCheaper' : 'forecast.vsTodayDearer', { pct })}
+              </Text>
+            </View>
+          )}
           <Text style={styles.explain}>{t('forecast.periodsExplain')}</Text>
 
           <View style={styles.periodList}>
@@ -86,7 +106,7 @@ function DaySummary({
               const to = clockLabel(period.end, true);
               const isNow = now >= period.start && now < period.end;
               const bandWord = t(`chart.legend.${period.band}`);
-              const price = formatOre(period.averagePrice, language);
+              const price = String(Math.round(period.averagePrice * 100));
               return (
                 <View
                   key={period.start.toISOString()}
@@ -131,19 +151,27 @@ export function ForecastScreen() {
   const now = useNow();
   const isProSubscriber = useUserStore((s) => s.isProSubscriber);
   const { outlook, isLoading: outlookLoading } = useOutlook(zone, isProSubscriber);
+  const [outlookRange, setOutlookRange] = useState<OutlookRange>('week');
+  const scrollRef = useRef<ScrollView>(null);
+  const chartCardY = useRef(0);
+  // "Show in the chart" on the past-years card: switch to Year and scroll up to the chart.
+  const showYearChart = () => {
+    setOutlookRange('year');
+    scrollRef.current?.scrollTo({ y: Math.max(0, chartCardY.current - 16), animated: true });
+  };
   const todayHourly = useMemo(() => groupPricesByHour(todayPrices), [todayPrices]);
   const tomorrowHourly = useMemo(() => groupPricesByHour(tomorrowPrices), [tomorrowPrices]);
 
   const todayAvg = todayHourly.length > 0 ? todayHourly.reduce((s, p) => s + p.price, 0) / todayHourly.length : null;
   const tomorrowAvg =
     tomorrowHourly.length > 0 ? tomorrowHourly.reduce((s, p) => s + p.price, 0) / tomorrowHourly.length : null;
-  const diffPct = todayAvg !== null && tomorrowAvg !== null && todayAvg > 0 ? ((tomorrowAvg - todayAvg) / todayAvg) * 100 : null;
 
   const todaySummary = (
     <DaySummary title={t('forecast.today')} hourlyPrices={todayHourly} language={language} emptyText={t('forecast.noPrices')} now={now} />
   );
   const tomorrowSummary = (
     <DaySummary
+      compareWith={todayAvg}
       title={t('forecast.tomorrow')}
       hourlyPrices={tomorrowHourly}
       language={language}
@@ -152,22 +180,23 @@ export function ForecastScreen() {
     />
   );
 
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
       <Text style={styles.title}>{t('forecast.title')}</Text>
       <Text style={styles.subtitle}>{t('forecast.subtitle', { zone })}</Text>
 
-      {diffPct !== null && (
-        <Card style={styles.diffCard}>
-          <Text style={styles.diffLabel}>
-            {diffPct <= 0 ? t('forecast.tomorrowCheaper') : t('forecast.tomorrowPricier')}
-          </Text>
-          <Text style={[styles.diffValue, { color: diffPct <= 0 ? theme.colors.positiveTeal : theme.colors.dangerEmber }]}>
-            {diffPct <= 0 ? '' : '+'}
-            {Math.round(diffPct)}%
-          </Text>
-        </Card>
-      )}
+      {/*
+        Order (UI/UX Pro Max content-priority + proximity, reworked 2026-11-20),
+        near → far, certain → uncertain:
+        1. the next real prices (tomorrow once published, with "x % vs today"),
+        2. the 48 h chart,
+        3. coming days (AI) and right below it the chart of the same forecast
+           (they used to be split by two hour cards),
+        4. same time in past years (facts),
+        5. the other day's hours last: today is already on Home.
+      */}
+      {tomorrowHourly.length > 0 ? tomorrowSummary : todaySummary}
 
       {todayPrices.length > 0 && (
         <Card style={styles.chartCard}>
@@ -175,15 +204,21 @@ export function ForecastScreen() {
         </Card>
       )}
 
-      {/*
-        Order (UI/UX Pro Max content-priority, near → far): the quick answer and
-        the 48 h chart, then the coming days (the screen's main question), then
-        the hour-by-hour detail for tomorrow and today, then the longer views.
-        Tomorrow comes before today once published: today is already on Home.
-      */}
       {isProSubscriber ? (
         outlook ? (
-          <OutlookDaysCard outlook={outlook} todayAvg={todayAvg} zone={zone} />
+          <>
+            <OutlookDaysCard outlook={outlook} todayAvg={todayAvg} zone={zone} />
+            <View onLayout={(e) => (chartCardY.current = e.nativeEvent.layout.y)}>
+              <OutlookChartCard
+                outlook={outlook}
+                todayAvg={todayAvg}
+                tomorrowAvg={tomorrowAvg}
+                range={outlookRange}
+                onRangeChange={setOutlookRange}
+              />
+            </View>
+            <SeasonalCard outlook={outlook} onShowInChart={availableRanges(outlook).includes('year') ? showYearChart : undefined} />
+          </>
         ) : !outlookLoading ? (
           <Card style={styles.dayCard}>
             <Text style={styles.dayTitle}>{t('outlook.daysTitle')}</Text>
@@ -192,26 +227,9 @@ export function ForecastScreen() {
         ) : null
       ) : null}
 
-      {tomorrowHourly.length > 0 ? (
-        <>
-          {tomorrowSummary}
-          {todaySummary}
-        </>
-      ) : (
-        <>
-          {todaySummary}
-          {tomorrowSummary}
-        </>
-      )}
+      {tomorrowHourly.length > 0 ? todaySummary : tomorrowSummary}
 
-      {isProSubscriber ? (
-        outlook && (
-          <>
-            <OutlookChartCard outlook={outlook} todayAvg={todayAvg} tomorrowAvg={tomorrowAvg} />
-            <SeasonalCard outlook={outlook} />
-          </>
-        )
-      ) : (
+      {!isProSubscriber && (
         // Free: one Pro offer at the end instead of a locked card per section.
         <ProUpsellCard
           style={styles.locked}
@@ -228,13 +246,19 @@ export function ForecastScreen() {
   );
 }
 
+/** Readable tones for the comparison words (≥ 9:1 on the card), the colours' text twins. */
+const COMPARE_TEXT: Record<Direction, string> = {
+  cheaper: theme.colors.positiveTealDeep,
+  same: theme.colors.textSecondary,
+  dearer: theme.colors.accentAmberDeep,
+};
+
 const styles = StyleSheet.create({
+  comparePill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', columnGap: 6, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginTop: 8 },
+  compareText: { fontFamily: theme.typography.bodySemibold, fontSize: theme.type.sm },
   container: { padding: 16, paddingTop: 60, paddingBottom: 40 },
   title: { fontFamily: theme.typography.display, fontSize: theme.type.xl, color: theme.colors.textPrimary },
   subtitle: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textMuted, marginTop: 4, marginBottom: 20 },
-  diffCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  diffLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, flex: 1 },
-  diffValue: { fontFamily: theme.typography.display, fontSize: theme.type.lg },
   dayCard: { marginBottom: 16 },
   locked: { marginBottom: 16 },
   chartCard: { marginBottom: 16, overflow: 'hidden' },
