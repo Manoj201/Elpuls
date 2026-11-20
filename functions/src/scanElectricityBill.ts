@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import type Anthropic from '@anthropic-ai/sdk';
+import { checkBill, fixedFeesFromLines, monthlyInclVat, resolveBillType, type BillCheck, type FixedFeeLine } from './billChecks';
 
 const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -35,24 +36,11 @@ export interface ScanElectricityBillResult {
   consumptionKwh: number | null;
   periodDays: number | null;
   confidence: 'high' | 'low';
+  /** Fields that look wrong (checked in code: line totals, ranges, units). The app says "Kontrollera mot fakturan". */
+  checks: BillCheck[];
 }
 
 const NUMBER_OR_NULL = ['number', 'null'];
-const DAYS_PER_MONTH = 365 / 12;
-
-/**
- * Fixed fee as printed on the bill (rate + unit + VAT or not) → kr per
- * month incl. VAT. Done here, not by the model: asking the model to convert
- * made it return the period total excl. VAT instead (a real Vattenfall bill
- * gave 549,34 kr for "Abonnemang 6 468 kr/år", which is 673,75 kr/month).
- */
-function monthlyInclVat(rate: unknown, per: unknown, includesVat: unknown): number | null {
-  if (typeof rate !== 'number' || !Number.isFinite(rate) || rate < 0) return null;
-  const perMonth = per === 'year' ? rate / 12 : per === 'day' ? rate * DAYS_PER_MONTH : per === 'month' ? rate : null;
-  if (perMonth === null) return null;
-  const withVat = includesVat === true ? perMonth : perMonth * 1.25;
-  return Math.round(withVat * 100) / 100;
-}
 const STRING_OR_NULL = ['string', 'null'];
 
 /**
@@ -137,7 +125,7 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
                 retailerMarkupOrePerKwh: {
                   type: NUMBER_OR_NULL,
                   description:
-                    'Retailer\'s own markup on top of the spot price, in öre/kWh EXCLUDING VAT: the sum of lines like "Påslag", "Fast påslag", "Rörliga kostnader", "Tillägg". NOT the spot price itself, NOT the grid fee, NOT energy tax or elcertifikat. Null if not on this bill.',
+                    'Retailer\'s own markup on top of the spot price, in öre/kWh EXCLUDING VAT: ADD UP the rates of lines like "Rörliga kostnader", "Fast påslag", "Fast påslag spot", "Påslag", "Tillägg". NEVER the "Spotpris"/"Medelspotpris" line (that is the market price), NOT the grid fee, NOT energy tax, NOT negative production/self-billing lines (solar sold to the grid). Null if not on this bill.',
                 },
                 retailerFixedRate: {
                   type: NUMBER_OR_NULL,
@@ -156,6 +144,63 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
                 consumptionKwh: {
                   type: NUMBER_OR_NULL,
                   description: 'Total electricity used in the billing period, in kWh ("Förbrukning", the kWh quantity on the spot price or elöverföring line). Null if not shown.',
+                },
+                fixedFeeLines: {
+                  type: 'array',
+                  description:
+                    'Every FIXED fee line on the bill (subscription/abonnemang, månadsavgift, årsavgift, fast avgift), from both the grid company and the supplier, exactly as printed. Read each number separately; do not calculate them. Empty if none.',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      label: { type: 'string', description: 'The line name as printed, e.g. "Elnätsabonnemang månadsavgift" or "Elavtal årsavgift".' },
+                      side: { type: STRING_OR_NULL, enum: ['grid', 'retailer', null], description: 'Which company the line belongs to: the grid company (elnät) or the electricity supplier (elhandel).' },
+                      rate: { type: 'number', description: 'The rate printed on the line, kr (e.g. "384 kr" → 384, "6 468,00 kr/år" → 6468).' },
+                      per: { type: STRING_OR_NULL, enum: ['year', 'month', 'day', null], description: 'What the rate is per: "årsavgift"/"kr/år" = year, "månadsavgift"/"kr/mån" = month, "kr/dygn" = day.' },
+                      includesVat: { type: ['boolean', 'null'], description: 'True only if the printed rate includes VAT.' },
+                      days: { type: NUMBER_OR_NULL, description: 'Number of days the line covers if printed ("30 dagar", "31 dygn"), else null.' },
+                      sumKr: { type: NUMBER_OR_NULL, description: 'The amount printed for this line in the sum column, kr.' },
+                    },
+                    required: ['label', 'side', 'rate', 'per', 'includesVat', 'days', 'sumKr'],
+                  },
+                },
+                retailerSubtotalExclVatKr: {
+                  type: NUMBER_OR_NULL,
+                  description:
+                    'The electricity supplier part\'s total EXCLUDING VAT, in kr, as printed: e.g. "Moms 25 % av 1 101,59 kr" → 1101.59, or "Totalt E.ON Energilösningar AB 141,85 kr" when that total is before VAT. Only the supplier (elhandel) part, not the grid part. Null if not printed.',
+                },
+                totalEnergyPriceOrePerKwh: {
+                  type: NUMBER_OR_NULL,
+                  description:
+                    'If the bill prints a total supplier price per kWh made of spot price plus markup (e.g. "Ditt elpris, rörligt pris 102,46 öre/kWh består av"), that number. Null if not printed.',
+                },
+                retailerMarkupLines: {
+                  type: 'array',
+                  description:
+                    'REQUIRED whenever retailerMarkupOrePerKwh is not null: each of the retailer\'s markup lines that you added up, exactly as printed: its rate (öre/kWh excl. VAT) and its own amount in kr from the sum/amount column. Include every markup line (e.g. both "Rörliga kostnader" and "Fast påslag"). Read each number separately from the bill; do not calculate them. Empty only if the bill has no markup.',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      label: { type: 'string', description: 'The line name, e.g. "Rörliga kostnader".' },
+                      orePerKwh: { type: 'number', description: 'The rate printed on that line, öre/kWh.' },
+                      sumKr: { type: NUMBER_OR_NULL, description: 'The amount printed on that line, kr. Null if not shown.' },
+                    },
+                    required: ['label', 'orePerKwh', 'sumKr'],
+                  },
+                },
+                spotPriceOrePerKwh: {
+                  type: NUMBER_OR_NULL,
+                  description:
+                    'The rate of the spot price line ("Spotpris", "Medelspotpris", "Elpris timpris"/"kvartspris") in öre/kWh excluding VAT. This line is the market price, NOT the markup. Always fill it in when the bill has a supplier part. Null only if not on this bill.',
+                },
+                gridVariableLineSumKr: {
+                  type: NUMBER_OR_NULL,
+                  description:
+                    'The amount in kr EXCLUDING VAT in the sum/amount column of the grid transfer line(s) ("Elöverföring", "Överföringsavgift") for this period; add them up if there are several. Null if not on this bill.',
+                },
+                retailerMarkupLineSumKr: {
+                  type: NUMBER_OR_NULL,
+                  description:
+                    'The amount in kr EXCLUDING VAT in the sum/amount column of the retailer markup line(s) you added up for retailerMarkupOrePerKwh, together. Null if not on this bill.',
                 },
                 periodDays: {
                   type: NUMBER_OR_NULL,
@@ -180,6 +225,13 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
                 'retailerFixedPer',
                 'retailerFixedIncludesVat',
                 'consumptionKwh',
+                'fixedFeeLines',
+                'totalEnergyPriceOrePerKwh',
+                'retailerSubtotalExclVatKr',
+                'retailerMarkupLines',
+                'spotPriceOrePerKwh',
+                'gridVariableLineSumKr',
+                'retailerMarkupLineSumKr',
                 'periodDays',
                 'confidence',
               ],
@@ -193,7 +245,7 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
               fileContent,
               {
                 type: 'text',
-                text: 'This is a Swedish electricity bill. Many households get two separate bills: one from the electricity supplier (elhandel) and one from the local grid company (elnät); some get one combined invoice. First decide which kind this is. Then report only the fees that appear on this bill and use null for the rest. Also report the kWh used in the billing period and how many days the period covers. Per-kWh fees in öre/kWh excluding VAT. For fixed fees, copy the rate exactly as printed (with its unit and whether it includes VAT); do not convert it. Report your findings using the tool.',
+                text: 'This is a Swedish electricity bill. Read numbers exactly as printed (Swedish decimal commas, spaces as thousand separators). Many households get two separate bills: one from the electricity supplier (elhandel) and one from the local grid company (elnät); some get one combined invoice. First decide which kind this is. Then report only the fees that appear on this bill and use null for the rest. Also report the kWh used in the billing period, how many days the period covers, and the kr amounts (excl. VAT) on the grid transfer line(s) and the markup line(s), so the numbers can be checked. Per-kWh fees in öre/kWh excluding VAT. For fixed fees, copy the rate exactly as printed (with its unit and whether it includes VAT); do not convert it. Report your findings using the tool.',
               },
             ],
           },
@@ -213,17 +265,78 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
     const input = toolUse.input as Partial<ScanElectricityBillResult> & Record<string, unknown>;
     const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null);
     const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 60) : null);
+    // Fixed fees from their printed lines when listed (side by line name, unit
+    // checked against the line's amount); otherwise from the single fields.
+    const listedFeeLines: FixedFeeLine[] = Array.isArray(input.fixedFeeLines)
+      ? (input.fixedFeeLines as Record<string, unknown>[]).slice(0, 8).map((l) => ({
+          label: str(l?.label) ?? '',
+          side: l?.side === 'grid' || l?.side === 'retailer' ? l.side : null,
+          rate: Number(l?.rate),
+          per: l?.per === 'year' || l?.per === 'month' || l?.per === 'day' ? l.per : null,
+          includesVat: typeof l?.includesVat === 'boolean' ? l.includesVat : null,
+          days: num(l?.days),
+          sumKr: num(l?.sumKr),
+        }))
+      : [];
+    // Without listed lines, the single rate fields go through the same checks
+    // (side, and a unit that gives an impossible fee, e.g. 528 kr "per month").
+    const asLine = (side: 'grid' | 'retailer', rate: unknown, per: unknown, includesVat: unknown): FixedFeeLine[] =>
+      typeof rate === 'number' && rate > 0
+        ? [{ label: '', side, rate, per: per === 'year' || per === 'month' || per === 'day' ? per : null, includesVat: typeof includesVat === 'boolean' ? includesVat : null, days: null, sumKr: null }]
+        : [];
+    const feeLines: FixedFeeLine[] = listedFeeLines.length
+      ? listedFeeLines
+      : [
+          ...asLine('grid', input.gridFixedRate, input.gridFixedPer, input.gridFixedIncludesVat),
+          ...asLine('retailer', input.retailerFixedRate, input.retailerFixedPer, input.retailerFixedIncludesVat),
+        ];
+    // The billing period's days: printed on the fee lines too ("31 dygn"), when the AI left it out.
+    const periodDays =
+      num(input.periodDays) ?? feeLines.map((l) => l.days).find((d): d is number => d !== null && d >= 7 && d <= 100) ?? null;
+    const fromLines = feeLines.length
+      ? fixedFeesFromLines(feeLines, periodDays, input.billType === 'retailer' || input.billType === 'grid' ? input.billType : 'combined')
+      : null;
+    const { values, checks: valueChecks } = checkBill(
+      {
+        gridFeeVariableOrePerKwh: num(input.gridFeeVariableOrePerKwh),
+        gridFeeFixedSekPerMonth: fromLines ? fromLines.grid : monthlyInclVat(input.gridFixedRate, input.gridFixedPer, input.gridFixedIncludesVat),
+        retailerMarkupOrePerKwh: num(input.retailerMarkupOrePerKwh),
+        retailerFixedSekPerMonth: fromLines
+          ? fromLines.retailer
+          : monthlyInclVat(input.retailerFixedRate, input.retailerFixedPer, input.retailerFixedIncludesVat),
+        consumptionKwh: num(input.consumptionKwh),
+        periodDays,
+      },
+      {
+        gridVariableLineSumKr: num(input.gridVariableLineSumKr),
+        retailerMarkupLineSumKr: num(input.retailerMarkupLineSumKr),
+        spotPriceOrePerKwh: num(input.spotPriceOrePerKwh),
+        totalEnergyPriceOrePerKwh: num(input.totalEnergyPriceOrePerKwh),
+        retailerSubtotalExclVatKr: num(input.retailerSubtotalExclVatKr),
+        // The supplier's fixed fee for the period, as printed on its line(s), when known.
+        retailerFixedPeriodKr: (() => {
+          const own = feeLines.filter((l) => l.sumKr !== null && (/elavtal|elhandel/i.test(l.label) || l.side === 'retailer') && !/nät|abonnemang/i.test(l.label));
+          return own.length ? own.reduce((sum, l) => sum + (l.sumKr ?? 0), 0) : null;
+        })(),
+        retailerMarkupLines: Array.isArray(input.retailerMarkupLines)
+          ? (input.retailerMarkupLines as { orePerKwh?: unknown; sumKr?: unknown }[])
+              .map((l) => ({ label: str((l as { label?: unknown })?.label) ?? '', orePerKwh: Number(l?.orePerKwh), sumKr: num(l?.sumKr) }))
+              .filter((l) => Number.isFinite(l.orePerKwh))
+              .slice(0, 6)
+          : [],
+      },
+    );
+    const modelType = input.billType === 'retailer' || input.billType === 'grid' ? input.billType : 'combined';
+    const checks = [...valueChecks, ...(fromLines?.checks ?? []).filter((c) => !valueChecks.some((v) => v.field === c.field))];
+    if (checks.length) logger.info(`Bill scan flags: ${checks.map((c) => `${c.field}:${c.reason}`).join(', ')}`);
     return {
-      billType: input.billType === 'retailer' || input.billType === 'grid' ? input.billType : 'combined',
+      billType: resolveBillType(modelType, values, { retailerName: str(input.retailerName), gridCompanyName: str(input.gridCompanyName) }),
       retailerName: str(input.retailerName),
       gridCompanyName: str(input.gridCompanyName),
-      gridFeeVariableOrePerKwh: num(input.gridFeeVariableOrePerKwh),
-      gridFeeFixedSekPerMonth: monthlyInclVat(input.gridFixedRate, input.gridFixedPer, input.gridFixedIncludesVat),
-      retailerMarkupOrePerKwh: num(input.retailerMarkupOrePerKwh),
-      retailerFixedSekPerMonth: monthlyInclVat(input.retailerFixedRate, input.retailerFixedPer, input.retailerFixedIncludesVat),
-      consumptionKwh: num(input.consumptionKwh),
-      periodDays: num(input.periodDays),
-      confidence: input.confidence === 'high' ? 'high' : 'low',
+      ...values,
+      // Any flag means the user should look carefully, whatever the model said.
+      confidence: input.confidence === 'high' && checks.length === 0 ? 'high' : 'low',
+      checks,
     };
   },
 );

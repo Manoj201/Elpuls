@@ -181,6 +181,8 @@ function toSlots(apps: HouseholdAppliance[]): Slot[] {
 
 /** The evening push "Kvällens plan" goes out at this hour; "tonight" is 21:00–06:00. */
 const TONIGHT_HOUR = 19;
+/** Daytime suggestions must end by this hour; later ones are in the 19:00 plan. */
+const DAY_SUGGESTION_END_HOUR = 21;
 const NIGHT_FROM_HOUR = 21;
 /** The night ends at 06:00, the start of the next "electricity day" (same as Din plan and the app). */
 const NIGHT_TO_HOUR = 6;
@@ -294,10 +296,15 @@ export function planForUser(
 
     // Flat day: timing barely matters, so no daytime appliance pushes.
     const dayFlat = isFlatDay(hours);
-    // Daytime = after quiet hours until the evening peak (17:00); the evening
-    // and night belong to the 19:00 plan.
-    const dayHours = awakeHours.filter((h) => local(new Date(h.hour)).hour < EVENING_PEAK_START);
-    for (const { slot, window } of dayFlat ? [] : pick(dayHours, slots.filter((x) => !x.kinds.includes('dishwasher') && !x.isEv))) {
+    // Daytime = the best time over the whole awake day (same answer as the
+    // app's "best time from now" in the morning), suggested only when it ends
+    // by 21:00; a later best time belongs to the 19:00 "Tonight's plan".
+    const dayCutoff = hours.find((h) => local(new Date(h.hour)).hour === DAY_SUGGESTION_END_HOUR && local(new Date(h.hour)).minute === 0);
+    const dayCutoffMs = dayCutoff ? new Date(dayCutoff.hour).getTime() : Number.POSITIVE_INFINITY;
+    const daytime = pick(awakeHours, slots.filter((x) => !x.kinds.includes('dishwasher') && !x.isEv)).filter(
+      ({ window }) => window.end.getTime() <= dayCutoffMs,
+    );
+    for (const { slot, window } of dayFlat ? [] : daytime) {
       const daySaving = slot.kwh * (eveningAvg - window.averagePrice) * VAT;
       if (daySaving < MIN_DAY_KR) continue;
       const start = local(new Date(window.start.hour));
@@ -574,4 +581,96 @@ export async function scheduleSmartPushes(
 
   logger.info(`Scheduled ${scheduled} smart push(es) for ${zone} ${dateKey}; ${planReady.size} plan-ready.`);
   return planReady;
+}
+
+/** Order for appliances that start at the same time (same as the app's liveBestTimes RANK). */
+const LIVE_RANK: Record<string, number> = { washing_machine: 0, dishwasher: 1, ev: 2, pool_heater: 3, sauna: 4 };
+
+/** One line for the morning briefing: the household's first appliance time "from now". */
+export interface LiveBestLine {
+  names: string[];
+  clock: string;
+  endClock: string;
+}
+
+/**
+ * Server copy of the app's "best time from now" (src/lib/liveBestTimes.ts),
+ * for the 07:10 briefing, so its line names the same time the app shows at
+ * 07:10. Same rules: from the current quarter-hour until 06:00 (or the end of
+ * the prices), washer + dryer together, dishwasher 21:00–06:00 (skipped while
+ * the night isn't known), appliances that aren't night-friendly 07:00–22:00.
+ * Returns the earliest-starting time, or null.
+ */
+export function liveBestLine(
+  hours: PriceHour[],
+  now: Date,
+  language: ServerLanguage,
+  user: Record<string, unknown>,
+  registered: { id: string; label: string; watts: number; durationHours?: number }[],
+  prefs: NotificationPrefs,
+): LiveBestLine | null {
+  const sorted = [...hours].sort((a, b) => new Date(a.hour).getTime() - new Date(b.hour).getTime());
+  if (sorted.length === 0) return null;
+  const step = sorted.length > 1 ? new Date(sorted[1].hour).getTime() - new Date(sorted[0].hour).getTime() : 15 * 60000;
+  const startMs = Math.floor(now.getTime() / step) * step;
+  const dataEnd = new Date(sorted[sorted.length - 1].hour).getTime() + step;
+  const t = local(now);
+  // 06:00 after now, in Stockholm time.
+  const dayEnd = sorted.find((h) => {
+    const l = local(new Date(h.hour));
+    return new Date(h.hour).getTime() > now.getTime() && l.hour === NIGHT_TO_HOUR && l.minute === 0;
+  });
+  const until = dayEnd ? new Date(dayEnd.hour).getTime() : dataEnd;
+  const nightPending = dataEnd < until || (!dayEnd && t.hour >= NIGHT_TO_HOUR);
+  const inRange = sorted.filter((h) => {
+    const ms = new Date(h.hour).getTime();
+    return ms >= startMs && ms + step <= Math.min(until, dataEnd);
+  });
+  const hourOf = (h: PriceHour) => local(new Date(h.hour)).hour;
+  const household = householdAppliances(language, user, registered, { ...prefs, mutedAppliances: [] });
+  let best: { names: string[]; startMs: number; endMs: number } | null = null;
+  const rank = (slot: Slot) => LIVE_RANK[slot.kinds[0]] ?? 9;
+  const allowedFor = (slot: Slot, list: PriceHour[]) =>
+    slot.kinds.includes('dishwasher')
+      ? list.filter((h) => hourOf(h) >= NIGHT_FROM_HOUR || hourOf(h) < NIGHT_TO_HOUR)
+      : slot.nightFriendly
+        ? list
+        : list.filter((h) => hourOf(h) >= 7 && hourOf(h) < 22);
+  for (const slot of [...toSlots(household)].sort((a, b) => rank(a) - rank(b))) {
+    const dishwasher = slot.kinds.includes('dishwasher');
+    if (dishwasher && nightPending) continue;
+    const pool = allowedFor(slot, inRange);
+    let w = findCheapestWindow(pool, slot.durationHours);
+    if (!w && !nightPending) {
+      // Doesn't fit before 06:00 (e.g. the washer at 05:00): look into the new day's known prices.
+      const ext = sorted.filter((h) => {
+        const ms = new Date(h.hour).getTime();
+        return ms >= startMs && ms < until + 24 * 3600000;
+      });
+      w = findCheapestWindow(allowedFor(slot, ext), slot.durationHours);
+    }
+    if (!w) continue;
+    let s0 = new Date(w.start.hour).getTime();
+    let e0 = w.end.getTime();
+    // "Good time now", as in the app: waiting saves < 1 kr or < 5 %, and now is an allowed time.
+    const nowSlot = sorted.find((h) => new Date(h.hour).getTime() === startMs);
+    if (nowSlot) {
+      const saving = slot.kwh * (Number(nowSlot.price) - w.averagePrice) * 1.25;
+      const costNow = slot.kwh * Number(nowSlot.price) * 1.25;
+      // The whole run must fit from now in the allowed hours.
+      const runSlots = Math.max(1, Math.round((slot.durationHours * 3600000) / step));
+      const nowAllowed = Array.from({ length: runSlots }, (_, i) => startMs + i * step).every((ms) =>
+        pool.some((h) => new Date(h.hour).getTime() === ms),
+      );
+      if (s0 <= startMs || (nowAllowed && (saving < 1 || (costNow > 0 && saving / costNow < 0.05)))) {
+        s0 = startMs;
+        e0 = startMs + slot.durationHours * 3600000;
+      }
+    }
+    if (!best || s0 < best.startMs) best = { names: slot.names, startMs: s0, endMs: e0 };
+  }
+  if (!best) return null;
+  const a = local(new Date(best.startMs));
+  const b = local(new Date(best.endMs));
+  return { names: best.names, clock: clock(a.hour, a.minute), endClock: clock(b.hour, b.minute) };
 }

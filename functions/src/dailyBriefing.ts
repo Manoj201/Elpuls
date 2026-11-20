@@ -6,9 +6,10 @@ import { findWeatherPrepTip, type WeatherHour } from './weatherPrep';
 import { sendExpoPushToUid } from './sendPriceNotifications';
 import { isProUser } from './proStatus';
 import { buildPlanWindows, localClock, type PlanWindow } from './dailyPlan';
+import { liveBestLine, resolvePrefs } from './smartPushes';
 import {
   APPLIANCE_NOTE_COPY,
-  applianceName,
+  joinNames,
   DAILY_BRIEFING_TITLE,
   HEATING_PLAN_COPY,
   PRICE_RECAP_COPY,
@@ -93,13 +94,16 @@ export const sendDailyBriefings = onSchedule({ schedule: '10 7 * * *', timeZone:
       // first upcoming window. Falls back to the template below without a plan.
       const planText = plan ? (language === 'sv' ? plan.text_sv : plan.text_en) : null;
       if (planText) {
-        const disabled = Array.isArray(user.disabledDefaultAppliances) ? (user.disabledDefaultAppliances as string[]) : [];
-        const mine = ['washing_machine', 'dishwasher', 'dryer', ...(user.hasEv ? ['ev'] : [])].filter((id) => !disabled.includes(id));
-        const next = (plan?.windows ?? [])
-          .filter((w) => mine.includes(w.activity) && new Date(w.start).getTime() > Date.now())
-          .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
-        const name = next ? applianceName(language, next.activity) : '';
-        const windowLine = next ? ` ${name.charAt(0).toUpperCase()}${name.slice(1)}: ${localClock(next.start)}–${localClock(next.end)}.` : '';
+        // The household's first appliance time "from now": the same time the
+        // app's Best times card and Din plan show at 07:10 (liveBestLine).
+        const appliancesSnap = await db.collection('users').doc(uid).collection('appliances').get();
+        const registered = appliancesSnap.docs.map((d) => {
+          const a = d.data();
+          return { id: d.id, label: String(a.label ?? ''), watts: Number(a.watts ?? 0), durationHours: a.durationHours as number | undefined };
+        });
+        const next = liveBestLine(hours, new Date(), language, user, registered, resolvePrefs(user.notificationPrefs));
+        const name = next ? joinNames(language, next.names) : '';
+        const windowLine = next ? ` ${name.charAt(0).toUpperCase()}${name.slice(1)}: ${next.clock}–${next.endClock}.` : '';
         // Tonight's times arrive with tomorrow's prices (~13:00), after this push.
         const tonightLine = plan?.nightReady === true ? '' : ` ${TONIGHT_LATER_COPY[language]}`;
         await sendExpoPushToUid(db, uid, DAILY_PLAN_TITLE[language], `${planText}${windowLine}${tonightLine}`, {

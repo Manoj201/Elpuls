@@ -21,11 +21,15 @@ export interface BestTime {
   /** Preset kind (e.g. 'dishwasher') for the icon. */
   kind: string;
   label: string;
-  start: Date;
-  end: Date;
+  /** Null when the time isn't known yet (night-only appliance before tonight's prices). */
+  start: Date | null;
+  end: Date | null;
   /** Kronor saved vs. running it right now (incl. VAT); null when unknown. */
   saving: number | null;
-  startsNow: boolean;
+  /** Now is the best time, or waiting saves next to nothing. */
+  goodNow: boolean;
+  /** Tonight's time comes around 13:00. */
+  pendingNight: boolean;
 }
 
 // Tabular figures so times and prices line up row to row.
@@ -153,7 +157,10 @@ export function PriceChart({ slots, now, highlights, bestTimes, nightPricesPendi
         ))}
       </View>
 
-      {bestTimes && bestTimes.length > 0 ? (
+      {bestTimes !== undefined ? (
+        // Pro: the card always shows, also when there's nothing to list yet
+        // (e.g. a morning before tonight's times arrive): an empty state says why,
+        // instead of the card disappearing.
         <View style={styles.bestTimes}>
           <Text style={styles.bestTitle} accessibilityRole="header">
             {t('chart.bestTimesTitle')}
@@ -163,21 +170,24 @@ export function PriceChart({ slots, now, highlights, bestTimes, nightPricesPendi
             <Text style={styles.legendText}>{t('chart.bestTimesLegend')}</Text>
           </View>
 
+          <Text style={styles.compareNote}>{t('chart.bestTimesCompare')}</Text>
+          {bestTimes.length === 0 && <Text style={styles.emptyNote}>{t('chart.bestTimesNoAppliances')}</Text>}
           {bestTimes.map((b, i) => {
             const Icon = APPLIANCE_ICONS[b.kind] ?? IconBolt;
-            const when = whenOf(b.start, now, b.startsNow);
             const timeText =
-              when === 'now'
-                ? t('chart.when.nowUntil', { end: formatClock(b.end) })
-                : `${t(`chart.when.${when}`)} ${formatClock(b.start)}–${formatClock(b.end)}`;
+              b.pendingNight || !b.start || !b.end
+                ? t('chart.bestTimesPendingRow')
+                : b.goodNow
+                  ? t('chart.when.nowUntil', { end: formatClock(b.end) })
+                  : `${t(`chart.when.${whenOf(b.start, now)}`)} ${formatClock(b.start)}–${formatClock(b.end)}`;
             const saving = b.saving !== null ? Math.round(b.saving) : 0;
             return (
               <View
-                key={`${b.id}-${b.start.toISOString()}`}
+                key={`${b.id}-${b.start?.toISOString() ?? 'pending'}`}
                 style={[styles.bestRow, i > 0 && styles.bestRowDivider]}
                 accessible
                 accessibilityLabel={`${b.label}. ${timeText}.${
-                  b.startsNow ? ` ${t('chart.bestNow')}.` : saving >= 1 ? ` ${t('chart.saveKr', { kr: saving })}.` : ''
+                  b.goodNow ? ` ${t('chart.bestNow')}.` : saving >= 1 ? ` ${t('chart.saveKr', { kr: saving })}.` : ''
                 }`}
               >
                 <View style={styles.bestIcon}>
@@ -187,7 +197,7 @@ export function PriceChart({ slots, now, highlights, bestTimes, nightPricesPendi
                   <Text style={styles.bestLabel}>{b.label}</Text>
                   <Text style={[styles.bestTime, TABULAR]}>{timeText}</Text>
                 </View>
-                {b.startsNow ? (
+                {b.pendingNight ? null : b.goodNow ? (
                   <Chip label={t('chart.bestNow')} variant="amber" />
                 ) : saving >= 1 ? (
                   <Chip label={t('chart.saveKr', { kr: saving })} variant="teal" />
@@ -195,7 +205,7 @@ export function PriceChart({ slots, now, highlights, bestTimes, nightPricesPendi
               </View>
             );
           })}
-          {nightPricesPending && <Text style={styles.pendingNote}>{t('chart.nightPricesPending')}</Text>}
+          {nightPricesPending && bestTimes.length > 0 && <Text style={styles.pendingNote}>{t('chart.nightPricesPending')}</Text>}
         </View>
       ) : (
         ranges.length > 0 && <Text style={styles.planHint}>{t('chart.planHint')}</Text>
@@ -231,6 +241,8 @@ const styles = StyleSheet.create({
   bestText: { flex: 1, gap: 2 },
   bestLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary },
   bestTime: { fontFamily: theme.typography.body, fontSize: theme.type.sm, color: theme.colors.textSecondary },
+  compareNote: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary, marginBottom: 2 },
+  emptyNote: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 22, color: theme.colors.textSecondary, paddingVertical: 10 },
   pendingNote: {
     marginTop: 4,
     marginBottom: 8,

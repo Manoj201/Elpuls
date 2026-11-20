@@ -482,7 +482,17 @@
     "perMonth": "Per month",
     "retailerFixedWhere": "Shown on the bill as e.g. \"Årsavgift 528 kr/år\". Enter the amount from the Pris (price) column, without VAT.",
     "gridFixedWhere": "Shown on the bill as e.g. \"Abonnemang 6 468 kr/år\". Enter the amount from the Pris (price) column, without VAT.",
-    "withVat": "With VAT that's {{amount}} kr/month."
+    "withVat": "With VAT that's {{amount}} kr/month.",
+    "check": {
+      "generic": "Check this against your bill.",
+      "lineMismatch": "Check against your bill: the price times your usage doesn't match the amount on that line.",
+      "outOfRange": "Check against your bill: this value is unusual for a Swedish electricity bill.",
+      "unitFixed": "Check this: we read kronor and converted it to öre.",
+      "looksLikeTax": "Check against your bill: this looks like the energy tax, not the grid fee.",
+      "looksLikeSpot": "Check against your bill: this looks like the spot price, not your supplier's markup.",
+      "unverified": "Check against your bill: we couldn't double-check the markup against the bill's lines.",
+      "periodFixed": "Check this: we worked out whether the fee is per year or per month from the amount on its line."
+    }
   },
   "paywall": {
     "headline": "Get more out of Elpuls with Pro",
@@ -680,7 +690,7 @@
     "bestTimesPair": "{{first}} and {{second}}",
     "bestTimesLegend": "Shaded in the chart",
     "nightPricesPending": "Tonight's prices arrive around 13:00. The night times may change then.",
-    "bestNow": "Best time is now",
+    "bestNow": "Good time now",
     "saveKr": "Save {{kr}} kr",
     "when": {
       "now": "Now",
@@ -698,7 +708,12 @@
     },
     "colCheapest": "Cheapest",
     "colDearest": "Priciest",
-    "planHint": "The shaded times come from Your plan further down."
+    "planHint": "The shaded times come from Your plan further down.",
+    "bestTimesEmpty": "No time today or tonight is clearly cheaper than now.",
+    "bestTimesEmptyPending": "No clearly cheaper times today. Tonight's times come around 13:00, when tomorrow's prices are out.",
+    "bestTimesCompare": "Saving compared with running it now.",
+    "bestTimesNoAppliances": "Add your appliances in Settings and we'll show when they're cheapest to run.",
+    "bestTimesPendingRow": "Tonight · time comes around 13:00"
   },
   "realPrice": {
     "spotLabel": "Spot price",

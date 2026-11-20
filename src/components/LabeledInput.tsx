@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { IconAlertTriangle } from '@tabler/icons-react-native';
 import { theme } from '../theme';
 
 interface LabeledInputProps extends Omit<TextInputProps, 'style'> {
@@ -11,28 +12,40 @@ interface LabeledInputProps extends Omit<TextInputProps, 'style'> {
   helper?: string;
   /** Optional control inside the field on the right, e.g. a show/hide password button. */
   accessory?: ReactNode;
+  /** Optional amber note under the field, e.g. "Check this against your bill" (field gets an amber border). */
+  warning?: string;
 }
 
-export function LabeledInput({ label, unit, helper, accessory, placeholderTextColor, ...inputProps }: LabeledInputProps) {
+export function LabeledInput({ label, unit, helper, accessory, warning, placeholderTextColor, ...inputProps }: LabeledInputProps) {
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.field}>
+      <View style={[styles.field, warning ? styles.fieldWarning : null]}>
         <TextInput
           style={styles.input}
           placeholderTextColor={placeholderTextColor ?? theme.colors.textFaint}
-          accessibilityLabel={unit ? `${label} (${unit})` : label}
+          accessibilityLabel={`${unit ? `${label} (${unit})` : label}${warning ? `. ${warning}` : ''}`}
           {...inputProps}
         />
         {unit ? <Text style={styles.unit}>{unit}</Text> : null}
         {accessory}
       </View>
+      {warning ? (
+        <View style={styles.warningRow}>
+          <IconAlertTriangle size={16} color={theme.colors.accentAmberDeep} style={styles.warningIcon} />
+          <Text style={styles.warning}>{warning}</Text>
+        </View>
+      ) : null}
       {helper ? <Text style={styles.helper}>{helper}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fieldWarning: { borderColor: theme.colors.accentAmber },
+  warningRow: { flexDirection: 'row', gap: 6, marginTop: 6, alignItems: 'flex-start' },
+  warningIcon: { marginTop: 2 },
+  warning: { flex: 1, fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.accentAmberDeep },
   wrapper: { alignSelf: 'stretch', marginBottom: 16 },
   label: {
     fontFamily: theme.typography.bodyMedium,

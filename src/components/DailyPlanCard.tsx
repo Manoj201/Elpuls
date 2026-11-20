@@ -12,8 +12,9 @@ import {
 } from '@tabler/icons-react-native';
 import { formatClock } from '../lib/formatNumber';
 import { APPLIANCE_ICONS } from '../lib/applianceDisplay';
-import { householdActivities, planRows, sharesWithDryer } from '../lib/planRows';
-import type { DailyPlan, PlanActivity, PlanWindow } from '../hooks/useDailyPlan';
+import { householdActivities, planDayKey, planRows } from '../lib/planRows';
+import type { LiveResult, LiveRow } from '../lib/liveBestTimes';
+import type { DailyPlan, PlanActivity } from '../hooks/useDailyPlan';
 import type { SupportedLanguage } from '../i18n';
 import type { HeatingType } from '../stores/useUserStore';
 import { theme } from '../theme';
@@ -33,9 +34,27 @@ interface DailyPlanCardProps {
   disabledDefaults: string[];
   /** Labels of registered appliances, matched to presets (e.g. a "Pool" → pool heater row). */
   registeredLabels: string[];
+  /** Live "best time from now" appliance rows (src/lib/liveBestTimes.ts), today and tomorrow. */
+  appliancesToday: LiveResult;
+  appliancesTomorrow: LiveResult;
+  labelOfAppliance: (r: LiveRow) => string;
 }
 
-const ICONS: Record<PlanActivity, IconType> = {
+/** One row in the card: a heating/avoid window from the server plan or a live appliance time. */
+interface Row {
+  key: string;
+  kind: string;
+  label: string;
+  start: Date;
+  end: Date;
+  averagePrice: number;
+  night: boolean;
+}
+
+/** Rows taken from the server plan; appliance times come from the live calculation. */
+const SERVER_ACTIVITIES = new Set<PlanActivity>(['heatBank', 'heatCoast', 'avoid']);
+
+const ICONS: Record<string, IconType> = {
   washing_machine: APPLIANCE_ICONS.washing_machine ?? IconBolt,
   dishwasher: APPLIANCE_ICONS.dishwasher ?? IconBolt,
   dryer: APPLIANCE_ICONS.dryer ?? IconBolt,
@@ -57,7 +76,18 @@ const ICONS: Record<PlanActivity, IconType> = {
  * away. When today is over, a clear evening state points to tomorrow, and
  * the card opens on tomorrow by itself once per evening.
  */
-export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabledDefaults, registeredLabels }: DailyPlanCardProps) {
+export function DailyPlanCard({
+  today,
+  tomorrow,
+  now,
+  hasEv,
+  heatingType,
+  disabledDefaults,
+  registeredLabels,
+  appliancesToday,
+  appliancesTomorrow,
+  labelOfAppliance,
+}: DailyPlanCardProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language as SupportedLanguage;
 
@@ -66,12 +96,39 @@ export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabl
     [hasEv, disabledDefaults, registeredLabels, heatingType],
   );
 
-  const todayParts = useMemo(() => planRows(today, mine), [today, mine]);
-  const tomorrowParts = useMemo(() => planRows(tomorrow, mine), [tomorrow, mine]);
+  /**
+   * Rows: heating and "avoid" from the server plan (calculated with the AI
+   * text when the day's prices came out); appliance times from the live
+   * "best time from now" calculation (src/lib/liveBestTimes.ts), the same one
+   * the Best times card uses, so the two always agree. Times after 21:00 (or
+   * after midnight) go under "Tonight".
+   */
+  const build = (plan: DailyPlan | null, live: LiveResult, dayKey: string) => {
+    const [y, m, d] = dayKey.split('-').map(Number);
+    const nightFrom = new Date(y, m - 1, d, 21, 0, 0, 0).getTime();
+    const server: Row[] = planRows(plan, mine)
+      .day.filter((w) => SERVER_ACTIVITIES.has(w.activity))
+      .map((w) => ({ key: `${w.activity}${w.start.toISOString()}`, kind: w.activity, label: t(`plan.activity.${w.activity}`), start: w.start, end: w.end, averagePrice: w.averagePrice, night: false }));
+    const appliances: Row[] = live.rows
+      .filter((r): r is LiveRow & { start: Date; end: Date } => r.start !== null && r.end !== null)
+      .map((r) => ({
+        key: `${r.id}${r.start.toISOString()}`,
+        kind: r.kind,
+        label: labelOfAppliance(r),
+        start: r.start,
+        end: r.end,
+        averagePrice: 0,
+        night: r.start.getTime() >= nightFrom,
+      }));
+    const pending = live.rows.filter((r) => r.pendingNight).map((r) => ({ key: `${r.id}-pending`, kind: r.kind, label: labelOfAppliance(r) }));
+    return { day: [...server, ...appliances.filter((r) => !r.night)], night: appliances.filter((r) => r.night), pending, nightPending: live.nightPending };
+  };
+  const todayParts = useMemo(() => build(today, appliancesToday, planDayKey(now)), [today, appliancesToday, now, mine, labelOfAppliance, t]);
+  const tomorrowParts = useMemo(() => build(tomorrow, appliancesTomorrow, planDayKey(now, 1)), [tomorrow, appliancesTomorrow, now, mine, labelOfAppliance, t]);
   // A plan day runs 06:00 → 06:00, so today is only over once tonight's
-  // part exists and has passed too. Judged on this home's rows only.
+  // times are known and have passed too. Judged on this home's rows only.
   const todayAll = [...todayParts.day, ...todayParts.night];
-  const todayOver = today !== null && todayParts.nightReady && todayAll.length > 0 && todayAll.every((w) => now >= w.end);
+  const todayOver = today !== null && !todayParts.nightPending && todayParts.pending.length === 0 && todayAll.length > 0 && todayAll.every((w) => now >= w.end);
 
   const [day, setDay] = useState<'today' | 'tomorrow'>(() => ((!today || todayOver) && tomorrow ? 'tomorrow' : 'today'));
   // Plans load after the card first shows, and evening comes while it's open:
@@ -96,29 +153,21 @@ export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabl
   // "Avoid" is a warning, not a task: shown as one amber line above the
   // tasks (while it's running or still ahead), never as a row with a "Now"
   // pill next to a task's "Now" (UI/UX Pro Max: one primary status per card).
-  const avoid = rows.find((w) => w.activity === 'avoid') ?? null;
+  const avoid = rows.find((w) => w.kind === 'avoid') ?? null;
   const showAvoid = avoid !== null && (isTomorrow || now < avoid.end);
   const avoidLive = avoid !== null && !isTomorrow && now >= avoid.start && now < avoid.end;
-  const tasks = rows.filter((w) => w.activity !== 'avoid');
-  const isUpcoming = (w: PlanWindow) => isTomorrow || now < w.end;
+  const tasks = rows.filter((w) => w.kind !== 'avoid');
+  const isUpcoming = (w: Row) => isTomorrow || now < w.end;
   const upcoming = tasks.filter(isUpcoming).sort((a, b) => a.start.getTime() - b.start.getTime());
   const passed = isTomorrow ? [] : tasks.filter((w) => !isUpcoming(w));
   const next = isTomorrow ? null : upcoming[0] ?? null;
-  const dayRest = parts.day.filter((w) => w.activity !== 'avoid' && isUpcoming(w) && w !== next);
+  const dayRest = parts.day.filter((w) => w.kind !== 'avoid' && isUpcoming(w) && w !== next).sort((a, b) => a.start.getTime() - b.start.getTime());
   const nightRest = parts.night.filter((w) => isUpcoming(w) && w !== next);
-  const nightIds = new Set(parts.night);
   const showEvening = !isTomorrow && today !== null && !today.flatDay && todayOver;
 
   const ore = (sekPerKwh: number) => Math.round(sekPerKwh * 100).toLocaleString(language === 'sv' ? 'sv-SE' : 'en-US');
 
-  const labelOf = (w: PlanWindow): string => {
-    const own = t(`plan.activity.${w.activity}`);
-    const all = [...(plan?.windows ?? []), ...(plan?.nightWindows ?? [])];
-    if (!sharesWithDryer(w, all, mine)) return own;
-    return t('chart.bestTimesPair', { first: own, second: t('plan.activity.dryer').toLocaleLowerCase() });
-  };
-
-  function status(w: PlanWindow): { text: string; live: boolean } | null {
+  function status(w: Row): { text: string; live: boolean } | null {
     if (isTomorrow) return null;
     if (now >= w.end) return { text: t('plan.statusPast'), live: false };
     if (now >= w.start) return { text: t('plan.statusNow'), live: true };
@@ -126,38 +175,54 @@ export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabl
     return { text: hours < 1 ? t('plan.statusSoon') : t('plan.statusIn', { count: hours }), live: false };
   }
 
-  function renderRow(w: PlanWindow, opts: { first: boolean; hero?: boolean; past?: boolean }) {
-    const Icon = ICONS[w.activity];
+  function renderRow(w: Row, opts: { first: boolean; hero?: boolean; past?: boolean }) {
+    const Icon = ICONS[w.kind] ?? APPLIANCE_ICONS[w.kind] ?? IconBolt;
     const s = status(w);
     const range = `${formatClock(w.start)}–${formatClock(w.end)}`;
-    const isAvoid = w.activity === 'avoid';
+    const isAvoid = w.kind === 'avoid';
     // Tonight's rows: say to set a delayed start in the evening.
-    const night = !opts.past && nightIds.has(w);
+    const night = !opts.past && w.night;
     return (
       <View
-        key={`${w.activity}${w.start.toISOString()}`}
+        key={w.key}
         style={[styles.row, opts.hero && styles.heroRow, !opts.first && !opts.hero && styles.divider, opts.past && styles.past]}
         accessible
-        accessibilityLabel={`${opts.hero ? `${t('plan.next')}: ` : ''}${labelOf(w)}, ${range}${s ? `, ${s.text}` : ''}`}
+        accessibilityLabel={`${opts.hero ? `${t('plan.next')}: ` : ''}${w.label}, ${range}${s ? `, ${s.text}` : ''}`}
       >
         <View style={[styles.icon, opts.hero && styles.iconHero, isAvoid && styles.iconAvoid]}>
           <Icon size={20} color={isAvoid ? theme.colors.dangerEmberDeep : theme.colors.accentPurpleDeep} />
         </View>
         <View style={styles.text}>
           {opts.hero && <Text style={styles.eyebrow}>{t('plan.next')}</Text>}
-          <Text style={[styles.label, opts.hero && styles.labelHero]}>{labelOf(w)}</Text>
+          <Text style={[styles.label, opts.hero && styles.labelHero]}>{w.label}</Text>
           <Text style={styles.meta}>
             {range}
             {isAvoid ? ` · ${t('plan.avoidPrice', { price: ore(w.averagePrice) })}` : ''}
           </Text>
           {night && <Text style={styles.hint}>{t('plan.nightHint')}</Text>}
-          {w.activity === 'heatCoast' && !opts.past && <Text style={styles.hint}>{t('plan.coastHint')}</Text>}
+          {w.kind === 'heatCoast' && !opts.past && <Text style={styles.hint}>{t('plan.coastHint')}</Text>}
         </View>
         {s && !opts.past && (
           <View style={[styles.status, (s.live || opts.hero) && styles.statusLive]}>
             <Text style={[styles.statusText, (s.live || opts.hero) && styles.statusTextLive]}>{s.text}</Text>
           </View>
         )}
+      </View>
+    );
+  }
+
+  /** A night appliance whose time comes with tomorrow's prices (~13:00). */
+  function renderPending(p: { key: string; kind: string; label: string }, first: boolean) {
+    const Icon = APPLIANCE_ICONS[p.kind] ?? IconBolt;
+    return (
+      <View key={p.key} style={[styles.row, !first && styles.divider]} accessible accessibilityLabel={`${p.label}, ${t('chart.bestTimesPendingRow')}`}>
+        <View style={styles.icon}>
+          <Icon size={20} color={theme.colors.accentPurpleDeep} />
+        </View>
+        <View style={styles.text}>
+          <Text style={styles.label}>{p.label}</Text>
+          <Text style={styles.meta}>{t('chart.bestTimesPendingRow')}</Text>
+        </View>
       </View>
     );
   }
@@ -232,16 +297,16 @@ export function DailyPlanCard({ today, tomorrow, now, hasEv, heatingType, disabl
           {dayRest.map((w, i) => renderRow(w, { first: i === 0 && !next && !plan.text }))}
 
           {/* Tonight (21:00 → 06:00): its own heading, so night times are never mistaken for today's. */}
-          {(nightRest.length > 0 || !parts.nightReady || (parts.night.length === 0 && parts.nightReady)) && (
+          {(nightRest.length > 0 || parts.pending.length > 0) && (
             <Text style={styles.nightHeading} accessibilityRole="header">
               {t(isTomorrow ? 'plan.nightHeadingTomorrow' : 'plan.nightHeading')}
             </Text>
           )}
           {nightRest.map((w, i) => renderRow(w, { first: i === 0 }))}
-          {!parts.nightReady && (
+          {parts.pending.map((p, i) => renderPending(p, i === 0 && nightRest.length === 0))}
+          {parts.nightPending && (
             <Text style={styles.nightPending}>{t(isTomorrow ? 'plan.nightPendingTomorrow' : 'plan.nightPending')}</Text>
           )}
-          {parts.nightReady && parts.night.length === 0 && <Text style={styles.nightPending}>{t('plan.nightFlat')}</Text>}
         </View>
       )}
 

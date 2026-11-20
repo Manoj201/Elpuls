@@ -482,7 +482,17 @@
     "perMonth": "Per månad",
     "retailerFixedWhere": "Står på fakturan som t.ex. \"Årsavgift 528 kr/år\". Skriv beloppet från kolumnen Pris, utan moms.",
     "gridFixedWhere": "Står på fakturan som t.ex. \"Abonnemang 6 468 kr/år\". Skriv beloppet från kolumnen Pris, utan moms.",
-    "withVat": "Med moms blir det {{amount}} kr/mån."
+    "withVat": "Med moms blir det {{amount}} kr/mån.",
+    "check": {
+      "generic": "Kontrollera mot fakturan.",
+      "lineMismatch": "Kontrollera mot fakturan: priset gånger din förbrukning stämmer inte med beloppet på raden.",
+      "outOfRange": "Kontrollera mot fakturan: värdet är ovanligt för en svensk elräkning.",
+      "unitFixed": "Kontrollera: vi läste kronor och räknade om till öre.",
+      "looksLikeTax": "Kontrollera mot fakturan: det här ser ut som energiskatten, inte nätavgiften.",
+      "looksLikeSpot": "Kontrollera mot fakturan: det här ser ut som spotpriset, inte elbolagets påslag.",
+      "unverified": "Kontrollera mot fakturan: vi kunde inte dubbelkolla påslaget mot fakturans rader.",
+      "periodFixed": "Kontrollera: vi läste av om avgiften gäller per år eller per månad från beloppet på raden."
+    }
   },
   "paywall": {
     "headline": "Få ut mer av Elpuls med Pro",
@@ -680,7 +690,7 @@
     "bestTimesPair": "{{first}} och {{second}}",
     "bestTimesLegend": "Skuggat i grafen",
     "nightPricesPending": "Nattens priser kommer runt kl 13. Då kan tiderna för natten ändras.",
-    "bestNow": "Bästa tiden är nu",
+    "bestNow": "Bra läge nu",
     "saveKr": "Spara {{kr}} kr",
     "when": {
       "now": "Nu",
@@ -698,7 +708,12 @@
     },
     "colCheapest": "Billigast",
     "colDearest": "Dyrast",
-    "planHint": "De skuggade tiderna är från Din plan längre ner."
+    "planHint": "De skuggade tiderna är från Din plan längre ner.",
+    "bestTimesEmpty": "Ingen tid i dag eller i natt är tydligt billigare än nu.",
+    "bestTimesEmptyPending": "Inga tydligt billigare tider i dag. Tiderna för i natt kommer runt kl 13, när morgondagens priser är klara.",
+    "bestTimesCompare": "Besparing jämfört med att köra nu.",
+    "bestTimesNoAppliances": "Lägg till dina apparater under Inställningar, så visar vi när de är billigast att köra.",
+    "bestTimesPendingRow": "I natt · tiden kommer runt kl 13"
   },
   "realPrice": {
     "spotLabel": "Spotpriset",

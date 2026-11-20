@@ -24,7 +24,16 @@ export interface BillScanResult {
   consumptionKwh?: number | null;
   periodDays?: number | null;
   confidence: 'high' | 'low';
+  /** Fields that look wrong, checked on the server (functions/src/billChecks.ts). Missing on older servers. */
+  checks?: { field: BillCheckField; reason: string }[];
 }
+
+export type BillCheckField =
+  | 'gridFeeVariableOrePerKwh'
+  | 'gridFeeFixedSekPerMonth'
+  | 'retailerMarkupOrePerKwh'
+  | 'retailerFixedSekPerMonth'
+  | 'consumption';
 
 export interface PickedImage {
   base64: string;

@@ -6,7 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { IconArrowLeft, IconCamera, IconChevronRight, IconFileText } from '@tabler/icons-react-native';
 import { db } from '../lib/firebase';
-import { pickImage, scanElectricityBill, type BillScanResult } from '../lib/scan';
+import { pickImage, scanElectricityBill, type BillCheckField, type BillScanResult } from '../lib/scan';
 import type { BillDetails } from '../stores/useUserStore';
 import { usePriceStore } from '../stores/usePriceStore';
 import { useCountryStore } from '../stores/useCountryStore';
@@ -15,6 +15,7 @@ import { calculateLandedPrice } from '../lib/landedCost';
 import { RealPriceBars } from '../components/RealPriceBars';
 import { useUserStore } from '../stores/useUserStore';
 import { theme } from '../theme';
+import { FixedFeeInput, feeToInput, inputToFee, type FeePer } from '../components/FixedFeeInput';
 import { AiNote } from '../components/AiNote';
 import { Card } from '../components/Card';
 import { Chip } from '../components/Chip';
@@ -39,23 +40,6 @@ function parseOre(value: string): number | null {
 
 function formatOre(sekPerKwh: number | null): string {
   return sekPerKwh === null ? '' : formatInput(sekPerKwh * 100);
-}
-
-const VAT = 1.25;
-type FeePer = 'year' | 'month';
-
-/** Stored fee (kr/month incl. VAT) → what the bill prints: excl. VAT, per year or month. */
-function feeToInput(monthlyInclVat: number | null, per: FeePer): string {
-  if (monthlyInclVat === null) return '';
-  const exclVat = monthlyInclVat / VAT;
-  return formatInput(per === 'year' ? exclVat * 12 : exclVat);
-}
-
-/** Typed fee (excl. VAT, per year or month) → stored kr/month incl. VAT. */
-function inputToFee(value: string, per: FeePer): number | null {
-  const n = parseOre(value);
-  if (n === null) return null;
-  return Math.round((per === 'year' ? n / 12 : n) * VAT * 100) / 100;
 }
 
 function formatInput(value: number | null): string {
@@ -87,6 +71,15 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
   const showGrid = result === null || result.billType !== 'retailer';
   const showRetailer = result === null || result.billType !== 'grid';
 
+  // "Kontrollera mot fakturan" for fields the server's checks flagged; gone once the user edits the field.
+  const [edited, setEdited] = useState<Set<string>>(new Set());
+  const warningFor = (field: BillCheckField): string | undefined => {
+    if (edited.has(field)) return undefined;
+    const check = result?.checks?.find((c) => c.field === field);
+    return check ? t(`billScan.check.${check.reason}`, { defaultValue: t('billScan.check.generic') }) : undefined;
+  };
+  const touched = (field: BillCheckField) => setEdited((prev) => (prev.has(field) ? prev : new Set(prev).add(field)));
+
   async function runScan(fileBase64: string, mimeType: string) {
     setStep('scanning');
     try {
@@ -94,6 +87,7 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
       // Older servers don't send billType; treat that as a combined bill.
       const normalized: BillScanResult = { ...scanResult, billType: scanResult.billType ?? 'combined' };
       setResult(normalized);
+      setEdited(new Set());
       setGridFeeInput(formatInput(normalized.gridFeeVariableOrePerKwh));
       setGridFixedInput(feeToInput(normalized.gridFeeFixedSekPerMonth ?? null, gridFixedPer));
       setRetailerMarkupInput(formatInput(normalized.retailerMarkupOrePerKwh));
@@ -288,7 +282,11 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
               placeholder={t('billScan.retailerMarkupPlaceholder')}
               keyboardType="decimal-pad"
               value={retailerMarkupInput}
-              onChangeText={setRetailerMarkupInput}
+              onChangeText={(v) => {
+                setRetailerMarkupInput(v);
+                touched('retailerMarkupOrePerKwh');
+              }}
+              warning={warningFor('retailerMarkupOrePerKwh')}
             />
             <FixedFeeInput
               label={t('billScan.retailerFixedField')}
@@ -296,7 +294,11 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
               placeholder={retailerFixedPer === 'year' ? '528' : '44'}
               value={retailerFixedInput}
               per={retailerFixedPer}
-              onChangeValue={setRetailerFixedInput}
+              onChangeValue={(v) => {
+                setRetailerFixedInput(v);
+                touched('retailerFixedSekPerMonth');
+              }}
+              warning={warningFor('retailerFixedSekPerMonth')}
               onChangePer={(next) => {
                 setRetailerFixedInput(feeToInput(inputToFee(retailerFixedInput, retailerFixedPer), next));
                 setRetailerFixedPer(next);
@@ -318,7 +320,11 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
               placeholder={t('fields.exampleGridFeeVariable')}
               keyboardType="decimal-pad"
               value={gridFeeInput}
-              onChangeText={setGridFeeInput}
+              onChangeText={(v) => {
+                setGridFeeInput(v);
+                touched('gridFeeVariableOrePerKwh');
+              }}
+              warning={warningFor('gridFeeVariableOrePerKwh')}
             />
             <FixedFeeInput
               label={t('fields.gridFeeFixedLabel')}
@@ -326,7 +332,11 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
               placeholder={gridFixedPer === 'year' ? '6 468' : '539'}
               value={gridFixedInput}
               per={gridFixedPer}
-              onChangeValue={setGridFixedInput}
+              onChangeValue={(v) => {
+                setGridFixedInput(v);
+                touched('gridFeeFixedSekPerMonth');
+              }}
+              warning={warningFor('gridFeeFixedSekPerMonth')}
               onChangePer={(next) => {
                 setGridFixedInput(feeToInput(inputToFee(gridFixedInput, gridFixedPer), next));
                 setGridFixedPer(next);
@@ -346,7 +356,11 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
             placeholder={t('fields.exampleMonthlyKwh')}
             keyboardType="decimal-pad"
             value={usageInput}
-            onChangeText={setUsageInput}
+            onChangeText={(v) => {
+              setUsageInput(v);
+              touched('consumption');
+            }}
+            warning={warningFor('consumption')}
           />
         </View>
 
@@ -407,52 +421,6 @@ export function BillScanScreen({ uid, onBack, startManual = false }: BillScanScr
   );
 }
 
-/**
- * A fixed fee typed exactly as the bill prints it: excl. VAT, per year or per
- * month. Underneath, what it comes to per month with VAT, which is what
- * Elpuls stores and uses.
- */
-function FixedFeeInput({
-  label,
-  where,
-  placeholder,
-  value,
-  per,
-  onChangeValue,
-  onChangePer,
-}: {
-  label: string;
-  where: string;
-  placeholder: string;
-  value: string;
-  per: FeePer;
-  onChangeValue: (value: string) => void;
-  onChangePer: (per: FeePer) => void;
-}) {
-  const { t } = useTranslation();
-  const monthly = inputToFee(value, per);
-  return (
-    <View style={styles.feeInput}>
-      <LabeledInput
-        label={t('billScan.fixedExclVat', { label })}
-        unit={t(per === 'year' ? 'billScan.unitKrPerYear' : 'fields.unitKrPerMonth')}
-        placeholder={placeholder}
-        keyboardType="decimal-pad"
-        value={value}
-        onChangeText={onChangeValue}
-      />
-      <View style={styles.perRow} accessibilityRole="radiogroup">
-        <Chip label={t('billScan.perYear')} selected={per === 'year'} onPress={() => onChangePer('year')} />
-        <Chip label={t('billScan.perMonth')} selected={per === 'month'} onPress={() => onChangePer('month')} />
-      </View>
-      <Text style={styles.feeHint}>{where}</Text>
-      {monthly !== null && (
-        <Text style={styles.feeWithVat}>{t('billScan.withVat', { amount: Math.round(monthly) })}</Text>
-      )}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { padding: 20, paddingTop: 60, paddingBottom: 48 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
@@ -465,10 +433,6 @@ const styles = StyleSheet.create({
   resultNote: { fontFamily: theme.typography.body, fontSize: theme.type.md, lineHeight: 24, color: theme.colors.textSecondary },
   billTypeNote: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.md, color: theme.colors.textPrimary, marginBottom: 16 },
   group: { marginBottom: 8 },
-  feeInput: { marginBottom: 16 },
-  perRow: { flexDirection: 'row', gap: 8, marginTop: -8 },
-  feeHint: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginTop: 8 },
-  feeWithVat: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textPrimary, marginTop: 4, fontVariant: ['tabular-nums'] },
   groupTitle: { fontFamily: theme.typography.displayMedium, fontSize: theme.type.lg, color: theme.colors.textPrimary, marginBottom: 12 },
   groupCompany: { fontFamily: theme.typography.body, color: theme.colors.textSecondary },
   otherBillNote: { fontFamily: theme.typography.body, fontSize: theme.type.sm, lineHeight: 20, color: theme.colors.textSecondary, marginBottom: 8 },

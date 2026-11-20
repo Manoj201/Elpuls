@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,7 +30,7 @@ import { useUiStore } from '../stores/useUiStore';
 import { useUserStore } from '../stores/useUserStore';
 import { useApplianceStore } from '../stores/useApplianceStore';
 import { findCurrentPrice, findExtremeHours, groupPricesByHour } from '../lib/priceUtils';
-import { getHouseholdAppliances, matchPresetId, resolveApplianceLabel } from '../lib/applianceDisplay';
+import { getHouseholdAppliances, resolveApplianceLabel } from '../lib/applianceDisplay';
 import { assessPriceRisk, type PriceRiskFactor } from '../lib/priceRisk';
 import { findWeatherPrepTip } from '../lib/weatherPrep';
 import { findHeatingPlan } from '../lib/heatingPlan';
@@ -58,8 +58,7 @@ import { PriceDial } from '../components/PriceDial';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { whenOf } from '../lib/whenLabel';
 import { PriceChart, type BestTime } from '../components/PriceChart';
-import { APPLIANCE_PRESETS, type AppliancePreset } from '../config/appliances';
-import { applianceRanges, householdActivities, planRows, sharesWithDryer } from '../lib/planRows';
+import { liveBestTimes, tomorrowBestTimes, type LiveRow } from '../lib/liveBestTimes';
 import { ComparisonCard } from '../components/ComparisonCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ProUpsellCard } from '../components/ProUpsellCard';
@@ -239,51 +238,38 @@ export function HomeScreen({
     [hasEv, disabledDefaults, appliances],
   );
   const savings = useMonthlySavings(zone, savingsHousehold, todayPrices, now, onboardedAt);
-  // Pro: this home's appliance times from Din plan (today's and tomorrow's),
-  // shaded on the chart. The times themselves are listed only in Din plan.
-  const planMine = useMemo(
-    () => householdActivities({ hasEv, heatingType, disabledDefaults, registeredLabels: appliances.map((a) => a.label) }),
-    [hasEv, heatingType, disabledDefaults, appliances],
+
+  // "Best time from now" (src/lib/liveBestTimes.ts): each appliance's best
+  // window from the current quarter-hour until 06:00, from whatever prices
+  // exist right now. Used by both the Best times card and Din plan, so they
+  // always agree; recalculated on every clock tick and price reload.
+  const spotSlots = useMemo(() => [...todayPrices, ...tomorrowPrices], [todayPrices, tomorrowPrices]);
+  const liveToday = useMemo(() => liveBestTimes(savingsHousehold, spotSlots, now), [savingsHousehold, spotSlots, now]);
+  const liveTomorrow = useMemo(() => tomorrowBestTimes(savingsHousehold, spotSlots, now), [savingsHousehold, spotSlots, now]);
+  const labelOfLive = useCallback(
+    (r: LiveRow) =>
+      r.members.length > 1
+        ? t('chart.bestTimesPair', {
+            first: resolveApplianceLabel(r.members[0], t),
+            second: resolveApplianceLabel(r.members[1], t).toLocaleLowerCase(),
+          })
+        : resolveApplianceLabel(r.members[0], t),
+    [t],
   );
-  // "Best times for your appliances": the same rows as Din plan (today 06:00
-  // → 06:00, day + tonight), plus what each saves vs. running it right now.
-  // Read from the plan, so the list, the plan and the pushes always agree.
-  const todayPlanParts = useMemo(() => planRows(dailyPlan.today, planMine), [dailyPlan.today, planMine]);
-  const bestTimes: BestTime[] = useMemo(() => {
-    if (!isProSubscriber) return [];
-    const household = getHouseholdAppliances({ hasEv, disabledDefaults, registered: appliances });
-    const kindOfAppliance = (a: (typeof household)[number]) => (a.householdDefault || a.id === 'ev' ? a.id : matchPresetId(a.label) ?? a.id);
-    const find = (kind: string) => household.find((a) => kindOfAppliance(a) === kind) ?? APPLIANCE_PRESETS.find((p) => p.id === kind);
-    const kwhOf = (a: AppliancePreset | undefined) => (a ? (a.watts / 1000) * a.typicalDurationHours : 0);
-    const nowSlot = findCurrentPrice([...todayPrices, ...tomorrowPrices], now);
-    const all = [...todayPlanParts.day, ...todayPlanParts.night];
-    return all
-      .filter((w) => ['washing_machine', 'dishwasher', 'ev', 'pool_heater'].includes(w.activity) && w.end.getTime() > now.getTime())
-      .map((w) => {
-        const main = find(w.activity);
-        const pair = sharesWithDryer(w, [...(dailyPlan.today?.windows ?? []), ...(dailyPlan.today?.nightWindows ?? [])], planMine);
-        const dryer = pair ? find('dryer') : undefined;
-        const label =
-          pair && main && dryer
-            ? t('chart.bestTimesPair', { first: resolveApplianceLabel(main, t), second: resolveApplianceLabel(dryer, t).toLocaleLowerCase() })
-            : main
-              ? resolveApplianceLabel(main, t)
-              : t(`plan.activity.${w.activity}`);
-        const kwh = kwhOf(main) + kwhOf(dryer);
-        // Spot difference × VAT: grid fee, tax and markup are the same per kWh whenever you run it.
-        const saving = nowSlot ? kwh * (nowSlot.price - w.averagePrice) * 1.25 : null;
-        return {
-          id: `${w.activity}-${w.start.toISOString()}`,
-          kind: w.activity,
-          label,
-          start: w.start,
-          end: w.end,
-          saving,
-          startsNow: w.start.getTime() <= now.getTime(),
-        };
-      })
-      .sort((a, b) => a.start.getTime() - b.start.getTime());
-  }, [isProSubscriber, hasEv, disabledDefaults, appliances, todayPrices, tomorrowPrices, now, todayPlanParts, dailyPlan.today, planMine, t]);
+  const bestTimes: BestTime[] = useMemo(
+    () =>
+      liveToday.rows.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        label: labelOfLive(r),
+        start: r.start,
+        end: r.end,
+        saving: r.saving,
+        goodNow: r.goodNow,
+        pendingNight: r.pendingNight,
+      })),
+    [liveToday, labelOfLive],
+  );
 
   // A tapped plan push (usePushTaps): scroll to Din plan once it's laid out.
   const scrollRef = useRef<ScrollView>(null);
@@ -300,9 +286,15 @@ export function HomeScreen({
     scrollRef.current?.scrollTo({ y: Math.max(0, planY - 56), animated: true });
     clearPlanFocus();
   }, [planFocusPending, planY, isProSubscriber, clearPlanFocus]);
+  // The same live times, shaded on the chart (today + tonight, and tomorrow's day when known).
   const planHighlights = useMemo(
-    () => (isProSubscriber ? [...applianceRanges(dailyPlan.today, planMine, now), ...applianceRanges(dailyPlan.tomorrow, planMine, now)] : []),
-    [isProSubscriber, dailyPlan.today, dailyPlan.tomorrow, planMine, now],
+    () =>
+      isProSubscriber
+        ? [...liveToday.rows, ...liveTomorrow.rows]
+            .filter((r): r is LiveRow & { start: Date; end: Date } => r.start !== null && r.end !== null)
+            .map((r) => ({ start: r.start, end: r.end }))
+        : [],
+    [isProSubscriber, liveToday, liveTomorrow],
   );
   // Spot average for the share card: compareToOtherZones fetches other zones' raw spot prices, so the
   // comparison must stay spot-vs-spot regardless of what's displayed.
@@ -702,8 +694,8 @@ export function HomeScreen({
             slots={chartSlots}
             now={now}
             highlights={planHighlights}
-            bestTimes={bestTimes}
-            nightPricesPending={isProSubscriber && dailyPlan.today !== null && !todayPlanParts.nightReady}
+            bestTimes={isProSubscriber ? bestTimes : undefined}
+            nightPricesPending={isProSubscriber && liveToday.nightPending}
           />
 
           <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -725,6 +717,9 @@ export function HomeScreen({
                 heatingType={heatingType}
                 disabledDefaults={disabledDefaults}
                 registeredLabels={appliances.map((a) => a.label)}
+                appliancesToday={liveToday}
+                appliancesTomorrow={liveTomorrow}
+                labelOfAppliance={labelOfLive}
               />
               </View>
               {/* The plan's own heat rows replace this card when today's plan exists (no two answers). */}

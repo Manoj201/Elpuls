@@ -7,6 +7,7 @@ import { useCountryStore } from '../stores/useCountryStore';
 import { useUserStore, type HeatingType } from '../stores/useUserStore';
 import { guessZoneFromPostcode } from '../lib/postcodeZone';
 import { theme } from '../theme';
+import { FixedFeeInput, feeToInput, inputToFee, type FeePer } from '../components/FixedFeeInput';
 import { OptionCard } from '../components/OptionCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
@@ -45,6 +46,8 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
   const [hasSolar, setHasSolar] = useState<boolean | null>(null);
   const [hasEv, setHasEv] = useState<boolean | null>(null);
   const [gridFeeFixedInput, setGridFeeFixedInput] = useState('');
+  // Typed as the bill prints it (excl. VAT); most grid bills show the fee per year.
+  const [gridFixedPer, setGridFixedPer] = useState<FeePer>('year');
   const [gridFeeVariableInput, setGridFeeVariableInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [billScanOpen, setBillScanOpen] = useState(false);
@@ -76,7 +79,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
     }
 
     setSaving(true);
-    const gridFeeFixedSekPerMonth = parsePositiveFloat(gridFeeFixedInput);
+    const gridFeeFixedSekPerMonth = inputToFee(gridFeeFixedInput, gridFixedPer);
     const gridFeeVariableOre = parsePositiveFloat(gridFeeVariableInput);
     const info = {
       zone: zone!,
@@ -115,7 +118,7 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
         onBack={() => {
           const { gridFeeVariableSekPerKwh: saved, gridFeeFixedSekPerMonth: savedFixed } = useUserStore.getState();
           if (saved !== null) setGridFeeVariableInput(String(Number((saved * 100).toFixed(2))).replace('.', ','));
-          if (savedFixed !== null) setGridFeeFixedInput(String(Number(savedFixed.toFixed(2))).replace('.', ','));
+          if (savedFixed !== null) setGridFeeFixedInput(feeToInput(savedFixed, gridFixedPer));
           setBillScanOpen(false);
         }}
       />
@@ -211,13 +214,18 @@ export function OnboardingScreen({ uid, onDone }: OnboardingScreenProps) {
             value={gridFeeVariableInput}
             onChangeText={setGridFeeVariableInput}
           />
-          <LabeledInput
+          {/* Same field as the bill scan: the amount as printed (excl. VAT), per year or month. */}
+          <FixedFeeInput
             label={t('fields.gridFeeFixedLabel')}
-            unit={t('fields.unitKrPerMonth')}
-            placeholder={t('fields.exampleGridFeeFixed')}
-            keyboardType="decimal-pad"
+            where={t('billScan.gridFixedWhere')}
+            placeholder={gridFixedPer === 'year' ? '6 468' : '539'}
             value={gridFeeFixedInput}
-            onChangeText={setGridFeeFixedInput}
+            per={gridFixedPer}
+            onChangeValue={setGridFeeFixedInput}
+            onChangePer={(next) => {
+              setGridFeeFixedInput(feeToInput(inputToFee(gridFeeFixedInput, gridFixedPer), next));
+              setGridFixedPer(next);
+            }}
           />
           <Pressable onPress={handleContinue} style={styles.skipButton} hitSlop={8} accessibilityRole="button">
             <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
