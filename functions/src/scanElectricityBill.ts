@@ -2,8 +2,8 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import type Anthropic from '@anthropic-ai/sdk';
 import { checkBill, fixedFeesFromLines, monthlyInclVat, resolveBillType, type BillCheck, type FixedFeeLine } from './billChecks';
+import { CLAUDE_MODEL, logStopReason } from './claudeModel';
 
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const PDF_MIME_TYPE = 'application/pdf';
 const REPORT_TOOL_NAME = 'report_bill_markup';
@@ -80,7 +80,7 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
     try {
       message = await anthropic.messages.create({
         model: CLAUDE_MODEL,
-        max_tokens: 700,
+        max_tokens: 2000,
         tool_choice: { type: 'tool', name: REPORT_TOOL_NAME },
         tools: [
           {
@@ -255,6 +255,8 @@ export const scanElectricityBill = onCall<ScanElectricityBillRequest>(
       logger.error(`Claude call failed for bill scan: ${err}`);
       throw new HttpsError('internal', 'Could not read the bill. Try again or enter the values manually.');
     }
+
+    logStopReason(message, 'bill scan');
 
     const toolUse = message.content.find((block) => block.type === 'tool_use');
     if (!toolUse || toolUse.type !== 'tool_use') {

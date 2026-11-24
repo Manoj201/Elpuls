@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
+import { CLAUDE_MODEL, logStopReason } from './claudeModel';
 
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const REPORT_TOOL_NAME = 'report_appliance_watts';
 
@@ -47,7 +47,7 @@ export const scanAppliancePhoto = onCall<ScanAppliancePhotoRequest>(
     try {
       message = await anthropic.messages.create({
         model: CLAUDE_MODEL,
-        max_tokens: 400,
+        max_tokens: 800,
         tool_choice: { type: 'tool', name: REPORT_TOOL_NAME },
         tools: [
           {
@@ -100,6 +100,8 @@ export const scanAppliancePhoto = onCall<ScanAppliancePhotoRequest>(
       logger.error(`Claude call failed for appliance scan: ${err}`);
       throw new HttpsError('internal', 'Could not read the photo. Try again or enter it manually.');
     }
+
+    logStopReason(message, 'appliance scan');
 
     const toolUse = message.content.find((block) => block.type === 'tool_use');
     if (!toolUse || toolUse.type !== 'tool_use') {

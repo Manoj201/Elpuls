@@ -4,6 +4,7 @@ import { findCheapestWindow, type PriceHour } from './priceUtils';
 import { APPLIANCE_PRESETS } from './appliances';
 import { findHeatingPlan } from './heatingPlan';
 import { assessPriceRisk, type WeatherHour } from './priceRisk';
+import { CLAUDE_MODEL, logStopReason } from './claudeModel';
 
 /**
  * "Din plan" (Pro, Release 1.2 section G): one plan per zone and day, shared
@@ -15,7 +16,6 @@ import { assessPriceRisk, type WeatherHour } from './priceRisk';
  * sentences about the day, in Swedish and English.
  */
 
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 const REPORT_TOOL_NAME = 'report_daily_plan';
 /** Same rule as the app's price bands (src/lib/priceBands.ts): ≥ 115 % of the day average is dear. */
 const DEAR_RATIO = 1.15;
@@ -329,11 +329,16 @@ export async function generateDailyPlan(
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const message = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 400,
-      tool_choice: { type: 'tool', name: REPORT_TOOL_NAME },
+      // Thinking on (auto tool choice): clearly more natural Swedish than a forced call,
+      // which skips thinking on Haiku 5.5. Thinking counts toward max_tokens.
+      max_tokens: 4000,
+      output_config: { effort: 'medium' },
+      system: `Answer only by calling the ${REPORT_TOOL_NAME} tool once, with both text_sv and text_en filled in.`,
+      tool_choice: { type: 'auto' },
       tools: [
         {
           name: REPORT_TOOL_NAME,
+          strict: true,
           description: 'Report the plan summary in Swedish and English.',
           input_schema: {
             type: 'object',
@@ -342,11 +347,13 @@ export async function generateDailyPlan(
               text_en: { type: 'string', description: 'The same summary in English, at most 2 short sentences, plain text.' },
             },
             required: ['text_sv', 'text_en'],
+            additionalProperties: false,
           },
         },
       ],
       messages: [{ role: 'user', content: buildPrompt(zone, dateKey, hours, windows, risk?.factors ?? []) }],
     });
+    logStopReason(message, 'daily plan text');
     const toolUse = message.content.find((block) => block.type === 'tool_use');
     if (toolUse && toolUse.type === 'tool_use') {
       const input = toolUse.input as { text_sv?: unknown; text_en?: unknown };

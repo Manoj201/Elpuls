@@ -2,6 +2,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { addDays, loadHistory, RateLimitedError, updateHistory, type History } from './priceHistory';
+import { CLAUDE_MODEL, logStopReason } from './claudeModel';
 
 /** Past days stored on each outlook doc for the app's chart ("Månad" view). */
 const RECENT_HISTORY_DAYS = 30;
@@ -42,7 +43,6 @@ const MIN_HISTORY_DAYS = 500;
  */
 const RANGE_LOW_Q = 0.075;
 const RANGE_HIGH_Q = 0.925;
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 const REPORT_TOOL_NAME = 'report_outlook';
 
 const stockholmDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Stockholm' });
@@ -335,11 +335,16 @@ async function writeSummary(zone: string, outlook: ZoneOutlook): Promise<{ sv: s
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const message = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 300,
-      tool_choice: { type: 'tool', name: REPORT_TOOL_NAME },
+      // Thinking on (auto tool choice): clearly more natural Swedish than a forced call,
+      // which skips thinking on Haiku 5.5. Thinking counts toward max_tokens.
+      max_tokens: 4000,
+      output_config: { effort: 'medium' },
+      system: `Answer only by calling the ${REPORT_TOOL_NAME} tool once, with both text_sv and text_en filled in.`,
+      tool_choice: { type: 'auto' },
       tools: [
         {
           name: REPORT_TOOL_NAME,
+          strict: true,
           description: 'Report the outlook summary in Swedish and English.',
           input_schema: {
             type: 'object',
@@ -348,11 +353,13 @@ async function writeSummary(zone: string, outlook: ZoneOutlook): Promise<{ sv: s
               text_en: { type: 'string', description: 'The same in English, 1–2 short sentences, plain text.' },
             },
             required: ['text_sv', 'text_en'],
+            additionalProperties: false,
           },
         },
       ],
       messages: [{ role: 'user', content: prompt }],
     });
+    logStopReason(message, 'outlook text');
     const toolUse = message.content.find((b) => b.type === 'tool_use');
     if (!toolUse || toolUse.type !== 'tool_use') return { sv: null, en: null };
     const input = toolUse.input as { text_sv?: unknown; text_en?: unknown };

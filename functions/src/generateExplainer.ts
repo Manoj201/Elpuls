@@ -2,9 +2,9 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { assessPriceRisk, type PriceRiskAssessment, type WeatherHour } from './priceRisk';
+import { CLAUDE_MODEL, logStopReason } from './claudeModel';
 
 const SWEDISH_ZONES = ['SE1', 'SE2', 'SE3', 'SE4'];
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 const REPORT_TOOL_NAME = 'report_explainer';
 
 interface PriceHour {
@@ -101,11 +101,16 @@ export const generateExplainer = onSchedule(
 
         const message = await anthropic.messages.create({
           model: CLAUDE_MODEL,
-          max_tokens: 400,
-          tool_choice: { type: 'tool', name: REPORT_TOOL_NAME },
+          // Thinking on (auto tool choice): clearly more natural Swedish than a forced call,
+          // which skips thinking on Haiku 5.5. Thinking counts toward max_tokens.
+          max_tokens: 4000,
+          output_config: { effort: 'medium' },
+          system: `Answer only by calling the ${REPORT_TOOL_NAME} tool once, with both text_sv and text_en filled in.`,
+          tool_choice: { type: 'auto' },
           tools: [
             {
               name: REPORT_TOOL_NAME,
+              strict: true,
               description: "Report today's price explainer in both Swedish and English.",
               input_schema: {
                 type: 'object',
@@ -117,11 +122,14 @@ export const generateExplainer = onSchedule(
                   },
                 },
                 required: ['text_sv', 'text_en'],
+                additionalProperties: false,
               },
             },
           ],
           messages: [{ role: 'user', content: buildPrompt({ zone, risk, avgPrice, minPrice, maxPrice }) }],
         });
+
+        logStopReason(message, 'explainer');
 
         const toolUse = message.content.find((block) => block.type === 'tool_use');
         if (!toolUse || toolUse.type !== 'tool_use') {
