@@ -6,7 +6,7 @@ import { APPLIANCE_ICONS } from '../lib/applianceDisplay';
 import { whenOf } from '../lib/whenLabel';
 import { useUserStore } from '../stores/useUserStore';
 import { groupPricesByHour, findCurrentPrice } from '../lib/priceUtils';
-import { formatClock, formatOre } from '../lib/formatNumber';
+import { formatClock } from '../lib/formatNumber';
 import { BAND_COLOR, BAND_ORDER, HIGHLIGHT_COLOR, type ChartRange } from '../lib/priceBands';
 import type { SupportedLanguage } from '../i18n';
 import type { HourlyPrice } from '../providers/types';
@@ -139,9 +139,9 @@ export function PriceChart({ slots, now, highlights, bestTimes, nightPricesPendi
             accessibilityLabel={t('chart.summary', {
               day: d.label,
               cheapTime: formatClock(d.cheapest.hour),
-              cheapPrice: formatOre(d.cheapest.price, language),
+              cheapPrice: String(Math.round(d.cheapest.price * 100)),
               dearTime: formatClock(d.dearest.hour),
-              dearPrice: formatOre(d.dearest.price, language),
+              dearPrice: String(Math.round(d.dearest.price * 100)),
             })}
           >
             <Text style={[styles.dayCol, styles.dayLabel]} numberOfLines={1}>
@@ -150,7 +150,7 @@ export function PriceChart({ slots, now, highlights, bestTimes, nightPricesPendi
             {[d.cheapest, d.dearest].map((slot, j) => (
               <View key={j} style={styles.valueCol}>
                 <Text style={[styles.timeText, TABULAR]}>{formatClock(slot.hour)}</Text>
-                <Text style={[styles.priceText, TABULAR]}>{formatOre(slot.price, language)} öre</Text>
+                <Text style={[styles.priceText, TABULAR]}>{Math.round(slot.price * 100)} öre</Text>
               </View>
             ))}
           </View>

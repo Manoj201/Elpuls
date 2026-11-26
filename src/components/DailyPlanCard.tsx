@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
-import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   IconBolt,
+  IconCalendarCheck,
+  IconCalendarPlus,
   IconChevronDown,
   IconChevronUp,
   IconFlame,
@@ -11,6 +13,8 @@ import {
   IconTemperatureMinus,
 } from '@tabler/icons-react-native';
 import { formatClock } from '../lib/formatNumber';
+import { addPlanEventToCalendar, calendarAvailable } from '../lib/planCalendar';
+import { useUiStore } from '../stores/useUiStore';
 import { APPLIANCE_ICONS } from '../lib/applianceDisplay';
 import { householdActivities, planDayKey, planRows } from '../lib/planRows';
 import type { LiveResult, LiveRow } from '../lib/liveBestTimes';
@@ -145,6 +149,30 @@ export function DailyPlanCard({
   }, [today, tomorrow, todayOver, todayKey]);
 
   const [showPassed, setShowPassed] = useState(false);
+  const calendarAdded = useUiStore((st) => st.calendarAdded);
+  const markCalendarAdded = useUiStore((st) => st.markCalendarAdded);
+
+  /**
+   * "Lägg till i kalendern" (Pro): opens the phone's own New event sheet,
+   * filled in. Never automatic, never reads the calendar, never controls a
+   * device (§2): a reminder the phone keeps even with Elpuls closed.
+   */
+  async function addToCalendar(w: Row) {
+    const range = `${formatClock(w.start)}–${formatClock(w.end)}`;
+    try {
+      const result = await addPlanEventToCalendar({
+        title: t('calendar.title', { label: w.label }),
+        notes: `${w.night ? `${t('calendar.notesNight')}\n\n` : ''}${t('calendar.notes', { range })}`,
+        start: w.start,
+        end: w.end,
+        night: w.night,
+      });
+      if (result === 'saved') markCalendarAdded(w.key);
+      else if (result === 'noPermission') Alert.alert(t('calendar.noPermissionTitle'), t('calendar.noPermissionText'));
+    } catch {
+      Alert.alert(t('calendar.failedTitle'), t('calendar.failedText'));
+    }
+  }
 
   const isTomorrow = day === 'tomorrow' && tomorrow !== null;
   const plan = isTomorrow ? tomorrow : today;
@@ -183,24 +211,46 @@ export function DailyPlanCard({
     // Tonight's rows: say to set a delayed start in the evening.
     const night = !opts.past && w.night;
     return (
-      <View
-        key={w.key}
-        style={[styles.row, opts.hero && styles.heroRow, !opts.first && !opts.hero && styles.divider, opts.past && styles.past]}
-        accessible
-        accessibilityLabel={`${opts.hero ? `${t('plan.next')}: ` : ''}${w.label}, ${range}${s ? `, ${s.text}` : ''}`}
-      >
+      <View key={w.key} style={[styles.row, opts.hero && styles.heroRow, !opts.first && !opts.hero && styles.divider, opts.past && styles.past]}>
         <View style={[styles.icon, opts.hero && styles.iconHero, isAvoid && styles.iconAvoid]}>
           <Icon size={20} color={isAvoid ? theme.colors.dangerEmberDeep : theme.colors.accentPurpleDeep} />
         </View>
         <View style={styles.text}>
-          {opts.hero && <Text style={styles.eyebrow}>{t('plan.next')}</Text>}
-          <Text style={[styles.label, opts.hero && styles.labelHero]}>{w.label}</Text>
-          <Text style={styles.meta}>
-            {range}
-            {isAvoid ? ` · ${t('plan.avoidPrice', { price: ore(w.averagePrice) })}` : ''}
-          </Text>
-          {night && <Text style={styles.hint}>{t('plan.nightHint')}</Text>}
-          {w.kind === 'heatCoast' && !opts.past && <Text style={styles.hint}>{t('plan.coastHint')}</Text>}
+          {/* The row's facts are one screen-reader element; the calendar link below stays its own button. */}
+          <View accessible accessibilityLabel={`${opts.hero ? `${t('plan.next')}: ` : ''}${w.label}, ${range}${s ? `, ${s.text}` : ''}`}>
+            {opts.hero && <Text style={styles.eyebrow}>{t('plan.next')}</Text>}
+            <Text style={[styles.label, opts.hero && styles.labelHero]}>{w.label}</Text>
+            <Text style={styles.meta}>
+              {range}
+              {isAvoid ? ` · ${t('plan.avoidPrice', { price: ore(w.averagePrice) })}` : ''}
+            </Text>
+            {night && <Text style={styles.hint}>{t('plan.nightHint')}</Text>}
+            {w.kind === 'heatCoast' && !opts.past && <Text style={styles.hint}>{t('plan.coastHint')}</Text>}
+          </View>
+          {/*
+            Calendar: a quiet labelled link under the time (UI/UX Pro Max primary-action:
+            secondary actions stay subordinate; text + icon, not an unlabelled icon;
+            44 pt tap height). The right side keeps only the status pill.
+          */}
+          {calendarAvailable && !opts.past && !isAvoid && (
+            calendarAdded[w.key] ? (
+              <View style={styles.calLink} accessible accessibilityLabel={t('calendar.added')}>
+                <IconCalendarCheck size={16} color={theme.colors.positiveTealDeep} />
+                <Text style={[styles.calText, styles.calTextDone]}>{t('calendar.addedShort')}</Text>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => addToCalendar(w)}
+                style={({ pressed }) => [styles.calLink, pressed && styles.pressed]}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('calendar.add', { label: w.label, range })}
+              >
+                <IconCalendarPlus size={16} color={theme.colors.accentPurpleDeep} />
+                <Text style={styles.calText}>{t('calendar.addShort')}</Text>
+              </Pressable>
+            )
+          )}
         </View>
         {s && !opts.past && (
           <View style={[styles.status, (s.live || opts.hero) && styles.statusLive]}>
@@ -437,6 +487,9 @@ const styles = StyleSheet.create({
   },
   foldLabel: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.textSecondary },
   pressed: { opacity: 0.7 },
+  calLink: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', columnGap: 6, marginTop: 6, minHeight: 28 },
+  calText: { fontFamily: theme.typography.bodyMedium, fontSize: theme.type.sm, color: theme.colors.accentPurpleDeep },
+  calTextDone: { color: theme.colors.positiveTealDeep },
   note: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.borderMuted },
   footnote: { fontFamily: theme.typography.body, fontSize: theme.type.xs, color: theme.colors.textSecondary },
 });

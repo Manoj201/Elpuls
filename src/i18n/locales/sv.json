@@ -923,5 +923,19 @@
     "amountA11y": "ungefär {{amount}} kronor",
     "todayAmount": "+{{amount}} kr",
     "howStart": "Vi räknar från dagen du började använda Elpuls."
+  },
+  "calendar": {
+    "add": "Lägg till {{label}} {{range}} i kalendern",
+    "added": "Tillagd i kalendern",
+    "title": "Elpuls: {{label}}",
+    "notes": "Elpuls räknade ut att {{range}} är den billigaste tiden, utifrån elpriserna. Det är ett förslag, inget startar av sig självt.",
+    "notesNight": "Ställ in fördröjd start på kvällen, så kör maskinen i natt.",
+    "noPermissionTitle": "Elpuls får inte använda kalendern",
+    "noPermissionText": "Du kan slå på det under Inställningar > Elpuls > Kalendrar.",
+    "failedTitle": "Det gick inte att öppna kalendern",
+    "failedText": "Försök igen om en stund.",
+    "hint": "Tryck på kalendern för en påminnelse i din egen kalender.",
+    "addShort": "Lägg i kalendern",
+    "addedShort": "I kalendern"
   }
 }

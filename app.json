@@ -2,7 +2,7 @@
   "expo": {
     "name": "Elpuls",
     "slug": "elpuls",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -55,7 +55,13 @@
           "enableFullScreenImage_legacy": true
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Elpuls adds the times from Din plan to your calendar when you ask it to. Elpuls never reads your calendar."
+        }
+      ]
     ]
   }
 }

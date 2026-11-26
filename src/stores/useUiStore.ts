@@ -33,6 +33,9 @@ interface UiState {
   planFocusPending: boolean;
   requestPlanFocus: () => void;
   clearPlanFocus: () => void;
+  /** Din plan rows added to the calendar this session (row key → true), for the ✓ on the row. Not persisted. */
+  calendarAdded: Record<string, true>;
+  markCalendarAdded: (key: string) => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -42,6 +45,8 @@ export const useUiStore = create<UiState>((set) => ({
   planFocusPending: false,
   requestPlanFocus: () => set({ planFocusPending: true }),
   clearPlanFocus: () => set({ planFocusPending: false }),
+  calendarAdded: {},
+  markCalendarAdded: (key) => set((st) => ({ calendarAdded: { ...st.calendarAdded, [key]: true } })),
   showPaywall: (source = 'generic') => set({ isPaywallVisible: true, paywallSource: source }),
   hidePaywall: () => set({ isPaywallVisible: false }),
   startTicker: (watts, label) => set({ ticker: { watts, label, startedAt: Date.now() } }),

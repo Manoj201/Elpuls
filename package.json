@@ -1,6 +1,6 @@
 {
   "name": "elpuls",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "main": "index.ts",
   "packageManager": "yarn@1.22.22",
   "engines": {
@@ -14,6 +14,7 @@
     "@tabler/icons-react-native": "^3.46.0",
     "expo": "^54.0.0",
     "expo-application": "~7.0.8",
+    "expo-calendar": "~15.0.8",
     "expo-constants": "~18.0.14",
     "expo-device": "~8.0.10",
     "expo-document-picker": "~14.0.8",

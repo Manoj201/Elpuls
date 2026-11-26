@@ -923,5 +923,19 @@
     "amountA11y": "about {{amount}} kronor",
     "todayAmount": "+{{amount}} kr",
     "howStart": "We count from the day you started using Elpuls."
+  },
+  "calendar": {
+    "add": "Add {{label}} {{range}} to your calendar",
+    "added": "Added to your calendar",
+    "title": "Elpuls: {{label}}",
+    "notes": "Elpuls worked out from the electricity prices that {{range}} is the cheapest time. It’s a suggestion; nothing starts by itself.",
+    "notesNight": "Set a delayed start in the evening so the machine runs tonight.",
+    "noPermissionTitle": "Elpuls can’t use your calendar",
+    "noPermissionText": "You can turn it on in Settings > Elpuls > Calendars.",
+    "failedTitle": "Couldn’t open the calendar",
+    "failedText": "Please try again in a moment.",
+    "hint": "Tap the calendar for a reminder in your own calendar.",
+    "addShort": "Add to calendar",
+    "addedShort": "In your calendar"
   }
 }
