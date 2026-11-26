@@ -59,7 +59,8 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Elpuls adds the times from Din plan to your calendar when you ask it to. Elpuls never reads your calendar."
+          "calendarPermission": "Elpuls adds the times from Din plan to your calendar when you ask it to. Elpuls never reads your calendar.",
+          "remindersPermission": "Elpuls does not use your reminders. Times from Din plan are added to your calendar only when you tap Add to calendar."
         }
       ]
     ]
